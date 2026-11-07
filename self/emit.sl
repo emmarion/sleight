@@ -554,62 +554,6 @@
   (let-match many (spot-pos file p) (MkPos f l c) ((NoPos) (RStr "Ffi_core.NoLoc")))
   (rcat3 (rcat3 (RStr "(Ffi_core.At { file = ") (quoted f) $ RStr "; line = ") (rcat3 (z-rope l) (RStr "; col = ") (z-rope c)) $ RStr " })"))
 
-; ---- Names for the frames code binds: one per id, in step with the frames (ASSUMPTIONS 127); a function
-; bound by a group is named, so a call of it is direct, a value use its closure.
-
-(def-adts $ (Named : -> Type)
-  enum
-  (many NmVal : (many (Rope) r) -> (Named))
-  (many NmFn : (many (String) name) (many (Nat) id) -> (Named))
-  (many NmConst : (many (Nat) id) -> (Named)))
-
-(def-adts $ (Names : ((List $ List $ Nat) ctx) -> Type)
-  enum
-  (many NmNil : -> (Names (Nil (List (Nat)))))
-  (many NmFrame : (erased (List $ List $ Nat) ctx) (many (List $ Nat) f) (many (List $ Named) rs) (erased (Lockstep (Nat) (Named) f rs) lk) (many (Names ctx) rest) -> (Names (Cons (List (Nat)) f ctx))))
-
-(def-fns _ $ (many names-depth : (erased (List $ List $ Nat) ctx) (subterm many (Names ctx) ns) -> (many (Nat) n))
-  (match many ns _
-    ((NmNil) 0)
-    ((NmFrame _ _ _ _ rest) (Succ $ notail $ names-depth _ rest))))
-
-(def-fns _ $ (many names-get : (erased (Nat) x) (erased (List $ List $ Nat) ctx) (subterm many (Mem x ctx) p) (many (Names ctx) ns) -> (many (Named) r))
-  (match many p _
-    ((MHere _ _ _ q)
-      (let-match many ns (NmFrame _ _ rs lk _))
-      (let ((many r) (erased _)) $ at-get _ _ _ q rs lk) r)
-    ((MThere _ _ _ q)
-      (let-match many ns (NmFrame _ _ _ _ rest))
-      (tail $ names-get _ _ q rest))))
-
-(def-fns _ $ (many target-named : (erased (List $ List $ Nat) ctx) (many (Code ctx many-one) c) (many (Names ctx) ns) -> (many (Named) r))
-  (match many c _
-    ((CVar _ _ p) (names-get _ _ p ns))
-    ((CConst _ t) (NmConst t))
-    (else (NmVal $ RStr "(failwith \"internal: an alias with no target\")"))))
-
-(def-fns _ $ (many alias-named : (erased (List $ List $ Nat) ctx) (erased (List $ Nat) all) (many (Names (Cons (List (Nat)) all ctx)) whole) (erased (List $ Nat) f) (subterm many (List $ Named) rs) (erased (Lockstep (Nat) (Named) f rs) lk) (many (List $ Pair (Nat) $ Func all ctx) fns) -> (many (List $ Named) rs2) (erased (Lockstep (Nat) (Named) f rs2) lk2))
-  (match many rs _
-    ((Nil _)
-      (let-match erased lk (LsNil _ _))
-      (values (Nil _) (LsNil _ _)))
-    ((Cons _ r rest)
-      (let-match erased lk (LsCons _ _ x _ xs _ p))
-      (let ((many (Named) r2) (many (List $ Pair (Nat) $ Func all ctx) more))
-        (match many fns _
-          ((Nil _) (values r fns))
-          ((Cons _ pr fr)
-            (let-match many pr (MkPair _ _ _ fn))
-            (match many fn _
-              ((MkFunc _ _ _ _ _ _ _ _ _) (values r fr))
-              ((MkAlias _ _ _ _ target) (values (target-named _ target whole) fr))))))
-      (let ((many rs3) (erased lk3)) $ notail $ alias-named _ _ whole _ rest p more)
-      (values (Cons _ r2 rs3) (LsCons _ _ x r2 xs rs3 lk3)))))
-
-(def-fns _ $ (many group-names : (erased (List $ List $ Nat) ctx) (many (List $ Nat) ids) (many (List $ Pair (Nat) $ Func ids ctx) fns) (many (List $ Named) rs) (erased (Lockstep (Nat) (Named) ids rs) lk) (many (Names ctx) rest) -> (many (Names (Cons (List (Nat)) ids ctx)) r))
-  (let ((many rs2) (erased lk2)) $ alias-named _ _ (NmFrame _ ids rs lk rest) _ rs lk fns)
-  (NmFrame _ ids rs2 lk2 rest))
-
 (def-fns _ $ (many addr-str : (erased (Hist Block) a) (many (Ref Block a) addr) -> (many (String) r))
   (str-cat "a" $ nat-str $ ref-pos Block _ addr))
 
@@ -620,20 +564,6 @@
 ; allocated twice is emitted twice.
 (def-fns _ $ (many member-name : (erased (Hist Block) a) (many (Env) env) (many (Nat) id) (many (Ref Block a) g) -> (many (String) r))
   (str-cat3 (top-name env id) "_" $ addr-str _ g))
-
-(def-fns _ $ (many top-names : (subterm many (List $ Nat) ids) (many (Env) env) (many (Maybe $ String) suffix) -> (many (List $ Named) r) (erased (Lockstep (Nat) (Named) ids r) lk))
-  (let-match many ids (Cons _ x rest) ((Nil _) (values (Nil _) (LsNil _ _))))
-  (let ((many rs) (erased lk)) $ notail $ top-names rest env suffix)
-  (let ((many (Named) r)) $ match many suffix _ ((None _) (NmVal $ RStr $ top-name env x)) ((Some _ s) (NmFn (str-cat (top-name env x) s) x)))
-  (values (Cons _ r rs) (LsCons _ _ x r rest rs lk)))
-
-(def-fns _ $ (many push-names : (erased (List $ List $ Nat) ctx) (many (List $ Nat) ids) (many (Env) env) (many (Names ctx) ns) -> (many (Names (Cons (List (Nat)) ids ctx)) r))
-  (let ((many rs) (erased lk)) $ top-names ids env $ None _)
-  (NmFrame _ ids rs lk ns))
-
-(def-fns _ $ (many push-fn-names : (erased (List $ List $ Nat) ctx) (many (List $ Nat) ids) (many (List $ Pair (Nat) $ Func ids ctx) fns) (many (Env) env) (many (String) suffix) (many (Names ctx) ns) -> (many (Names (Cons (List (Nat)) ids ctx)) r))
-  (let ((many rs) (erased lk)) $ top-names ids env $ Some _ suffix)
-  (group-names _ ids fns rs lk ns))
 
 (def-fns _ $ (many addr-ropes : (erased (Hist Block) a) (subterm many (List $ Ref Block a) vs) -> (many (List $ Rope) rs))
   (match many vs _
@@ -691,65 +621,6 @@
     ((PHandle x rd m _) (rcat3 (RStr "(Obj.repr (") (handle-rope env x rd m) $ RStr "))")))
   (let ((many n) (erased _)) (str-length s))
   (rcat5 (RStr "(Obj.repr ((") (quoted s) (RStr ", 0, ") (nat-rope n) $ RStr ") : Ffi_core.slice))"))
-
-(def-fns _ $ (many named-rope : (many (Named) n) (many (Env) env) -> (many (Rope) r))
-  (match many n _
-    ((NmVal r) r)
-    ((NmFn name _) (RStr $ str-cat3 "(Obj.repr " name ")"))
-    ((NmConst x) (const-rope env x))))
-
-; The names of a group block's captured frames: an address's block by name, a group's members by theirs.
-(def-fns _ $ (many frame-named : (erased (Hist Block) a) (erased (List $ Nat) f) (subterm many (List $ Ref Block a) vs) (erased (Lockstep (Nat) (Ref Block a) f vs) lk) -> (many (List $ Named) rs) (erased (Lockstep (Nat) (Named) f rs) lk2))
-  (match many vs _
-    ((Nil _)
-      (let-match erased lk (LsNil _ _))
-      (values (Nil _) (LsNil _ _)))
-    ((Cons _ v rest)
-      (let-match erased lk (LsCons _ _ x _ xs _ p))
-      (let ((many rs) (erased lk2)) $ notail $ frame-named _ _ rest p)
-      (let ((many r)) $ NmVal $ addr-rope _ v)
-      (values (Cons _ r rs) (LsCons _ _ x r xs rs lk2)))))
-
-(def-fns _ $ (many member-named : (erased (Hist Block) a) (subterm many (List $ Nat) gids) (many (Env) env) (many (Ref Block a) g) -> (many (List $ Named) rs) (erased (Lockstep (Nat) (Named) gids rs) lk))
-  (let-match many gids (Cons _ x rest) ((Nil _) (values (Nil _) (LsNil _ _))))
-  (let ((many rs) (erased lk)) $ notail $ member-named _ rest env g)
-  (let ((many r)) $ NmFn (member-name _ env x g) x)
-  (values (Cons _ r rs) (LsCons _ _ x r rest rs lk)))
-
-(def-fns _ $ (many frame-names : (erased (Hist Block) a) (erased (List $ List $ Nat) ctx) (subterm many (Frames (Ref Block a) ctx) fr) (many (Env) env) -> (many (Names ctx) r))
-  (match many fr _
-    ((FrNil _) (NmNil))
-    ((FrVals _ _ f vs lk rest)
-      (let ((many rs) (erased lk2)) $ frame-named _ _ vs lk)
-      (NmFrame _ f rs lk2 $ notail $ frame-names _ _ rest env))
-    ((FrGroup _ _ gids g grp rest)
-      (let ((many rs) (erased lk2)) $ member-named _ gids env g)
-      (match many grp _ ((MkGroup _ _ fns _) (group-names _ gids fns rs lk2 $ notail $ frame-names _ _ rest env))))))
-
-; ---- The head of a call: a constructor the elaborator saw, a function with an OCaml name, or a value.
-
-(def-adts $ (Head : -> Type)
-  enum
-  (many HCtor : (many (Ctor) c) -> (Head))
-  (many HFn : (many (String) name) (many (Nat) id) -> (Head))
-  (many HDyn : -> (Head)))
-
-(def-fns _ $ (many block-head : (erased (Hist Block) a) (many (Block (Ref Block a)) b) (many (Env) env) -> (many (Head) h))
-  (match many b _
-    ((BCtorFn _ c) (HCtor c))
-    ((BFn _ g _ id) (HFn (member-name _ env id g) id))
-    (else (HDyn))))
-
-(def-fns _ $ (many const-head : (many (Env) env) (many (Nat) x) -> (many (Head) h))
-  (let ((erased _) (many blk)) $ env-block env x)
-  (match many blk _ ((None _) (HDyn)) ((Some _ b) (block-head _ b env))))
-
-(def-fns _ $ (many head-of : (erased (List $ List $ Nat) ctx) (many (Code ctx many-one) f) (many (Env) env) (many (Names ctx) ns) -> (many (Head) h))
-  (let-match many f (CVar _ _ p)
-    ((CConst _ x) (const-head env x))
-    ((CValue _ v) (block-head _ v env))
-    (else (HDyn)))
-  (match many (names-get _ _ p ns) _ ((NmFn name id) (HFn name id)) ((NmConst x) (const-head env x)) ((NmVal _) (HDyn))))
 
 ; The prelude's ADT of a type name.
 ; The prelude's names are found in its scope, as lib/program.ml's driver finds them, however the program
@@ -881,158 +752,6 @@
   (match many xs _
     ((Nil _) (rcat5 (RStr "(let _ = ") rr (RStr " in ") body $ RStr ")"))
     ((Cons _ _ _) (untuple-rope xs rr body))))
-
-(def-fns _ $ (many fusing : (erased (List $ List $ Nat) ctx) (many (List $ Nat) ids) (many (Code ctx many-one) f)
-    (many (Code (Cons (List (Nat)) ids ctx) many-one) scrut) (many (Shape (Cons (List (Nat)) ids ctx)) shape) (many (Env) env) (many (Names ctx) ns) (many (Decls) d) ->
-    (many (Maybe $ Template) r))
-  (let-match many ids (Cons _ x more) ((Nil _) (None _)))
-  (let-match many more (Nil _) ((Cons _ _ _) (None _)))
-  (let-match many scrut (CVar _ y _) (else (None _)))
-  (let-match many shape (ShKnown _ adt) (else (None _)))
-  (let-match many (head-of _ f env ns) (HFn _ id) (else (None _)))
-  (let-match many (find-entry (decl-templates d) "call" "" id) (Some _ t) ((None _) (None _)))
-  (let-match many t (MkTemplate _ _ _ _ outcomes))
-  (match many (and (nat-eqb x y) $ and (not $ list-is-empty _ outcomes) $ nat-list-eq outcomes $ adt-shape adt) _
-    ((BTrue) (Some _ t))
-    ((BFalse) (None _))))
-
-; ---- Code and blocks as OCaml; every piece recurses on the piece it writes.
-
-(def-fns _
-  ((many emit-code : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ms) (subterm many (Code ctx ms) code) (many (Env) env) (many (Names ctx) ns) (many (Decls) d) -> (many (Rope) r))
-    (match many code _
-      ((CVar _ _ p) (named-rope (names-get _ _ p ns) env))
-      ((CConst _ x) (const-rope env x))
-      ((CValue _ v) (tail $ block-rope _ v env d))
-      ((CErased _ _) (RStr "(Obj.repr ())"))
-      ((CValues _ _ cs _) (values-rope (names-depth _ ns) $ notail $ emit-codes _ cs env ns d))
-      ((CApp _ _ f args _)
-        (let ((many ars)) $ notail $ emit-codes _ args env ns d)
-        (match many (head-of _ f env ns) _
-          ((HCtor c) (build-rope d (names-depth _ ns) c ars))
-          ((HFn name id)
-            (let-match many (find-entry (decl-templates d) "call" "" id) (Some _ t)
-              ((None _) (rcat3 (RStr $ str-cat "(" name) (rcat (RStr " ") $ args-rope ars) $ RStr ")")))
-            (let-match many t (MkTemplate _ _ _ ps outcomes))
-            (templated-build d ps outcomes (names-depth _ ns) ars))
-          ((HDyn)
-            (let ((many fr)) $ notail $ emit-code _ _ f env ns d)
-            (dyn-call fr ars))))
-      ((CLet _ _ _ ids _ rhs rest)
-        (let ((many rr)) $ notail $ emit-code _ _ rhs env ns d)
-        (let ((many ns2)) $ push-names _ ids env ns)
-        (let ((many xs)) $ names-of-ids ids env)
-        (let-match many rhs (CApp _ _ f args _) (else (let-rope xs rr $ notail $ emit-code _ _ rest env ns2 d)))
-        (let-match many rest (CMatch _ _ scrut shape branches dfl live) (else (let-rope xs rr $ notail $ emit-code _ _ rest env ns2 d)))
-        (let-match many (fusing _ ids f scrut shape env ns d) (Some _ t) ((None _) (let-rope xs rr $ notail $ emit-code _ _ rest env ns2 d)))
-        (let-match many t (MkTemplate _ _ _ ps outcomes))
-        (let ((many ars)) $ notail $ emit-codes _ args env ns d)
-        (let ((many arms)) $ notail $ emit-arms _ _ branches env ns2 d)
-        (let ((many (Maybe $ Rope) dr)) (match many dfl _ ((None _) (None _)) ((Some _ dd) (Some _ $ notail $ emit-code _ _ dd env (push-names _ (Nil _) env ns2) d))))
-        (templated-fused d ps (names-depth _ ns) ars outcomes live (list-nth-or _ xs 0 $ RStr "_") arms dr))
-      ((CLetRec _ _ _ g rest)
-        (let-match many g (MkGroup _ ids fns _))
-        (let ((many ns3)) $ push-fn-names _ ids fns env "" ns)
-        (match many (notail $ emit-group _ _ fns env ns3 d "") _
-          ((Nil _) (tail $ emit-code _ _ rest env ns3 d))
-          ((Cons _ f1 more) (rcat5 (RStr "(let rec ") (rjoin (Cons _ f1 more) "\nand ") (RStr " in ") (notail $ emit-code _ _ rest env ns3 d) $ RStr ")"))))
-      ((CMatch _ _ scrut shape branches dfl live)
-        (let ((many sr)) $ notail $ emit-code _ _ scrut env ns d)
-        (let ((many (Maybe $ Rope) dr)) (match many dfl _ ((None _) (None _)) ((Some _ dd) (Some _ $ notail $ emit-code _ _ dd env (push-names _ (Nil _) env ns) d))))
-        (let ((many arms)) $ notail $ emit-arms _ _ branches env ns d)
-        (let-match many shape (ShHeld _ mcode adt)
-          ((ShKnown _ adt) (dispatch-rope d (names-depth _ ns) adt live sr arms dr))
-          ((ShNone _) (default-rope dr)))
-        (let ((many mr)) $ notail $ emit-code _ _ mcode env ns d)
-        (let ((many sr2)) $ rcat5 (RStr "((Obj.obj ") mr (RStr " : Obj.t -> Obj.t) ") sr $ RStr ")")
-        (dispatch-rope d (names-depth _ ns) adt live sr2 arms dr))
-
-      ((CCellAlloc _ ctor slots) (plain-build d ctor $ notail $ emit-codes _ slots env ns d))
-      ((CCellWrite _ k2 cell slots imms)
-        (let ((many indices) (many args)) $ notail $ emit-slots _ slots env ns d)
-        (cell-write-rope d k2 (notail $ emit-code _ _ cell env ns d) indices args imms $ names-depth _ ns))
-      ((CCellCopy _ k2 cell slots)
-        (let ((many indices) (many args)) $ notail $ emit-slots _ slots env ns d)
-        (field-copy-rope d k2 (notail $ emit-code _ _ cell env ns d) indices args $ names-depth _ ns))
-      ((CCellRead _ k2 index cell)
-        (field-read-rope d k2 (notail $ emit-code _ _ cell env ns d) index $ str-cat3 "cell" (nat-str $ names-depth _ ns) "_r"))
-      ((CWorldDo _ req) (rcat3 (RStr "(driver.Driver_core.perform world ") (notail $ emit-code _ _ req env ns d) $ RStr ")"))
-      ((CPrim _ _ p args)
-        (let ((many hs)) $ notail $ emit-codes _ args env ns d)
-        (let-match many hs (Cons _ h hidden) ((Nil _) (rcat3 (RStr "(failwith ") (quoted $ no-macro-world p) $ RStr ")")))
-        (let ((many no-ctors)) (RStr "(failwith \"`slot-eq` with no constructors\")"))
-        (let-match many (sp-eq p $ SpExpr $ ExSlotEq) (BFalse)
-          ((BTrue)
-            (let-match many hidden (Cons _ b q1) ((Nil _) no-ctors))
-            (let-match many q1 (Cons _ none q2) ((Nil _) no-ctors))
-            (let-match many q2 (Cons _ some _) ((Nil _) no-ctors))
-            (rcat5 (rcat3 (RStr "(if ") h $ RStr " == ") b (RStr " then ") some $ rcat3 (RStr " else ") none $ RStr ")")))
-        (let-match many (sp-eq p $ SpExpr $ ExSettledValue) (BFalse) ((BTrue) (rcat3 (RStr "(let (_, _, _, v) = (Obj.obj ") h $ RStr " : int * Ffi_core.reading * Ffi_core.mult * Obj.t) in v)")))
-        (let-match many (sp-eq p $ SpExpr $ ExSettledErase) (BFalse)
-          ((BTrue) (rcat3 (RStr "(Obj.repr (let (x, r, _, _) = (Obj.obj ") h $ RStr " : int * Ffi_core.reading * Ffi_core.mult * Obj.t) in (x, r, Ffi_core.Erased, Obj.repr ())))")))
-        (let-match many (sp-eq p $ SpExpr $ ExSettledType) (BFalse)
-          ((BTrue) (rcat5 (RStr "(Obj.repr (match (Obj.obj ") h (RStr " : int * Ffi_core.reading * Ffi_core.mult * Obj.t) with (x, Ffi_core.MintedIs, _, _) -> (x, Ffi_core.MintedType, Ffi_core.Erased, Obj.repr ()) | _ -> (") (handle-rope env type-id (MintedIs) (Erased)) $ RStr ")))")))
-        (let-match many (sp-eq p $ SpExpr $ ExSettledMult) (BTrue) ((BFalse) (rcat3 (RStr "(failwith ") (quoted $ no-macro-world p) $ RStr ")")))
-        (let-match many hidden (Cons _ ce r1) ((Nil _) (RStr "(failwith \"`settled-mult` with no constructors\")")))
-        (let-match many r1 (Cons _ cm r2) ((Nil _) (RStr "(failwith \"`settled-mult` with no constructors\")")))
-        (let-match many r2 (Cons _ cu _) ((Nil _) (RStr "(failwith \"`settled-mult` with no constructors\")")))
-        (rcat5 (rcat3 (RStr "(match (Obj.obj ") h $ RStr " : int * Ffi_core.reading * Ffi_core.mult * Obj.t) with (_, _, Ffi_core.Erased, _) -> ") ce (RStr " | (_, _, Ffi_core.Many, _) -> ") cm $ rcat3 (RStr " | _ -> ") cu $ RStr ")"))
-      ((CAbsurd _ _) (RStr "(absurd ())"))
-      ((CError _ _ m) (rcat3 (RStr "(failwith ") (quoted m) $ RStr ")"))))
-
-  ((many emit-codes : (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) (many (Env) env) (many (Names ctx) ns) (many (Decls) d) -> (many (List $ Rope) rs))
-    (match many cs _
-      ((Nil _) (Nil _))
-      ((Cons _ c rest) (Cons _ (notail $ emit-code _ _ c env ns d) $ notail $ emit-codes _ rest env ns d))))
-
-
-  ((many emit-slots : (erased (List $ List $ Nat) ctx) (subterm many (List $ Pair (Nat) $ Code ctx many-one) slots) (many (Env) env) (many (Names ctx) ns) (many (Decls) d) -> (many (List $ Nat) indices) (many (List $ Rope) args))
-    (let-match many slots (Cons _ slot rest) ((Nil _) (values (Nil _) $ Nil _)))
-    (let-match many slot (MkPair _ _ index code))
-    (let ((many indices) (many args)) $ notail $ emit-slots _ rest env ns d)
-    (values (Cons _ index indices) $ Cons _ (notail $ emit-code _ _ code env ns d) args))
-
-  ((many emit-arms : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ns2) (subterm many (List $ Branch ctx ns2) bs) (many (Env) env) (many (Names ctx) ns) (many (Decls) d) -> (many (List $ Arm) r))
-    (let-match many bs (Cons _ b rest) ((Nil _) (Nil _)))
-    (match many b _
-      ((MkBranch _ _ disc ids body)
-        (Cons _ (MkArm disc (names-of-ids ids env) $ notail $ emit-code _ _ body env (push-names _ ids env ns) d) $ notail $ emit-arms _ _ rest env ns d))))
-
-  ; The definitions of a group, each named by its entry and the suffix.
-  ((many emit-group : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (subterm many (List $ Pair (Nat) $ Func gids ctx) fns) (many (Env) env) (many (Names (Cons (List (Nat)) gids ctx)) ns) (many (Decls) d) (many (String) suffix) -> (many (List $ Rope) r))
-    (let-match many fns (Cons _ p rest) ((Nil _) (Nil _)))
-    (let ((many more)) $ notail $ emit-group _ _ rest env ns d suffix)
-    (let-match many p (MkPair _ _ id fn))
-    (match many fn _
-      ((MkFunc _ _ _ _ _ _ _ _ _) (Cons _ (rcat3 (RStr $ str-cat (top-name env id) suffix) (RStr " ") $ notail $ emit-fn _ _ fn env ns d) more))
-      ((MkAlias _ _ _ _ _) more)))
-
-  ; A function's parameters and body; an extern one is the host's, over its parameters unboxed.
-  ((many emit-fn : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (subterm many (Func gids ctx) fn) (many (Env) env) (many (Names (Cons (List (Nat)) gids ctx)) ns) (many (Decls) d) -> (many (Rope) r))
-    (let-match many fn (MkFunc _ _ _ _ _ params body impl _) ((MkAlias _ _ _ _ _) (REmpty)))
-    (let ((many ps)) $ names-of-ids params env)
-    (let ((many (Rope) b))
-      (match many impl _
-        ((Some _ im)
-          (let-match many im (MkImpl se _))
-          (match many se (((Rope) _)) ((MkSomeExtern _ e) (ffi-call (ext-name _ e) ps env d))))
-        ((None _) (notail $ emit-code _ _ body env (push-names _ params env ns) d))))
-    (rcat3 (params-rope ps) (RStr " : Obj.t = ") b))
-
-  ; A block as one OCaml value, its addresses by name; a function value is its member's closure.
-  ((many block-rope : (erased (Hist Block) a) (subterm many (Block (Ref Block a)) b) (many (Env) env) (many (Decls) d) -> (many (Rope) r))
-    (match many b _
-      ((BTag _ c fields) (build-rope d 0 c $ addr-ropes _ fields))
-      ((BTup _ fields) (tuple-rope $ addr-ropes _ fields))
-      ((BExt _ p) (payload-rope env p))
-      ((BArray _ n es) (rcat3 (RStr "(Obj.repr [|") (rjoin (addr-ropes _ $ idmap-prefix _ es n $ Nil _) "; ") $ RStr "|])"))
-      ((BSlots _ n ks _) (rcat3 (RStr "(Obj.repr (let t = Ffi_core.slots_new () in List.iter (fun k -> ignore (Ffi_core.slots_add t k)) [ ") (rjoin (addr-ropes _ $ idmap-prefix _ ks n $ Nil _) "; ") $ RStr " ]; t))"))
-      ((BCtorFn _ c) (ctor-fn-rope d c))
-      ((BMat _ adt) (matchable-rope adt d))
-      ((BGroup _ _ _ _ _) (RStr "(failwith \"a group as a closed value\")"))
-      ((BFn _ g _ id) (RStr $ str-cat3 "(Obj.repr " (member-name _ env id g) ")"))
-      ((BToken _) (RStr "(Obj.repr ())"))
-      ((BError _ m) (rcat3 (RStr "(failwith ") (quoted m) $ RStr ")")))))
 
 ; ---- The declarations: found by a walk over every block of the store and the code it holds, then written
 ; ahead of the blocks; the narrowed copies come before the shapes, so a bare constructor names the shape's.
@@ -1170,6 +889,1056 @@
   (match many d _
     ((MkDecls shapes2 narrows _ _) (rcat (narrow-decls d narrows) $ shape-decls d shapes2 $ BTrue))))
 
+(def-fns _ $ (many prim-rope : (many (Env) env) (many (Sp) p) (many (List $ Rope) hs) -> (many (Rope) r))
+  (let-match many hs (Cons _ h hidden) ((Nil _) (rcat3 (RStr "(failwith ") (quoted $ no-macro-world p) $ RStr ")")))
+  (let ((many no-ctors)) (RStr "(failwith \"`slot-eq` with no constructors\")"))
+  (let-match many (sp-eq p $ SpExpr $ ExSlotEq) (BFalse)
+    ((BTrue)
+      (let-match many hidden (Cons _ b q1) ((Nil _) no-ctors))
+      (let-match many q1 (Cons _ none q2) ((Nil _) no-ctors))
+      (let-match many q2 (Cons _ some _) ((Nil _) no-ctors))
+      (rcat5 (rcat3 (RStr "(if ") h $ RStr " == ") b (RStr " then ") some $ rcat3 (RStr " else ") none $ RStr ")")))
+  (let-match many (sp-eq p $ SpExpr $ ExSettledValue) (BFalse) ((BTrue) (rcat3 (RStr "(let (_, _, _, v) = (Obj.obj ") h $ RStr " : int * Ffi_core.reading * Ffi_core.mult * Obj.t) in v)")))
+  (let-match many (sp-eq p $ SpExpr $ ExSettledErase) (BFalse)
+    ((BTrue) (rcat3 (RStr "(Obj.repr (let (x, r, _, _) = (Obj.obj ") h $ RStr " : int * Ffi_core.reading * Ffi_core.mult * Obj.t) in (x, r, Ffi_core.Erased, Obj.repr ())))")))
+  (let-match many (sp-eq p $ SpExpr $ ExSettledType) (BFalse)
+    ((BTrue) (rcat5 (RStr "(Obj.repr (match (Obj.obj ") h (RStr " : int * Ffi_core.reading * Ffi_core.mult * Obj.t) with (x, Ffi_core.MintedIs, _, _) -> (x, Ffi_core.MintedType, Ffi_core.Erased, Obj.repr ()) | _ -> (") (handle-rope env type-id (MintedIs) (Erased)) $ RStr ")))")))
+  (let-match many (sp-eq p $ SpExpr $ ExSettledMult) (BTrue) ((BFalse) (rcat3 (RStr "(failwith ") (quoted $ no-macro-world p) $ RStr ")")))
+  (let-match many hidden (Cons _ ce r1) ((Nil _) (RStr "(failwith \"`settled-mult` with no constructors\")")))
+  (let-match many r1 (Cons _ cm r2) ((Nil _) (RStr "(failwith \"`settled-mult` with no constructors\")")))
+  (let-match many r2 (Cons _ cu _) ((Nil _) (RStr "(failwith \"`settled-mult` with no constructors\")")))
+  (rcat5 (rcat3 (RStr "(match (Obj.obj ") h $ RStr " : int * Ffi_core.reading * Ffi_core.mult * Obj.t) with (_, _, Ffi_core.Erased, _) -> ") ce (RStr " | (_, _, Ffi_core.Many, _) -> ") cm $ rcat3 (RStr " | _ -> ") cu $ RStr ")"))
+
+(def-fns _ $ (many block-rope : (erased (Hist Block) a) (subterm many (Block (Ref Block a)) b) (many (Env) env) (many (Decls) d) -> (many (Rope) r))
+  (match many b _
+    ((BTag _ c fields) (build-rope d 0 c $ addr-ropes _ fields))
+    ((BTup _ fields) (tuple-rope $ addr-ropes _ fields))
+    ((BExt _ p) (payload-rope env p))
+    ((BArray _ n es) (rcat3 (RStr "(Obj.repr [|") (rjoin (addr-ropes _ $ idmap-prefix _ es n $ Nil _) "; ") $ RStr "|])"))
+    ((BSlots _ n ks _) (rcat3 (RStr "(Obj.repr (let t = Ffi_core.slots_new () in List.iter (fun k -> ignore (Ffi_core.slots_add t k)) [ ") (rjoin (addr-ropes _ $ idmap-prefix _ ks n $ Nil _) "; ") $ RStr " ]; t))"))
+    ((BCtorFn _ c) (ctor-fn-rope d c))
+    ((BMat _ adt) (matchable-rope adt d))
+    ((BGroup _ _ _ _ _) (RStr "(failwith \"a group as a closed value\")"))
+    ((BFn _ g _ id) (RStr $ str-cat3 "(Obj.repr " (member-name _ env id g) ")"))
+    ((BToken _) (RStr "(Obj.repr ())"))
+    ((BError _ m) (rcat3 (RStr "(failwith ") (quoted m) $ RStr ")"))))
+
+(def-adts $ (Key : -> Type)
+  enum
+  (many KVal : (many (Nat) x) -> (Key))
+  (many KFn : (many (Nat) m) -> (Key)))
+
+(def-fns _ $ (many key-id : (many (Key) k) -> (many (Nat) x))
+  (match many k _ ((KVal x) x) ((KFn x) x)))
+
+(def-fns _ $ (many key-lt : (many (Key) a) (many (Key) b) -> (many (Bool) r))
+  (match many a _
+    ((KVal x) (match many b _ ((KVal y) (nat-lt x y)) ((KFn _) (BTrue))))
+    ((KFn x) (match many b _ ((KVal _) (BFalse)) ((KFn y) (nat-lt x y))))))
+
+(def-fns _ $ (many key-eqb : (many (Key) a) (many (Key) b) -> (many (Bool) r))
+  (and (not $ key-lt a b) $ not $ key-lt b a))
+
+(def-fns _ $ (many key-insert : (many (Key) k) (subterm many (List $ Key) ks) -> (many (List $ Key) r))
+  (let-match many ks (Cons _ h rest) ((Nil _) (Cons _ k $ Nil _)))
+  (let-match many (key-lt k h) (BFalse) ((BTrue) (Cons _ k ks)))
+  (match many (key-eqb k h) _ ((BTrue) ks) ((BFalse) (Cons _ h $ notail $ key-insert k rest))))
+
+(def-fns _ $ (many keys-eqb : (subterm many (List $ Key) a) (many (List $ Key) b) -> (many (Bool) r))
+  (let-match many a (Cons _ x rest) ((Nil _) (list-is-empty _ b)))
+  (let-match many b (Cons _ y more) ((Nil _) (BFalse)))
+  (and (key-eqb x y) $ tail $ keys-eqb rest more))
+
+(def-fns _ $ (many keys-own : (many (List $ Nat) ids) (subterm many (List $ Key) ks) -> (many (Bool) r))
+  (let-match many ks (Cons _ k rest) ((Nil _) (BTrue)))
+  (match many k _
+    ((KVal _) (BFalse))
+    ((KFn m) (and (nat-list-mem ids m) $ tail $ keys-own ids rest))))
+
+(def-fns _ $ (many fac-caps : (many (List $ Nat) ids) (subterm many (List $ Key) ks) -> (many (List $ Key) r))
+  (let-match many ks (Cons _ k rest) ((Nil _) (Nil _)))
+  (let ((many (Bool) own)) $ match many k _ ((KFn m) (nat-list-mem ids m)) ((KVal _) (BFalse)))
+  (match many own _ ((BTrue) (tail $ fac-caps ids rest)) ((BFalse) (Cons _ k $ notail $ fac-caps ids rest))))
+
+(def-adts $ (Target : -> Type)
+  enum
+  (many TgVar : (many (Nat) x) -> (Target))
+  (many TgConst : (many (Nat) x) -> (Target))
+  (many TgNone : -> (Target)))
+
+(def-fns _ $ (many target-of : (erased (List $ List $ Nat) ctx) (many (Code ctx many-one) c) -> (many (Target) t))
+  (match many c _ ((CVar _ x _) (TgVar x)) ((CConst _ x) (TgConst x)) (else (TgNone))))
+
+(def-adts $ (GInfo : -> Type)
+  enum
+  (many MkGInfo : (many (List $ Nat) ids) (many (List $ Nat) arities) (many (List $ Nat) uses) (many (List $ Pair (Nat) (Nat)) heads)
+    (many (IdMap $ Unit) binders) (many (IdMap $ Unit) inner) (many (List $ Nat) consts) (many (Maybe $ Nat) parent) (many (List $ Key) caps) (many (Bool) top) -> (GInfo)))
+
+(def-adts $ (SomeGroup : -> Type)
+  enum
+  (many MkSomeGroup : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (Group gids ctx) g) -> (SomeGroup)))
+
+(def-adts $ (Reg : -> Type)
+  enum
+  (many MkReg : (many (IdMap $ GInfo) infos) (many (IdMap $ SomeGroup) codes) (many (IdMap $ Nat) owner) (many (IdMap $ Target) aliases) (many (List $ Nat) keys) (many (IdMap $ List $ Nat) rets) -> (Reg)))
+
+(def-adts $ (Acc : -> Type)
+  enum
+  (many MkAcc : (many (List $ Nat) uses) (many (List $ Pair (Nat) (Nat)) heads) (many (IdMap $ Unit) binders) (many (IdMap $ Unit) inner) (many (List $ Nat) consts) -> (Acc)))
+
+(let ((many acc-empty)) (MkAcc (Nil _) (Nil _) (MEmpty _) (MEmpty _) (Nil _)))
+(let ((many reg-empty)) (MkReg (MEmpty _) (MEmpty _) (MEmpty _) (MEmpty _) (Nil _) (MEmpty _)))
+
+(def-fns _ $ (many set-add-all : (subterm many (List $ Nat) xs) (many (IdMap $ Unit) s) -> (many (IdMap $ Unit) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) s))
+  (tail $ set-add-all rest $ idmap-set _ x (MkUnit) s))
+
+(def-fns _ $ (many pair-keys : (erased Type V) (subterm many (List $ Pair (Nat) V) ps) (many (List $ Nat) acc) -> (many (List $ Nat) r))
+  (let-match many ps (Cons _ p rest) ((Nil _) acc))
+  (let-match many p (MkPair _ _ k _))
+  (tail $ pair-keys _ rest $ Cons _ k acc))
+
+(def-fns _ $ (many set-union : (many (IdMap $ Unit) a) (many (IdMap $ Unit) b) -> (many (IdMap $ Unit) r))
+  (set-add-all (pair-keys _ (idmap-pairs _ b 1 0 $ Nil _) $ Nil _) a))
+
+(def-fns _ $ (many acc-use : (many (Nat) x) (many (Acc) a) -> (many (Acc) r))
+  (match many a _ ((MkAcc us hs bs ins cs) (MkAcc (Cons _ x us) hs bs ins cs))))
+
+(def-fns _ $ (many acc-head : (many (Nat) x) (many (Nat) n) (many (Acc) a) -> (many (Acc) r))
+  (match many a _ ((MkAcc us hs bs ins cs) (MkAcc us (Cons _ (MkPair _ _ x n) hs) bs ins cs))))
+
+(def-fns _ $ (many acc-bind : (many (Bool) binding) (many (List $ Nat) xs) (many (Acc) a) -> (many (Acc) r))
+  (let-match many binding (BTrue) ((BFalse) a))
+  (match many a _ ((MkAcc us hs bs ins cs) (MkAcc us hs (set-add-all xs bs) ins cs))))
+
+(def-fns _ $ (many acc-const : (many (Nat) x) (many (Acc) a) -> (many (Acc) r))
+  (match many a _ ((MkAcc us hs bs ins cs) (MkAcc us hs bs ins $ Cons _ x cs))))
+
+(def-fns _ $ (many acc-merge : (many (Bool) binding) (many (GInfo) g) (many (Acc) a) -> (many (Acc) r))
+  (let-match many g (MkGInfo ids _ us2 hs2 bs2 is2 cs2 _ _ _))
+  (let-match many a (MkAcc us hs bs ins cs))
+  (MkAcc (rev-onto _ us2 us) (rev-onto _ hs2 hs) (match many binding (((IdMap $ Unit) _)) ((BTrue) (set-union bs bs2)) ((BFalse) bs)) (set-add-all ids $ set-union ins is2) (rev-onto _ cs2 cs)))
+
+(def-fns _ $ (many reg-get : (many (Reg) r) (many (Nat) key) -> (many (Maybe $ GInfo) i))
+  (let-match many r (MkReg infos _ _ _ _ _))
+  (match many (idmap-get _ key infos) _ ((Hit _ _ _ i _) (Some _ i)) ((Miss _ _ _ _) (None _))))
+
+(def-fns _ $ (many reg-put : (many (Reg) r) (many (Nat) key) (many (GInfo) i) -> (many (Reg) r2))
+  (match many r _ ((MkReg infos codes owner aliases keys rets) (MkReg (idmap-set _ key i infos) codes owner aliases keys rets))))
+
+(def-fns _ $ (many reg-owner : (many (Reg) r) (many (Nat) x) -> (many (Maybe $ Nat) k))
+  (let-match many r (MkReg _ _ owner _ _ _))
+  (match many (idmap-get _ x owner) _ ((Hit _ _ _ k _) (Some _ k)) ((Miss _ _ _ _) (None _))))
+
+(def-fns _ $ (many reg-caps : (many (Reg) r) (many (Nat) key) -> (many (List $ Key) caps))
+  (let-match many (reg-get r key) (Some _ i) ((None _) (Nil _)))
+  (let-match many i (MkGInfo _ _ _ _ _ _ _ _ cs _))
+  cs)
+
+(def-fns _ $ (many reg-members : (many (Reg) r) (many (Nat) key) -> (many (List $ Nat) ids))
+  (let-match many (reg-get r key) (Some _ i) ((None _) (Nil _)))
+  (let-match many i (MkGInfo ids _ _ _ _ _ _ _ _ _))
+  ids)
+
+(def-fns _ $ (many reg-closed : (many (Reg) r) (many (Nat) key) -> (many (Bool) b))
+  (list-is-empty _ $ reg-caps r key))
+
+(def-fns _ $ (many reg-ret : (many (Reg) r) (many (Nat) key) -> (many (List $ Nat) ids))
+  (let-match many r (MkReg _ _ _ _ _ rets))
+  (match many (idmap-get _ key rets) _ ((Hit _ _ _ ids _) ids) ((Miss _ _ _ _) (Nil _))))
+
+(def-fns _ $ (many reg-code-of : (many (Reg) r) (many (Nat) key) -> (many (Maybe $ SomeGroup) g))
+  (let-match many r (MkReg _ codes _ _ _ _))
+  (match many (idmap-get _ key codes) _ ((Hit _ _ _ g _) (Some _ g)) ((Miss _ _ _ _) (None _))))
+
+(def-fns _ $ (many reg-resolve-n : (subterm many (Nat) fuel) (many (Reg) r) (many (Nat) x) -> (many (Target) t))
+  (let-match many r (MkReg _ _ _ aliases _ _))
+  (let-match many (idmap-get _ x aliases) (Hit _ _ _ t _) ((Miss _ _ _ _) (TgVar x)))
+  (let-match many t (TgVar y) (else t))
+  (match many fuel _ ((Zero) t) ((Succ k) (tail $ reg-resolve-n k r y))))
+
+(def-fns _ $ (many reg-resolve : (many (Reg) r) (many (Nat) x) -> (many (Target) t))
+  (reg-resolve-n 16 r x))
+
+(def-fns _ $ (many nat-index : (subterm many (List $ Nat) xs) (many (Nat) x) (many (Nat) i) -> (many (Maybe $ Nat) r))
+  (let-match many xs (Cons _ y rest) ((Nil _) (None _)))
+  (match many (nat-eqb x y) _ ((BTrue) (Some _ i)) ((BFalse) (tail $ nat-index rest x $ Succ i))))
+
+(def-fns _ $ (many reg-arity : (many (Reg) r) (many (Nat) key) (many (Nat) x) -> (many (Nat) n))
+  (let-match many (reg-get r key) (Some _ i) ((None _) 0))
+  (let-match many i (MkGInfo ids ars _ _ _ _ _ _ _ _))
+  (let-match many (nat-index ids x 0) (Some _ k) ((None _) 0))
+  (list-nth-or _ ars k 0))
+
+(def-fns _ $ (many owner-set : (subterm many (List $ Nat) ids) (many (Nat) key) (many (IdMap $ Nat) owner) -> (many (IdMap $ Nat) r))
+  (let-match many ids (Cons _ x rest) ((Nil _) owner))
+  (tail $ owner-set rest key $ idmap-set _ x key owner))
+
+(def-fns _ $ (many reg-insert : (many (Reg) r) (many (Nat) key) (many (SomeGroup) sg) (many (List $ Nat) ids) (many (List $ Nat) ars) (many (Acc) a) (many (Maybe $ Nat) parent) (many (Bool) top) -> (many (GInfo) info) (many (Reg) r2))
+  (let-match many a (MkAcc us hs bs ins cs))
+  (let ((many info)) $ MkGInfo ids ars us hs bs ins cs parent (Nil _) top)
+  (let-match many r (MkReg infos codes owner aliases keys rets))
+  (values info $ MkReg (idmap-set _ key info infos) (idmap-set _ key sg codes) (owner-set ids key owner) aliases (Cons _ key keys) rets))
+
+(def-fns _ $ (many reg-parent : (many (Reg) r) (many (Nat) key) (many (Nat) parent) -> (many (Reg) r2))
+  (let-match many (reg-get r key) (Some _ i) ((None _) r))
+  (let-match many i (MkGInfo ids ars us hs bs ins cs p caps top))
+  (match many p _ ((Some _ _) r) ((None _) (reg-put r key $ MkGInfo ids ars us hs bs ins cs (Some _ parent) caps top))))
+
+(def-fns _ $ (many reg-alias : (many (Reg) r) (many (Nat) x) (many (Target) t) -> (many (Reg) r2))
+  (match many r _ ((MkReg infos codes owner aliases keys rets) (MkReg infos codes owner (idmap-set _ x t aliases) keys rets))))
+
+(def-fns _ $ (many group-key : (many (List $ Nat) gids) -> (many (Nat) k))
+  (list-nth-or _ gids 0 0))
+
+(def-fns _
+  ((many reg-code : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ms) (subterm many (Code ctx ms) code) (many (Nat) key) (many (Bool) binding) (many (Acc) a) (many (Reg) r) -> (many (Acc) a2) (many (Reg) r2))
+    (match many code _
+      ((CVar _ x _) (values (acc-use x a) r))
+      ((CConst _ x) (values (acc-const x a) r))
+      ((CValues _ _ cs _) (tail $ reg-codes _ cs key binding a r))
+      ((CApp _ _ f args _)
+        (let ((many (Acc) a1) (many (Reg) r1))
+          (match many f _
+            ((CVar _ x _) (values (acc-head x (list-length _ args) a) r))
+            (else (notail $ reg-code _ _ f key binding a r))))
+        (tail $ reg-codes _ args key binding a1 r1))
+      ((CLet _ _ _ ids _ rhs rest)
+        (let ((many a1) (many r1)) $ notail $ reg-code _ _ rhs key binding (acc-bind binding ids a) r)
+        (tail $ reg-code _ _ rest key binding a1 r1))
+      ((CLetRec _ _ _ g rest)
+        (let-match many g (MkGroup _ gids fns _))
+        (let ((many key2)) $ group-key gids)
+        (let ((many (GInfo) info) (many (Reg) r1))
+          (match many (reg-get r key2) _
+            ((Some _ i) (values i $ reg-parent r key2 key))
+            ((None _)
+              (let ((many a1) (many ids) (many ars) (many r2)) $ notail $ reg-fns _ _ fns key2 (BTrue) acc-empty r)
+              (reg-insert r2 key2 (MkSomeGroup _ _ g) ids ars a1 (Some _ key) $ BFalse))))
+        (tail $ reg-code _ _ rest key binding (acc-merge binding info a) r1))
+      ((CMatch _ _ scrut shape branches dfl _)
+        (let ((many a1) (many r1)) $ notail $ reg-code _ _ scrut key binding a r)
+        (let ((many (Acc) a2) (many (Reg) r2)) $ match many shape _ ((ShHeld _ mcode _) (notail $ reg-code _ _ mcode key binding a1 r1)) (else (values a1 r1)))
+        (let ((many a3) (many r3)) $ notail $ reg-branches _ _ branches key binding a2 r2)
+        (match many dfl _ ((None _) (values a3 r3)) ((Some _ dd) (tail $ reg-code _ _ dd key binding a3 r3))))
+      ((CCellAlloc _ _ slots) (tail $ reg-codes _ slots key binding a r))
+      ((CCellWrite _ _ cell slots _)
+        (let ((many a1) (many r1)) $ notail $ reg-code _ _ cell key binding a r)
+        (tail $ reg-slots _ slots key binding a1 r1))
+      ((CCellCopy _ _ cell slots)
+        (let ((many a1) (many r1)) $ notail $ reg-code _ _ cell key binding a r)
+        (tail $ reg-slots _ slots key binding a1 r1))
+      ((CCellRead _ _ _ cell) (tail $ reg-code _ _ cell key binding a r))
+      ((CWorldDo _ req) (tail $ reg-code _ _ req key binding a r))
+      ((CPrim _ _ _ args) (tail $ reg-codes _ args key binding a r))
+      (else (values a r))))
+
+  ((many reg-codes : (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) (many (Nat) key) (many (Bool) binding) (many (Acc) a) (many (Reg) r) -> (many (Acc) a2) (many (Reg) r2))
+    (let-match many cs (Cons _ c rest) ((Nil _) (values a r)))
+    (let ((many a1) (many r1)) $ notail $ reg-code _ _ c key binding a r)
+    (tail $ reg-codes _ rest key binding a1 r1))
+
+  ((many reg-slots : (erased (List $ List $ Nat) ctx) (subterm many (List $ Pair (Nat) $ Code ctx many-one) slots) (many (Nat) key) (many (Bool) binding) (many (Acc) a) (many (Reg) r) -> (many (Acc) a2) (many (Reg) r2))
+    (let-match many slots (Cons _ slot rest) ((Nil _) (values a r)))
+    (let-match many slot (MkPair _ _ _ c))
+    (let ((many a1) (many r1)) $ notail $ reg-code _ _ c key binding a r)
+    (tail $ reg-slots _ rest key binding a1 r1))
+
+  ((many reg-branches : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ns) (subterm many (List $ Branch ctx ns) bs) (many (Nat) key) (many (Bool) binding) (many (Acc) a) (many (Reg) r) -> (many (Acc) a2) (many (Reg) r2))
+    (let-match many bs (Cons _ b rest) ((Nil _) (values a r)))
+    (let-match many b (MkBranch _ _ _ ids body))
+    (let ((many a1) (many r1)) $ notail $ reg-code _ _ body key binding (acc-bind binding ids a) r)
+    (tail $ reg-branches _ _ rest key binding a1 r1))
+
+  ((many reg-fns : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (subterm many (List $ Pair (Nat) $ Func gids ctx) fns) (many (Nat) key) (many (Bool) binding) (many (Acc) a) (many (Reg) r) -> (many (Acc) a2) (many (List $ Nat) ids) (many (List $ Nat) ars) (many (Reg) r2))
+    (let-match many fns (Cons _ p rest) ((Nil _) (values a (Nil _) (Nil _) r)))
+    (let-match many p (MkPair _ _ _ fn))
+    (let ((many a1) (many ids) (many ars) (many r1)) $ notail $ reg-fns _ _ rest key binding a r)
+    (let-match many fn (MkFunc _ _ _ _ fid params body impl _)
+      ((MkAlias _ _ _ aid target) (values a1 ids ars $ reg-alias r1 aid $ target-of _ target)))
+    (let ((many ab)) $ acc-bind binding params a1)
+    (let ((many (Acc) a2) (many (Reg) r2)) $ match many impl _ ((None _) (notail $ reg-code _ _ body key binding ab r1)) ((Some _ _) (values ab r1)))
+    (values a2 (Cons _ fid ids) (Cons _ (list-length _ params) ars) r2)))
+
+(def-fns _ $ (many reg-block : (erased (Hist Block) a) (many (Block (Ref Block a)) b) (many (Reg) r) -> (many (Reg) r2))
+  (let-match many b (BGroup _ _ _ g fr) (else r))
+  (let-match many g (MkGroup _ gids fns _))
+  (let ((many key)) $ group-key gids)
+  (let-match many (reg-get r key) (None _) ((Some _ _) r))
+  (let ((many (Bool) top)) $ match many fr _ ((FrNil _) (BTrue)) (else (BFalse)))
+  (let ((many a1) (many ids) (many ars) (many r1)) $ reg-fns _ _ fns key (not top) acc-empty r)
+  (let ((many _) (many r2)) $ reg-insert r1 key (MkSomeGroup _ _ g) ids ars a1 (None _) top)
+  r2)
+
+(def-fns _ $ (many caps-onto : (many (IdMap $ Unit) bs) (many (IdMap $ Unit) inner) (subterm many (List $ Key) ks) (many (List $ Key) raw) -> (many (List $ Key) r))
+  (let-match many ks (Cons _ k rest) ((Nil _) raw))
+  (let ((many (Bool) skip)) $ match many k _ ((KVal y) (idmap-mem _ y bs)) ((KFn y) (idmap-mem _ y inner)))
+  (tail $ caps-onto bs inner rest $ match many skip (((List $ Key) _)) ((BTrue) raw) ((BFalse) (key-insert k raw))))
+
+(def-fns _ $ (many cap-refer : (many (Reg) r) (many (Nat) key) (many (GInfo) info) (many (Nat) x0) (many (Bool) value) (many (List $ Key) raw) -> (many (List $ Key) r2))
+  (let-match many info (MkGInfo _ _ _ _ bs inner _ _ _ _))
+  (let-match many (idmap-mem _ x0 bs) (BFalse) ((BTrue) raw))
+  (let-match many (reg-resolve r x0) (TgVar x) (else raw))
+  (let-match many (reg-owner r x) (Some _ hk) ((None _) (key-insert (KVal x) raw)))
+  (let-match many (idmap-mem _ x inner) (BFalse) ((BTrue) raw))
+  (let ((many hcaps)) $ reg-caps r hk)
+  (let ((many (List $ Key) raw1)) $ match many (and value $ not $ list-is-empty _ hcaps) _ ((BTrue) (key-insert (KFn x) raw)) ((BFalse) raw))
+  (match many (nat-eqb hk key) _ ((BTrue) raw1) ((BFalse) (caps-onto bs inner hcaps raw1))))
+
+(def-fns _ $ (many cap-uses : (many (Reg) r) (many (Nat) key) (many (GInfo) info) (subterm many (List $ Nat) xs) (many (List $ Key) raw) -> (many (List $ Key) r2))
+  (let-match many xs (Cons _ x rest) ((Nil _) raw))
+  (tail $ cap-uses r key info rest $ cap-refer r key info x (BTrue) raw))
+
+(def-fns _ $ (many head-valued : (many (Reg) r) (many (Nat) x) (many (Nat) n) -> (many (Bool) b))
+  (let-match many (reg-resolve r x) (TgVar y) (else (BFalse)))
+  (match many (reg-owner r y) _ ((Some _ hk) (not $ nat-eqb n $ reg-arity r hk y)) ((None _) (BFalse))))
+
+(def-fns _ $ (many cap-heads : (many (Reg) r) (many (Nat) key) (many (GInfo) info) (subterm many (List $ Pair (Nat) (Nat)) hs) (many (List $ Key) raw) -> (many (List $ Key) r2))
+  (let-match many hs (Cons _ h rest) ((Nil _) raw))
+  (let-match many h (MkPair _ _ x n))
+  (tail $ cap-heads r key info rest $ cap-refer r key info x (head-valued r x n) raw))
+
+(def-fns _ $ (many analyse-one : (many (Reg) r) (many (Nat) key) -> (many (List $ Key) caps))
+  (let-match many (reg-get r key) (Some _ info) ((None _) (Nil _)))
+  (let-match many info (MkGInfo ids _ us hs _ _ _ _ _ top))
+  (let-match many top (BFalse) ((BTrue) (Nil _)))
+  (let ((many raw)) $ cap-heads r key info hs $ cap-uses r key info us $ Nil _)
+  (match many (keys-own ids raw) _ ((BTrue) (Nil _)) ((BFalse) raw)))
+
+(def-fns _ $ (many reg-set-caps : (many (Reg) r) (many (Nat) key) (many (List $ Key) caps) -> (many (Reg) r2))
+  (let-match many (reg-get r key) (Some _ i) ((None _) r))
+  (let-match many i (MkGInfo ids ars us hs bs ins cs p _ top))
+  (reg-put r key $ MkGInfo ids ars us hs bs ins cs p caps top))
+
+(def-fns _ $ (many analyse-round : (many (Reg) r) (subterm many (List $ Nat) keys) (many (Bool) changed) -> (many (Reg) r2) (many (Bool) c2))
+  (let-match many keys (Cons _ key rest) ((Nil _) (values r changed)))
+  (let ((many caps)) $ analyse-one r key)
+  (match many (keys-eqb caps $ reg-caps r key) _
+    ((BTrue) (tail $ analyse-round r rest changed))
+    ((BFalse) (tail $ analyse-round (reg-set-caps r key caps) rest $ BTrue))))
+
+(def-fns _ $ (many analyse : (subterm many (Nat) fuel) (many (Reg) r) -> (many (Reg) r2))
+  (let-match many fuel (Succ k) ((Zero) r))
+  (let-match many r (MkReg _ _ _ _ keys _))
+  (let ((many r1) (many changed)) $ analyse-round r keys $ BFalse)
+  (match many changed _ ((BTrue) (tail $ analyse k r1)) ((BFalse) r1)))
+
+(def-fns _ $ (many list-map-names : (many (Env) env) (subterm many (List $ Nat) ids) -> (many (List $ Rope) r))
+  (let-match many ids (Cons _ x rest) ((Nil _) (Nil _)))
+  (Cons _ (RStr $ str-cat (top-name env x) "_l") $ notail $ list-map-names env rest))
+
+(def-fns _ $ (many list-map-obj : (many (Env) env) (subterm many (List $ Nat) ids) -> (many (List $ Rope) r))
+  (let-match many ids (Cons _ x rest) ((Nil _) (Nil _)))
+  (Cons _ (RStr $ str-cat3 "Obj.repr " (top-name env x) "_l") $ notail $ list-map-obj env rest))
+
+(def-fns _ $ (many list-map-valued : (many (Env) env) (subterm many (List $ Nat) ids) -> (many (List $ Rope) r))
+  (let-match many ids (Cons _ x rest) ((Nil _) (Nil _)))
+  (Cons _ (RStr $ str-cat (top-name env x) "_v") $ notail $ list-map-valued env rest))
+
+(def-fns _ $ (many cap-slots : (many (Nat) i) (subterm many (List $ Key) ks) -> (many (List $ Rope) r))
+  (let-match many ks (Cons _ _ rest) ((Nil _) (Nil _)))
+  (Cons _ (RStr $ str-cat3 "c.(" (nat-str i) ")") $ notail $ cap-slots (Succ i) rest))
+
+(def-adts $ (Ectx : -> Type)
+  enum
+  (many MkEctx : (many (Env) env) (many (Decls) d) (many (Reg) reg) (many (Nat) cur) (many (Bool) fac) (many (IdMap $ Rope) nm) -> (Ectx)))
+
+(def-fns _ $ (many names-onto : (subterm many (List $ Nat) ids) (many (List $ Rope) rs) (many (IdMap $ Rope) nm) -> (many (IdMap $ Rope) r))
+  (let-match many ids (Cons _ x rest) ((Nil _) nm))
+  (let-match many rs (Cons _ r more) ((Nil _) nm))
+  (tail $ names-onto rest more $ idmap-set _ x r nm))
+
+(def-fns _ $ (many ex-bind : (many (Ectx) cx) (many (List $ Nat) ids) (many (List $ Rope) rs) -> (many (Ectx) r))
+  (match many cx _ ((MkEctx env d reg cur fac nm) (MkEctx env d reg cur fac $ names-onto ids rs nm))))
+
+(def-fns _ $ (many frame-name : (many (Ectx) cx) (many (Nat) x) -> (many (Rope) r))
+  (let-match many cx (MkEctx env _ _ _ _ nm))
+  (match many (idmap-get _ x nm) _ ((Hit _ _ _ r _) r) ((Miss _ _ _ _) (RStr $ top-name env x))))
+
+(def-fns _ $ (many lifted-name : (many (Env) env) (many (Nat) x) -> (many (String) s))
+  (str-cat (top-name env x) "_l"))
+
+(def-fns _ $ (many valued-name : (many (Env) env) (many (Nat) x) -> (many (String) s))
+  (str-cat (top-name env x) "_v"))
+
+(def-fns _ $ (many maker-name : (many (Env) env) (many (Nat) key) -> (many (String) s))
+  (str-cat "mk_" $ top-name env key))
+
+(def-fns _ $ (many obj-repr : (many (String) s) -> (many (Rope) r))
+  (RStr $ str-cat3 "(Obj.repr " s ")"))
+
+(def-fns _ $ (many member-value : (many (Ectx) cx) (many (Nat) hk) (many (Nat) m) -> (many (Rope) r) (many (List $ Nat) w))
+  (let-match many cx (MkEctx env _ reg cur fac _))
+  (let-match many (and fac $ nat-eqb hk cur) (BFalse) ((BTrue) (values (obj-repr $ top-name env m) $ Nil _)))
+  (match many (reg-closed reg hk) _
+    ((BTrue) (values (obj-repr $ lifted-name env m) $ Nil _))
+    ((BFalse) (values (RStr $ valued-name env m) $ Cons _ m $ Nil _))))
+
+(def-fns _ $ (many key-value : (many (Ectx) cx) (many (Key) k) -> (many (Rope) r) (many (List $ Nat) w))
+  (let-match many cx (MkEctx env _ reg _ _ _))
+  (let-match many k (KFn m) ((KVal x) (values (frame-name cx x) $ Nil _)))
+  (match many (reg-owner reg m) _ ((Some _ hk) (member-value cx hk m)) ((None _) (values (RStr $ valued-name env m) $ Nil _))))
+
+(def-fns _ $ (many keys-values : (many (Ectx) cx) (subterm many (List $ Key) ks) -> (many (List $ Rope) rs) (many (List $ Nat) w))
+  (let-match many ks (Cons _ k rest) ((Nil _) (values (Nil _) $ Nil _)))
+  (let ((many r) (many w1)) $ key-value cx k)
+  (let ((many rs) (many w2)) $ notail $ keys-values cx rest)
+  (values (Cons _ r rs) $ rev-onto _ w1 w2))
+
+(def-fns _ $ (many key-params : (many (Env) env) (subterm many (List $ Key) ks) -> (many (List $ Rope) rs))
+  (let-match many ks (Cons _ k rest) ((Nil _) (Nil _)))
+  (let ((many (String) name)) $ match many k _ ((KVal x) (top-name env x)) ((KFn m) (valued-name env m)))
+  (Cons _ (RStr $ str-cat3 "(" name " : Obj.t)") $ notail $ key-params env rest))
+
+(def-adts $ (ConstKind : -> Type)
+  enum
+  (many CkInline : (many (Rope) r) -> (ConstKind))
+  (many CkCtor : (many (Ctor) c) -> (ConstKind))
+  (many CkFn : (many (Nat) hk) (many (Nat) id) -> (ConstKind))
+  (many CkData : (many (Nat) pos) -> (ConstKind)))
+
+(def-fns _ $ (many plain-ctor : (many (Ctor) c) -> (many (Bool) b))
+  (let-match many c (MkCtor _ _ _ _ _ ext _ _))
+  (and (not $ ctor-newtype c) $ match many ext _ ((None _) (BTrue)) ((Some _ _) (BFalse))))
+
+(def-fns _ $ (many block-kind : (erased (Hist Block) a) (many (Block (Ref Block a)) b) (many (Nat) pos) (many (Decls) d) (many (Reg) reg) -> (many (ConstKind) k))
+  (match many b _
+    ((BExt _ p) (match many p _ ((PNat n) (CkInline $ nat-literal n)) ((PHalf n) (CkInline $ nat-literal n)) (else (CkData pos))))
+    ((BToken _) (CkInline $ RStr "(Obj.repr ())"))
+    ((BCtorFn _ c) (CkCtor c))
+    ((BMat _ adt) (CkInline $ matchable-rope adt d))
+    ((BTag _ c fs) (match many (and (list-is-empty _ fs) $ plain-ctor c) _ ((BTrue) (CkInline $ build-rope d 0 c $ Nil _)) ((BFalse) (CkData pos))))
+    ((BFn _ _ _ id)
+      (let-match many (reg-owner reg id) (Some _ hk) ((None _) (CkData pos)))
+      (match many (reg-closed reg hk) _ ((BTrue) (CkFn hk id)) ((BFalse) (CkData pos))))
+    (else (CkData pos))))
+
+(def-fns _ $ (many const-kind : (many (Env) env) (many (Decls) d) (many (Reg) reg) (many (Nat) x) -> (many (ConstKind) k))
+  (let ((erased hs) (many hp) (many en) (many _)) $ env-store env)
+  (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (CkInline $ RStr "(failwith \"unbound constant\")")))
+  (let-match many info (MkEInfo _ _ _ s _ _ _ _))
+  (let-match many s (SSettled _ v _) ((SHypothetical _) (CkInline $ RStr "(failwith \"a Hypothetical constant\")")))
+  (let ((erased _) (many b) (erased _)) $ store-read Block hs hp v)
+  (block-kind _ b (ref-pos Block _ v) d reg))
+
+(def-fns _ $ (many data-name : (many (Nat) pos) -> (many (String) s))
+  (str-cat "c" $ nat-str pos))
+
+(def-fns _ $ (many const-value : (many (Ectx) cx) (many (Nat) x) -> (many (Rope) r) (many (List $ Nat) w))
+  (let-match many cx (MkEctx env d reg _ _ _))
+  (match many (const-kind env d reg x) _
+    ((CkInline r) (values r $ Nil _))
+    ((CkCtor c) (values (ctor-fn-rope d c) $ Nil _))
+    ((CkFn hk id) (member-value cx hk id))
+    ((CkData pos) (values (RStr $ data-name pos) $ Nil _))))
+
+(def-fns _ $ (many var-value : (many (Ectx) cx) (many (Nat) x0) -> (many (Rope) r) (many (List $ Nat) w))
+  (let-match many cx (MkEctx env _ reg _ _ _))
+  (let-match many (reg-resolve reg x0) (TgVar x)
+    ((TgConst y) (const-value cx y))
+    ((TgNone) (values (RStr "(failwith \"internal: an alias with no target\")") $ Nil _)))
+  (match many (reg-owner reg x) _ ((Some _ hk) (member-value cx hk x)) ((None _) (values (frame-name cx x) $ Nil _))))
+
+(def-adts $ (Head : -> Type)
+  enum
+  (many HCtor : (many (Ctor) c) -> (Head))
+  (many HKnown : (many (Nat) hk) (many (Nat) id) -> (Head))
+  (many HDyn : -> (Head)))
+
+(def-fns _ $ (many const-head : (many (Ectx) cx) (many (Nat) x) -> (many (Head) h))
+  (let-match many cx (MkEctx env d reg _ _ _))
+  (match many (const-kind env d reg x) _ ((CkCtor c) (HCtor c)) ((CkFn hk id) (HKnown hk id)) (else (HDyn))))
+
+(def-fns _ $ (many head-of : (erased (List $ List $ Nat) ctx) (many (Code ctx many-one) f) (many (Ectx) cx) -> (many (Head) h))
+  (let-match many cx (MkEctx _ _ reg _ _ _))
+  (match many f _
+    ((CVar _ x0 _)
+      (let-match many (reg-resolve reg x0) (TgVar x) ((TgConst y) (const-head cx y)) ((TgNone) (HDyn)))
+      (match many (reg-owner reg x) _ ((Some _ hk) (HKnown hk x)) ((None _) (HDyn))))
+    ((CConst _ x) (const-head cx x))
+    ((CValue _ v) (match many v _ ((BCtorFn _ c) (HCtor c)) (else (HDyn))))
+    (else (HDyn))))
+
+(def-fns _ $ (many known-call : (many (Ectx) cx) (many (Nat) depth) (many (Nat) hk) (many (Nat) id) (many (List $ Rope) ars) -> (many (Rope) r) (many (List $ Nat) w))
+  (let-match many cx (MkEctx env d reg cur fac _))
+  (let-match many (find-entry (decl-templates d) "call" "" id) (None _)
+    ((Some _ t)
+      (let-match many t (MkTemplate _ _ _ ps outcomes))
+      (values (templated-build d ps outcomes depth ars) $ Nil _)))
+  (let-match many (nat-eqb (list-length _ ars) $ reg-arity reg hk id) (BTrue)
+    ((BFalse)
+      (let ((many fr) (many w)) $ member-value cx hk id)
+      (values (dyn-call fr ars) w)))
+  (let-match many (and fac $ nat-eqb hk cur) (BFalse)
+    ((BTrue) (values (rcat3 (RStr $ str-cat "(" $ top-name env id) (rcat (RStr " ") $ args-rope ars) $ RStr ")") $ Nil _)))
+  (let ((many caps) (many w)) $ keys-values cx $ reg-caps reg hk)
+  (values (rcat3 (RStr $ str-cat "(" $ lifted-name env id) (rcat (RStr " ") $ rjoin (rev-onto _ (list-rev _ caps) $ Cons _ (args-rope ars) $ Nil _) " ") $ RStr ")") w))
+
+(def-fns _ $ (many split-wanted : (many (List $ Nat) ids) (subterm many (List $ Nat) w) (many (List $ Nat) here) (many (List $ Nat) others) -> (many (List $ Nat) h) (many (List $ Nat) o))
+  (let-match many w (Cons _ x rest) ((Nil _) (values here others)))
+  (match many (nat-list-mem ids x) _
+    ((BTrue) (tail $ split-wanted ids rest (match many (nat-list-mem here x) (((List $ Nat) _)) ((BTrue) here) ((BFalse) (Cons _ x here))) others))
+    ((BFalse) (tail $ split-wanted ids rest here $ Cons _ x others))))
+
+(def-fns _ $ (many site-names : (many (Env) env) (subterm many (List $ Nat) rets) (many (List $ Nat) here) -> (many (List $ Rope) r))
+  (let-match many rets (Cons _ m rest) ((Nil _) (Nil _)))
+  (Cons _ (RStr $ match many (nat-list-mem here m) _ ((BTrue) (valued-name env m)) ((BFalse) "_")) $ notail $ site-names env rest here))
+
+(def-fns _ $ (many tuple-of : (many (List $ Rope) rs) -> (many (Rope) r))
+  (let-match many rs (Cons _ r rest) ((Nil _) (RStr "()")))
+  (match many rest _ ((Nil _) r) ((Cons _ _ _) (rcat3 (RStr "(") (commas rs) $ RStr ")"))))
+
+(def-fns _ $ (many site-wrap : (many (Ectx) cx) (many (Nat) key) (many (Rope) body) (many (List $ Nat) w) -> (many (Rope) r) (many (List $ Nat) w2))
+  (let-match many cx (MkEctx env _ reg _ _ _))
+  (let ((many ids)) $ reg-members reg key)
+  (let ((many here) (many others)) $ split-wanted ids w (Nil _) $ Nil _)
+  (let-match many here (Cons _ _ _) ((Nil _) (values body w)))
+  (let ((many caps) (many w2)) $ keys-values cx $ fac-caps ids $ reg-caps reg key)
+  (let ((many pat)) $ tuple-of $ site-names env (reg-ret reg key) here)
+  (values (rcat5 (RStr "(let ") pat (RStr " = ") (rcat3 (RStr $ maker-name env key) (RStr " ") $ args-rope caps) (rcat3 (RStr " in ") body $ RStr ")")) $ rev-onto _ w2 others))
+
+(def-fns _ $ (many fusing : (erased (List $ List $ Nat) ctx) (many (List $ Nat) ids) (many (Code ctx many-one) f)
+    (many (Code (Cons (List (Nat)) ids ctx) many-one) scrut) (many (Shape (Cons (List (Nat)) ids ctx)) shape) (many (Ectx) cx) ->
+    (many (Maybe $ Template) r))
+  (let-match many cx (MkEctx _ d _ _ _ _))
+  (let-match many ids (Cons _ x more) ((Nil _) (None _)))
+  (let-match many more (Nil _) ((Cons _ _ _) (None _)))
+  (let-match many scrut (CVar _ y _) (else (None _)))
+  (let-match many shape (ShKnown _ adt) (else (None _)))
+  (let-match many (head-of _ f cx) (HKnown _ id) (else (None _)))
+  (let-match many (find-entry (decl-templates d) "call" "" id) (Some _ t) ((None _) (None _)))
+  (let-match many t (MkTemplate _ _ _ _ outcomes))
+  (match many (and (nat-eqb x y) $ and (not $ list-is-empty _ outcomes) $ nat-list-eq outcomes $ adt-shape adt) _
+    ((BTrue) (Some _ t))
+    ((BFalse) (None _))))
+
+(def-fns _
+  ((many emit-code : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ms) (subterm many (Code ctx ms) code) (many (Ectx) cx) (many (Nat) depth) -> (many (Rope) r) (many (List $ Nat) w))
+    (let-match many cx (MkEctx env d _ _ _ _))
+    (match many code _
+      ((CVar _ x _) (var-value cx x))
+      ((CConst _ x) (const-value cx x))
+      ((CValue _ v) (values (block-rope _ v env d) $ Nil _))
+      ((CErased _ _) (values (RStr "(Obj.repr ())") $ Nil _))
+      ((CValues _ _ cs _)
+        (let ((many rs) (many w)) $ notail $ emit-codes _ cs cx depth)
+        (values (values-rope depth rs) w))
+      ((CApp _ _ f args _)
+        (let ((many ars) (many w1)) $ notail $ emit-codes _ args cx depth)
+        (match many (head-of _ f cx) _
+          ((HCtor c) (values (build-rope d depth c ars) w1))
+          ((HKnown hk id)
+            (let ((many r) (many w2)) $ known-call cx depth hk id ars)
+            (values r $ rev-onto _ w2 w1))
+          ((HDyn)
+            (let ((many fr) (many w2)) $ notail $ emit-code _ _ f cx depth)
+            (values (dyn-call fr ars) $ rev-onto _ w2 w1))))
+      ((CLet _ _ _ ids _ rhs rest)
+        (let ((many rr) (many w1)) $ notail $ emit-code _ _ rhs cx depth)
+        (let ((many xs)) $ names-of-ids ids env)
+        (let ((many (Maybe $ Template) fz))
+          (match many rhs _
+            ((CApp _ _ f _ _) (match many rest _ ((CMatch _ _ scrut shape _ _ _) (fusing _ ids f scrut shape cx)) (else (None _))))
+            (else (None _))))
+        (let ((many cxr)) $ ex-bind cx ids xs)
+        (let-match many fz (Some _ t)
+          ((None _)
+            (let ((many br) (many w2)) $ notail $ emit-code _ _ rest cxr $ Succ depth)
+            (values (let-rope xs rr br) $ rev-onto _ w2 w1)))
+        (let-match many t (MkTemplate _ _ _ ps outcomes))
+        (let-match many rhs (CApp _ _ _ args _) (else (values rr w1)))
+        (let-match many rest (CMatch _ _ _ _ branches dfl live) (else (values rr w1)))
+        (let ((many ars) (many w2)) $ notail $ emit-codes _ args cx depth)
+        (let ((many arms) (many w3)) $ notail $ emit-arms _ _ branches cxr $ Succ depth)
+        (let ((many (Maybe $ Rope) dr) (many (List $ Nat) w4))
+          (match many dfl _
+            ((None _) (values (None _) $ Nil _))
+            ((Some _ dd)
+              (let ((many r4) (many w5)) $ notail $ emit-code _ _ dd cxr $ Succ $ Succ depth)
+              (values (Some _ r4) w5))))
+        (values (templated-fused d ps depth ars outcomes live (list-nth-or _ xs 0 $ RStr "_") arms dr) $ rev-onto _ w1 $ rev-onto _ w2 $ rev-onto _ w3 w4))
+      ((CLetRec _ _ _ g rest)
+        (let-match many g (MkGroup _ gids _ _))
+        (let ((many br) (many w1)) $ notail $ emit-code _ _ rest cx $ Succ depth)
+        (site-wrap cx (group-key gids) br w1))
+      ((CMatch _ _ scrut shape branches dfl live)
+        (let ((many sr) (many w1)) $ notail $ emit-code _ _ scrut cx depth)
+        (let ((many (Maybe $ Rope) dr) (many (List $ Nat) w2))
+          (match many dfl _
+            ((None _) (values (None _) $ Nil _))
+            ((Some _ dd)
+              (let ((many r4) (many w5)) $ notail $ emit-code _ _ dd cx $ Succ depth)
+              (values (Some _ r4) w5))))
+        (let ((many arms) (many w3)) $ notail $ emit-arms _ _ branches cx depth)
+        (let ((many w4)) $ rev-onto _ w1 $ rev-onto _ w2 w3)
+        (let-match many shape (ShHeld _ mcode adt)
+          ((ShKnown _ adt) (values (dispatch-rope d depth adt live sr arms dr) w4))
+          ((ShNone _) (values (default-rope dr) w4)))
+        (let ((many mr) (many w5)) $ notail $ emit-code _ _ mcode cx depth)
+        (values (dispatch-rope d depth adt live (rcat5 (RStr "((Obj.obj ") mr (RStr " : Obj.t -> Obj.t) ") sr $ RStr ")") arms dr) $ rev-onto _ w5 w4))
+      ((CCellAlloc _ ctor slots)
+        (let ((many rs) (many w)) $ notail $ emit-codes _ slots cx depth)
+        (values (plain-build d ctor rs) w))
+      ((CCellWrite _ k2 cell slots imms)
+        (let ((many indices) (many args) (many w1)) $ notail $ emit-slots _ slots cx depth)
+        (let ((many cr) (many w2)) $ notail $ emit-code _ _ cell cx depth)
+        (values (cell-write-rope d k2 cr indices args imms depth) $ rev-onto _ w2 w1))
+      ((CCellCopy _ k2 cell slots)
+        (let ((many indices) (many args) (many w1)) $ notail $ emit-slots _ slots cx depth)
+        (let ((many cr) (many w2)) $ notail $ emit-code _ _ cell cx depth)
+        (values (field-copy-rope d k2 cr indices args depth) $ rev-onto _ w2 w1))
+      ((CCellRead _ k2 index cell)
+        (let ((many cr) (many w)) $ notail $ emit-code _ _ cell cx depth)
+        (values (field-read-rope d k2 cr index $ str-cat3 "cell" (nat-str depth) "_r") w))
+      ((CWorldDo _ req)
+        (let ((many rr) (many w)) $ notail $ emit-code _ _ req cx depth)
+        (values (rcat3 (RStr "(driver.Driver_core.perform world ") rr $ RStr ")") w))
+      ((CPrim _ _ p args)
+        (let ((many hs) (many w)) $ notail $ emit-codes _ args cx depth)
+        (values (prim-rope env p hs) w))
+      ((CAbsurd _ _) (values (RStr "(absurd ())") $ Nil _))
+      ((CError _ _ m) (values (rcat3 (RStr "(failwith ") (quoted m) $ RStr ")") $ Nil _))))
+
+  ((many emit-codes : (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) (many (Ectx) cx) (many (Nat) depth) -> (many (List $ Rope) rs) (many (List $ Nat) w))
+    (let-match many cs (Cons _ c rest) ((Nil _) (values (Nil _) $ Nil _)))
+    (let ((many r) (many w1)) $ notail $ emit-code _ _ c cx depth)
+    (let ((many rs) (many w2)) $ notail $ emit-codes _ rest cx depth)
+    (values (Cons _ r rs) $ rev-onto _ w1 w2))
+
+  ((many emit-slots : (erased (List $ List $ Nat) ctx) (subterm many (List $ Pair (Nat) $ Code ctx many-one) slots) (many (Ectx) cx) (many (Nat) depth) -> (many (List $ Nat) indices) (many (List $ Rope) args) (many (List $ Nat) w))
+    (let-match many slots (Cons _ slot rest) ((Nil _) (values (Nil _) (Nil _) $ Nil _)))
+    (let-match many slot (MkPair _ _ index c))
+    (let ((many indices) (many args) (many w1)) $ notail $ emit-slots _ rest cx depth)
+    (let ((many r) (many w2)) $ notail $ emit-code _ _ c cx depth)
+    (values (Cons _ index indices) (Cons _ r args) $ rev-onto _ w2 w1))
+
+  ((many emit-arms : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ns2) (subterm many (List $ Branch ctx ns2) bs) (many (Ectx) cx) (many (Nat) depth) -> (many (List $ Arm) r) (many (List $ Nat) w))
+    (let-match many cx (MkEctx env _ _ _ _ _))
+    (let-match many bs (Cons _ b rest) ((Nil _) (values (Nil _) $ Nil _)))
+    (let-match many b (MkBranch _ _ disc ids body))
+    (let ((many xs)) $ names-of-ids ids env)
+    (let ((many br) (many w1)) $ notail $ emit-code _ _ body (ex-bind cx ids xs) $ Succ depth)
+    (let ((many arms) (many w2)) $ notail $ emit-arms _ _ rest cx depth)
+    (values (Cons _ (MkArm disc xs br) arms) $ rev-onto _ w1 w2)))
+
+(def-fns _ $ (many fn-body : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (Func gids ctx) fn) (many (Ectx) cx) -> (many (Rope) r))
+  (let-match many cx (MkEctx env d _ _ _ _))
+  (let-match many fn (MkFunc _ _ _ _ _ params body impl _) ((MkAlias _ _ _ _ _) (REmpty)))
+  (match many impl _
+    ((Some _ im)
+      (let-match many im (MkImpl se _))
+      (match many se _ ((MkSomeExtern _ e) (ffi-call (ext-name _ e) (names-of-ids params env) env d))))
+    ((None _) (let ((many r) (many _)) $ emit-code _ _ body (ex-bind cx params $ names-of-ids params env) 0) r)))
+
+(def-fns _ $ (many fn-defs : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (subterm many (List $ Pair (Nat) $ Func gids ctx) fns) (many (Ectx) cx) (many (List $ Rope) caps) (many (Bool) local) -> (many (List $ Rope) r))
+  (let-match many fns (Cons _ p rest) ((Nil _) (Nil _)))
+  (let-match many p (MkPair _ _ _ fn))
+  (let ((many more)) $ notail $ fn-defs _ _ rest cx caps local)
+  (let-match many fn (MkFunc _ _ _ _ fid params _ _ _) ((MkAlias _ _ _ _ _) more))
+  (let-match many cx (MkEctx env _ _ _ _ _))
+  (let ((many (String) name)) $ match many local _ ((BTrue) (top-name env fid)) ((BFalse) (lifted-name env fid)))
+  (let ((many ps)) $ rjoin (rev-onto _ (list-rev _ caps) $ Cons _ (params-rope $ names-of-ids params env) $ Nil _) " ")
+  (Cons _ (rcat5 (RStr name) (RStr " ") ps (RStr " : Obj.t = ") $ fn-body _ _ fn cx) more))
+
+(def-fns _ $ (many factory-ret : (many (Env) env) (subterm many (List $ Nat) rets) -> (many (List $ Rope) r))
+  (let-match many rets (Cons _ m rest) ((Nil _) (Nil _)))
+  (Cons _ (obj-repr $ top-name env m) $ notail $ factory-ret env rest))
+
+(def-fns _ $ (many group-defs : (many (Env) env) (many (Decls) d) (many (Reg) reg) (many (Nat) key) -> (many (List $ Rope) defs) (many (List $ Rope) names))
+  (let-match many (reg-code-of reg key) (Some _ sg) ((None _) (values (Nil _) $ Nil _)))
+  (let-match many sg (MkSomeGroup _ _ g))
+  (let-match many g (MkGroup _ _ fns _))
+  (let ((many ids)) $ reg-members reg key)
+  (let ((many caps)) $ reg-caps reg key)
+  (let ((many lifted)) $ fn-defs _ _ fns (MkEctx env d reg key (BFalse) $ MEmpty _) (key-params env caps) $ BFalse)
+  (let ((many lnames)) $ list-map-names env ids)
+  (let ((many rets)) $ reg-ret reg key)
+  (let-match many (and (not $ list-is-empty _ caps) $ not $ list-is-empty _ rets) (BTrue) ((BFalse) (values lifted lnames)))
+  (let ((many (List $ Rope) fps)) $ match many (fac-caps ids caps) _ ((Nil _) (Cons _ (RStr "()") $ Nil _)) ((Cons _ k ks) (key-params env $ Cons _ k ks)))
+  (let ((many locals)) $ fn-defs _ _ fns (MkEctx env d reg key (BTrue) $ MEmpty _) (Nil _) $ BTrue)
+  (let ((many fac)) $ rcat5 (RStr $ maker-name env key) (RStr " ") (rjoin fps " ") (rcat3 (RStr " =\n  let rec ") (rjoin locals "\n  and ") $ RStr " in\n  ") $ tuple-of $ factory-ret env rets)
+  (values (Cons _ fac lifted) $ Cons _ (RStr $ maker-name env key) lnames))
+
+(def-fns _ $ (many frame-ref : (erased (Hist Block) a) (erased (List $ List $ Nat) ctx) (subterm many (Frames (Ref Block a) ctx) fr) (many (Nat) x) -> (many (Maybe $ Ref Block a) r))
+  (match many fr _
+    ((FrNil _) (None _))
+    ((FrVals _ _ f vs _ rest)
+      (let-match many (nat-index f x 0) (Some _ i) ((None _) (tail $ frame-ref _ _ rest x)))
+      (match many (list-nth _ vs i) _ ((NthHit _ _ _ v _) (Some _ v)) ((NthMiss _ _ _ _) (None _))))
+    ((FrGroup _ _ gids g _ rest) (match many (nat-list-mem gids x) _ ((BTrue) (Some _ g)) ((BFalse) (tail $ frame-ref _ _ rest x))))))
+
+(def-fns _ $ (many caps-refs : (erased (Hist Block) a) (erased (List $ List $ Nat) ctx) (many (Frames (Ref Block a) ctx) fr) (subterm many (List $ Key) ks) (many (List $ Ref Block a) acc) -> (many (List $ Ref Block a) r))
+  (let-match many ks (Cons _ k rest) ((Nil _) acc))
+  (tail $ caps-refs _ _ fr rest $ match many (frame-ref _ _ fr $ key-id k) (((List $ Ref Block a) _)) ((Some _ v) (Cons _ v acc)) ((None _) acc)))
+
+(def-fns _ $ (many group-refs : (erased (Hist Block) a) (erased (List $ Nat) gids0) (erased (List $ List $ Nat) ctx) (many (Group gids0 ctx) g) (many (Frames (Ref Block a) ctx) fr) (many (Reg) reg) -> (many (List $ Ref Block a) r))
+  (let-match many g (MkGroup _ gids _ _))
+  (let ((many key)) $ group-key gids)
+  (caps-refs _ _ fr (fac-caps (reg-members reg key) $ reg-caps reg key) $ Nil _))
+
+(def-fns _ $ (many want-add : (many (Nat) m) (many (Reg) r) (many (IdMap $ List $ Nat) want) -> (many (IdMap $ List $ Nat) w2))
+  (let-match many (reg-resolve r m) (TgVar y) (else want))
+  (let-match many (reg-owner r y) (Some _ hk) ((None _) want))
+  (let ((many (List $ Nat) cur)) $ match many (idmap-get _ hk want) _ ((Hit _ _ _ l _) l) ((Miss _ _ _ _) (Nil _)))
+  (idmap-set _ hk (Cons _ y cur) want))
+
+(def-fns _ $ (many want-uses : (many (Reg) r) (subterm many (List $ Nat) xs) (many (IdMap $ List $ Nat) want) -> (many (IdMap $ List $ Nat) w2))
+  (let-match many xs (Cons _ x rest) ((Nil _) want))
+  (tail $ want-uses r rest $ want-add x r want))
+
+(def-fns _ $ (many want-heads : (many (Reg) r) (subterm many (List $ Pair (Nat) (Nat)) hs) (many (IdMap $ List $ Nat) want) -> (many (IdMap $ List $ Nat) w2))
+  (let-match many hs (Cons _ h rest) ((Nil _) want))
+  (let-match many h (MkPair _ _ x n))
+  (tail $ want-heads r rest $ match many (head-valued r x n) (((IdMap $ List $ Nat) _)) ((BTrue) (want-add x r want)) ((BFalse) want)))
+
+(def-fns _ $ (many want-caps : (many (Reg) r) (subterm many (List $ Key) ks) (many (IdMap $ List $ Nat) want) -> (many (IdMap $ List $ Nat) w2))
+  (let-match many ks (Cons _ k rest) ((Nil _) want))
+  (tail $ want-caps r rest $ match many k (((IdMap $ List $ Nat) _)) ((KFn m) (want-add m r want)) ((KVal _) want)))
+
+(def-fns _ $ (many want-pass : (many (Reg) r) (subterm many (List $ Nat) keys) (many (IdMap $ List $ Nat) want) -> (many (IdMap $ List $ Nat) w2))
+  (let-match many keys (Cons _ key rest) ((Nil _) want))
+  (let-match many (reg-get r key) (Some _ info) ((None _) (tail $ want-pass r rest want)))
+  (let-match many info (MkGInfo _ _ us hs _ _ _ _ caps _))
+  (tail $ want-pass r rest $ want-caps r caps $ want-heads r hs $ want-uses r us want))
+
+(def-fns _ $ (many held-pass : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Ref Block hs) refs) (many (Reg) r) (many (IdMap $ List $ Nat) held) -> (many (IdMap $ List $ Nat) out))
+  (let-match many refs (Cons _ v rest) ((Nil _) held))
+  (let ((erased _) (many b) (erased _)) $ store-read Block hs hp v)
+  (tail $ held-pass _ hp rest r $ match many b (((IdMap $ List $ Nat) _)) ((BFn _ _ _ id) (want-add id r held)) (else held)))
+
+(def-fns _ $ (many map-list : (many (IdMap $ List $ Nat) m) (many (Nat) k) -> (many (List $ Nat) l))
+  (match many (idmap-get _ k m) _ ((Hit _ _ _ l _) l) ((Miss _ _ _ _) (Nil _))))
+
+(def-fns _ $ (many rets-of : (subterm many (List $ Nat) ids) (many (List $ Nat) held) (many (List $ Nat) want) (many (Bool) closed) -> (many (List $ Nat) r))
+  (let-match many ids (Cons _ m rest) ((Nil _) (Nil _)))
+  (let ((many more)) $ notail $ rets-of rest held want closed)
+  (match many (or (nat-list-mem held m) $ and (not closed) $ nat-list-mem want m) _ ((BTrue) (Cons _ m more)) ((BFalse) more)))
+
+(def-fns _ $ (many set-rets : (many (Reg) r) (subterm many (List $ Nat) keys) (many (IdMap $ List $ Nat) held) (many (IdMap $ List $ Nat) want) -> (many (Reg) r2))
+  (let-match many keys (Cons _ key rest) ((Nil _) r))
+  (let ((many ids)) $ rets-of (reg-members r key) (map-list held key) (map-list want key) $ reg-closed r key)
+  (let-match many r (MkReg infos codes owner aliases ks rets))
+  (tail $ set-rets (MkReg infos codes owner aliases ks $ idmap-set _ key ids rets) rest held want))
+
+(def-fns _ $ (many owners-of : (many (Reg) r) (subterm many (List $ Nat) xs) (many (List $ Nat) acc) -> (many (List $ Nat) out))
+  (let-match many xs (Cons _ x rest) ((Nil _) acc))
+  (let ((many (List $ Nat) acc1)) $ match many (reg-resolve r x) _ ((TgVar y) (match many (reg-owner r y) _ ((Some _ k) (Cons _ k acc)) ((None _) acc))) (else acc))
+  (tail $ owners-of r rest acc1))
+
+(def-fns _ $ (many head-ids : (subterm many (List $ Pair (Nat) (Nat)) hs) (many (List $ Nat) acc) -> (many (List $ Nat) r))
+  (let-match many hs (Cons _ h rest) ((Nil _) acc))
+  (let-match many h (MkPair _ _ x _))
+  (tail $ head-ids rest $ Cons _ x acc))
+
+(def-fns _ $ (many reach : (subterm many (Nat) fuel) (many (Reg) r) (many (List $ Nat) work) (many (IdMap $ Unit) seen) -> (many (IdMap $ Unit) out))
+  (let-match many fuel (Succ k) ((Zero) seen))
+  (let-match many work (Cons _ key rest) ((Nil _) seen))
+  (let-match many (idmap-mem _ key seen) (BFalse) ((BTrue) (tail $ reach k r rest seen)))
+  (let-match many (reg-get r key) (Some _ info) ((None _) (tail $ reach k r rest seen)))
+  (let-match many info (MkGInfo _ _ us hs _ inner _ _ _ _))
+  (let ((many more)) $ owners-of r us $ owners-of r (head-ids hs $ Nil _) $ owners-of r (pair-keys _ (idmap-pairs _ inner 1 0 $ Nil _) $ Nil _) rest)
+  (tail $ reach k r more $ idmap-set _ key (MkUnit) seen))
+
+(def-fns _ $ (many instance-keys : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Ref Block hs) refs) (many (List $ Nat) acc) -> (many (List $ Nat) r))
+  (let-match many refs (Cons _ v rest) ((Nil _) acc))
+  (let ((erased _) (many b) (erased _)) $ store-read Block hs hp v)
+  (tail $ instance-keys _ hp rest $ match many b (((List $ Nat) _)) ((BGroup _ _ _ g _) (match many g _ ((MkGroup _ gids _ _) (Cons _ (group-key gids) acc)))) (else acc)))
+
+(def-fns _ $ (many reached-consts : (many (Reg) r) (subterm many (List $ Nat) keys) (many (List $ Nat) acc) -> (many (List $ Nat) out))
+  (let-match many keys (Cons _ key rest) ((Nil _) acc))
+  (let-match many (reg-get r key) (Some _ info) ((None _) (tail $ reached-consts r rest acc)))
+  (let-match many info (MkGInfo _ _ _ _ _ _ cs _ _ _))
+  (tail $ reached-consts r rest $ rev-onto _ cs acc))
+
+(def-fns _ $ (many collect-reached : (many (Reg) r) (subterm many (List $ Nat) keys) (many (Env) env) (many (Decls) d) -> (many (Decls) d2))
+  (let-match many keys (Cons _ key rest) ((Nil _) d))
+  (let-match many (reg-code-of r key) (Some _ sg) ((None _) (tail $ collect-reached r rest env d)))
+  (let-match many sg (MkSomeGroup _ _ g))
+  (let-match many g (MkGroup _ _ fns _))
+  (tail $ collect-reached r rest env $ collect-group _ _ fns env d))
+
+(def-fns _ $ (many root-of : (subterm many (Nat) fuel) (many (Reg) r) (many (IdMap $ Unit) reached) (many (Nat) key) -> (many (Nat) root))
+  (let-match many (reg-get r key) (Some _ i) ((None _) key))
+  (let-match many i (MkGInfo _ _ _ _ _ _ _ p _ _))
+  (let-match many p (Some _ pk) ((None _) key))
+  (let-match many (idmap-mem _ pk reached) (BTrue) ((BFalse) key))
+  (match many fuel _ ((Zero) key) ((Succ k) (tail $ root-of k r reached pk))))
+
+(def-fns _ $ (many tree-map : (many (Reg) r) (many (IdMap $ Unit) reached) (subterm many (List $ Nat) keys) (many (IdMap $ List $ Nat) trees) (many (IdMap $ Nat) roots) -> (many (IdMap $ List $ Nat) t) (many (IdMap $ Nat) rs))
+  (let-match many keys (Cons _ key rest) ((Nil _) (values trees roots)))
+  (let ((many root)) $ root-of 100000 r reached key)
+  (tail $ tree-map r reached rest (idmap-set _ root (Cons _ key $ map-list trees root) trees) $ idmap-set _ key root roots))
+
+(def-adts $ (Kind : -> Type)
+  enum
+  (many CNone : -> (Kind))
+  (many CBlank : (many (Nat) tag) (many (Nat) size) -> (Kind))
+  (many CLeaf : -> (Kind))
+  (many CInst : (many (Nat) key) -> (Kind))
+  (many CExpr : -> (Kind)))
+
+(def-fns _ $ (many small-nat : (many (Nat) n) -> (many (Bool) b))
+  (nat-lt n 4611686018427387904))
+
+(def-fns _ $ (many count-filled : (subterm many (List $ Nat) s) (many (Nat) i) (many (Bool) zeros) (many (Nat) acc) -> (many (Nat) n))
+  (let-match many s (Cons _ a rest) ((Nil _) acc))
+  (let-match many i (Succ k) ((Zero) acc))
+  (let ((many (Bool) z)) $ nat-eqb a 0)
+  (let ((many (Bool) hit)) $ match many zeros _ ((BTrue) z) ((BFalse) (not z)))
+  (tail $ count-filled rest k zeros $ match many hit (((Nat) _)) ((BTrue) (Succ acc)) ((BFalse) acc)))
+
+(def-fns _ $ (many nullary-word : (many (Ctor) c) -> (many (Nat) n))
+  (match many (ctor-tagged c) _ ((BTrue) (count-filled (ctor-shape c) (ctor-index c) (BTrue) 0)) ((BFalse) 0)))
+
+(def-fns _ $ (many cell-of : (erased (Hist Block) a) (many (Block (Ref Block a)) b) (many (Reg) reg) -> (many (Kind) c))
+  (match many b _
+    ((BTag _ c fs)
+      (let ((many n)) $ list-length _ fs)
+      (let-match many (plain-ctor c) (BTrue) ((BFalse) (CExpr)))
+      (let-match many n (Succ _) ((Zero) (CNone)))
+      (let-match many (ctor-tagged c) (BTrue) ((BFalse) (CBlank 0 n)))
+      (let ((many s)) $ ctor-shape c)
+      (match many (shape-wide s) _ ((BTrue) (CBlank 0 $ Succ $ widest s)) ((BFalse) (CBlank (count-filled s (ctor-index c) (BFalse) 0) n))))
+    ((BTup _ fs)
+      (let-match many fs (Cons _ _ more) ((Nil _) (CNone)))
+      (match many more _ ((Nil _) (CNone)) ((Cons _ _ _) (CBlank 0 $ list-length _ fs))))
+    ((BArray _ n _) (CBlank 0 n))
+    ((BSlots _ _ _ _) (CLeaf))
+    ((BExt _ p) (match many p _ ((PNat n) (match many (small-nat n) _ ((BTrue) (CNone)) ((BFalse) (CLeaf)))) ((PHalf n) (match many (small-nat n) _ ((BTrue) (CNone)) ((BFalse) (CLeaf)))) ((PHandle _ _ _ _) (CBlank 0 4)) ((PRaw _ _) (CExpr)) (else (CLeaf))))
+    ((BCtorFn _ _) (CLeaf))
+    ((BMat _ _) (CLeaf))
+    ((BGroup _ _ _ g _)
+      (let-match many g (MkGroup _ gids _ _))
+      (let ((many key)) $ group-key gids)
+      (match many (reg-ret reg key) _ ((Nil _) (CNone)) (else (CInst key))))
+    ((BError _ _) (CExpr))
+    (else (CNone))))
+
+(def-fns _ $ (many assign-pass : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Ref Block hs) refs) (many (Reg) reg) (many (Bool) third) (many (Nat) next) (many (IdMap $ Nat) slots) -> (many (Nat) n) (many (IdMap $ Nat) s))
+  (let-match many refs (Cons _ v rest) ((Nil _) (values next slots)))
+  (let ((erased _) (many b) (erased _)) $ store-read Block hs hp v)
+  (let ((many (Nat) size))
+    (match many (cell-of _ b reg) _
+      ((CBlank _ _) (match many third _ ((BTrue) 0) ((BFalse) 1)))
+      ((CLeaf) (match many third _ ((BTrue) 0) ((BFalse) 1)))
+      ((CInst key) (match many third _ ((BTrue) (list-length _ $ reg-ret reg key)) ((BFalse) 0)))
+      ((CExpr) (match many third _ ((BTrue) 1) ((BFalse) 0)))
+      ((CNone) 0)))
+  (let ((many (IdMap $ Nat) s2)) $ match many size _ ((Zero) slots) (else (idmap-set _ (ref-pos Block _ v) next slots)))
+  (tail $ assign-pass _ hp rest reg third (nat-add next size) s2))
+
+(def-fns _ $ (many slot-tok : (many (IdMap $ Nat) slots) (many (Nat) pos) -> (many (String) t))
+  (match many (idmap-get _ pos slots) _ ((Hit _ _ _ k _) (nat-str k)) ((Miss _ _ _ _) "x")))
+
+(def-fns _ $ (many pos-tok : (many (IdMap $ String) toks) (many (Nat) pos) -> (many (String) t))
+  (match many (idmap-get _ pos toks) _ ((Hit _ _ _ t _) t) ((Miss _ _ _ _) "x")))
+
+(def-fns _ $ (many member-tok : (many (Reg) reg) (many (IdMap $ Nat) slots) (many (Nat) gpos) (many (Nat) id) -> (many (String) t))
+  (let-match many (reg-owner reg id) (Some _ hk) ((None _) "x"))
+  (let-match many (nat-index (reg-ret reg hk) id 0) (Some _ i) ((None _) "x"))
+  (match many (idmap-get _ gpos slots) _ ((Hit _ _ _ k _) (nat-str $ nat-add k i)) ((Miss _ _ _ _) "x")))
+
+(def-fns _ $ (many tok-pass : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Ref Block hs) refs) (many (Reg) reg) (many (IdMap $ Nat) slots) (many (IdMap $ String) toks) -> (many (IdMap $ String) t))
+  (let-match many refs (Cons _ v rest) ((Nil _) toks))
+  (let ((erased _) (many b) (erased _)) $ store-read Block hs hp v)
+  (let ((many pos)) $ ref-pos Block _ v)
+  (let ((many here)) $ slot-tok slots pos)
+  (let ((many (String) t))
+    (match many b _
+      ((BExt _ p) (match many p _ ((PNat n) (match many (small-nat n) _ ((BTrue) (str-cat "i" $ nat-str n)) ((BFalse) here))) ((PHalf n) (match many (small-nat n) _ ((BTrue) (str-cat "i" $ nat-str n)) ((BFalse) here))) (else here)))
+      ((BToken _) "i0")
+      ((BTag _ c fs) (match many (and (list-is-empty _ fs) $ plain-ctor c) _ ((BTrue) (str-cat "i" $ nat-str $ nullary-word c)) ((BFalse) here)))
+      ((BTup _ fs)
+        (let-match many fs (Cons _ x more) ((Nil _) "i0"))
+        (match many more _ ((Nil _) (pos-tok toks $ ref-pos Block _ x)) ((Cons _ _ _) here)))
+      ((BFn _ g _ id) (member-tok reg slots (ref-pos Block _ g) id))
+      (else here)))
+  (tail $ tok-pass _ hp rest reg slots $ idmap-set _ pos t toks))
+
+(def-fns _ $ (many toks-of : (erased (Hist Block) a) (many (IdMap $ String) toks) (subterm many (List $ Ref Block a) vs) -> (many (List $ String) r))
+  (let-match many vs (Cons _ v rest) ((Nil _) (Nil _)))
+  (Cons _ (pos-tok toks $ ref-pos Block _ v) $ notail $ toks-of _ toks rest))
+
+(def-fns _ $ (many tok-expr : (many (String) t) -> (many (Rope) r))
+  (let-match many t (SCons c rest) ((SNil) (RStr "(Obj.repr ())")))
+  (match many (char-eqb c #\i) _
+    ((BTrue) (RStr $ str-cat3 "(Obj.repr (" rest "))"))
+    ((BFalse) (RStr $ str-cat3 "(rt_get " t ")"))))
+
+(def-fns _ $ (many tok-exprs : (subterm many (List $ String) ts) -> (many (List $ Rope) r))
+  (let-match many ts (Cons _ t rest) ((Nil _) (Nil _)))
+  (Cons _ (tok-expr t) $ notail $ tok-exprs rest))
+
+(def-fns _ $ (many toks-rope : (subterm many (List $ String) ts) -> (many (Rope) r))
+  (let-match many ts (Cons _ t rest) ((Nil _) (REmpty)))
+  (rcat3 (RStr t) (RStr " ") $ notail $ toks-rope rest))
+
+(def-fns _ $ (many settled-pos : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Nat) p))
+  (let ((erased _) (many _) (many en) (many _)) $ env-store env)
+  (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (None _)))
+  (let-match many info (MkEInfo _ _ _ s _ _ _ _))
+  (match many s _ ((SSettled _ v _) (Some _ $ ref-pos Block _ v)) ((SHypothetical _) (None _))))
+
+(def-fns _ $ (many settled-tok : (many (Env) env) (many (IdMap $ String) toks) (many (Nat) x) -> (many (String) t))
+  (match many (settled-pos env x) _ ((Some _ p) (pos-tok toks p)) ((None _) "i0")))
+
+(def-fns _ $ (many text-op : (many (String) op) (many (String) s) -> (many (Rope) r))
+  (let ((many n) (erased _)) $ str-length s)
+  (rcat5 (RStr op) (nat-rope n) (RStr ":") (RStr s) $ RStr " "))
+
+(def-fns _ $ (many fill-op : (many (Nat) slot) (many (List $ String) ts) -> (many (Rope) r))
+  (rcat5 (RStr "f") (nat-rope slot) (RStr " ") (nat-rope $ list-length _ ts) $ rcat (RStr " ") $ toks-rope ts))
+
+(def-adts $ (P2 : -> Type)
+  enum
+  (many MkP2 : (many (Rope) allocs) (many (Rope) fills) (many (List $ Rope) globals) (many (Nat) count) -> (P2)))
+
+(def-fns _ $ (many p2-alloc : (many (P2) p) (many (Rope) a) (many (Rope) f) -> (many (P2) r))
+  (match many p _ ((MkP2 al fi gs n) (MkP2 (rcat al a) (rcat fi f) gs n))))
+
+(def-fns _ $ (many p2-global : (many (P2) p) (many (Rope) g) -> (many (P2) r))
+  (match many p _ ((MkP2 al fi gs n) (MkP2 (rcat3 al (RStr "g") $ rcat (nat-rope n) $ RStr " ") fi (Cons _ g gs) $ Succ n))))
+
+(def-fns _ $ (many mult-tok : (many (Multiplicity) m) -> (many (String) t))
+  (match many m _ ((Erased) "i0") ((Many) "i1") ((Once) "i2")))
+
+(def-fns _ $ (many pass2 : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Ref Block hs) refs) (many (Env) env) (many (Decls) d) (many (Reg) reg) (many (IdMap $ Nat) slots) (many (IdMap $ String) toks) (many (P2) acc) -> (many (P2) r))
+  (let-match many refs (Cons _ v rest) ((Nil _) acc))
+  (let ((erased _) (many b) (erased _)) $ store-read Block hs hp v)
+  (let ((many (Nat) slot)) $ match many (idmap-get _ (ref-pos Block _ v) slots) _ ((Hit _ _ _ k _) k) ((Miss _ _ _ _) 0))
+  (let ((many (P2) acc1))
+    (match many (cell-of _ b reg) _
+      ((CBlank t n)
+        (let ((many al)) $ rcat5 (RStr "b") (nat-rope t) (RStr ".") (nat-rope n) $ RStr " ")
+        (let ((many (List $ String) ts))
+          (match many b _
+            ((BTag _ c fs)
+              (let ((many fts)) $ toks-of _ toks fs)
+              (match many (and (ctor-tagged c) $ shape-wide $ ctor-shape c) _ ((BTrue) (Cons _ (str-cat "i" $ nat-str $ ctor-index c) fts)) ((BFalse) fts)))
+            ((BTup _ fs) (toks-of _ toks fs))
+            ((BArray _ n2 es) (toks-of _ toks $ idmap-prefix _ es n2 $ Nil _))
+            ((BExt _ p) (match many p _ ((PHandle x rd m _) (Cons _ (str-cat "i" $ nat-str x) $ Cons _ (match many rd _ ((MintedIs) "i0") ((MintedType) "i1")) $ Cons _ (mult-tok m) $ Cons _ (match many m _ ((Many) (settled-tok env toks x)) (else "i0")) $ Nil _)) (else (Nil _))))
+            (else (Nil _))))
+        (p2-alloc acc al $ fill-op slot ts))
+      ((CLeaf)
+        (let-match many b (BSlots _ n2 ks _)
+          ((BExt _ p) (p2-alloc acc (match many p _ ((PStr s) (text-op "s" s)) ((PBytes s) (text-op "y" s)) ((PNat n) (text-op "z" $ nat-str n)) ((PHalf n) (text-op "z" $ nat-str n)) (else (RStr "x "))) $ REmpty))
+          ((BCtorFn _ c) (p2-global acc $ ctor-fn-rope d c))
+          ((BMat _ adt) (p2-global acc $ matchable-rope adt d))
+          (else acc))
+        (let ((many ts)) $ toks-of _ toks $ idmap-prefix _ ks n2 $ Nil _)
+        (p2-alloc acc (RStr "t0 ") $ rcat5 (RStr "k") (nat-rope slot) (RStr " ") (nat-rope $ list-length _ ts) $ rcat (RStr " ") $ toks-rope ts))
+      (else acc)))
+  (tail $ pass2 _ hp rest env d reg slots toks acc1))
+
+(def-fns _ $ (many const-binds : (many (Env) env) (many (Decls) d) (many (Reg) reg) (many (IdMap $ String) toks) (subterm many (List $ Nat) xs) (many (IdMap $ Rope) acc) -> (many (IdMap $ Rope) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) acc))
+  (let-match many (const-kind env d reg x) (CkData pos) (else (tail $ const-binds env d reg toks rest acc)))
+  (let-match many (idmap-get _ pos toks) (Hit _ _ _ t _) ((Miss _ _ _ _) (tail $ const-binds env d reg toks rest acc)))
+  (tail $ const-binds env d reg toks rest $ idmap-set _ pos (rcat3 (RStr $ data-name pos) (RStr " = ") $ tok-expr t) acc))
+
+(def-fns _ $ (many pair-values : (erased Type V) (subterm many (List $ Pair (Nat) V) ps) (many (List V) acc) -> (many (List V) r))
+  (let-match many ps (Cons _ p rest) ((Nil _) acc))
+  (let-match many p (MkPair _ _ _ v))
+  (tail $ pair-values _ rest $ Cons _ v acc))
+
+(def-fns _ $ (many tree-parts : (many (Env) env) (many (Decls) d) (many (Reg) reg) (many (IdMap $ String) toks) (subterm many (List $ Nat) keys) (many (List $ Rope) defs) (many (List $ Rope) names) (many (IdMap $ Rope) binds) -> (many (List $ Rope) defs2) (many (List $ Rope) names2) (many (IdMap $ Rope) binds2))
+  (let-match many keys (Cons _ key rest) ((Nil _) (values defs names binds)))
+  (let ((many ds) (many ns)) $ group-defs env d reg key)
+  (let ((many (List $ Nat) cs)) $ match many (reg-get reg key) _ ((Some _ i) (match many i _ ((MkGInfo _ _ _ _ _ _ cs0 _ _ _) cs0))) ((None _) (Nil _)))
+  (tail $ tree-parts env d reg toks rest (rev-onto _ ds defs) (rev-onto _ ns names) $ const-binds env d reg toks cs binds))
+
+(def-fns _ $ (many adapter-text : (many (Env) env) (many (Reg) reg) (many (Nat) key) (many (Nat) i) -> (many (Rope) r))
+  (let ((many rets)) $ reg-ret reg key)
+  (let ((many head)) $ rcat3 (RStr "let () = (!rt_adapters).(") (nat-rope i) $ RStr ") <- ")
+  (let-match many (reg-closed reg key) (BFalse)
+    ((BTrue) (rcat4 head (RStr "(fun _ -> [| ") (rjoin (list-map-obj env rets) "; ") $ RStr " |])\n")))
+  (let ((many vs)) $ list-map-valued env rets)
+  (let ((many caps)) $ cap-slots 0 $ fac-caps (reg-members reg key) $ reg-caps reg key)
+  (rcat5 head (RStr "(fun c -> let ") (tuple-of vs) (rcat5 (RStr " = ") (RStr $ maker-name env key) (RStr " ") (args-rope caps) $ RStr " in [| ") $ rcat (rjoin vs "; ") $ RStr " |])\n"))
+
+(def-adts $ (P3 : -> Type)
+  enum
+  (many MkP3 : (many (Rope) out) (many (Rope) seg) (many (Bool) open) (many (List $ Nat) pending) (many (Nat) ads) (many (IdMap $ Nat) adm) -> (P3)))
+
+(def-adts $ (Px : -> Type)
+  enum
+  (many MkPx : (many (Env) env) (many (Decls) d) (many (Reg) reg) (many (IdMap $ Nat) slots) (many (IdMap $ String) toks) (many (IdMap $ List $ Nat) trees) (many (IdMap $ Nat) roots) -> (Px)))
+
+(def-fns _ $ (many p3-flush : (many (P3) st) -> (many (P3) r))
+  (let-match many st (MkP3 out seg open pending ads adm))
+  (match many open _
+    ((BFalse) st)
+    ((BTrue) (MkP3 (rcat3 out (rcat (RStr "let () = rt_run ") $ quoted $ rope-str seg) $ RStr "\n") (REmpty) (BFalse) pending ads adm))))
+
+(def-fns _ $ (many tree-adapters : (many (Env) env) (many (Reg) reg) (subterm many (List $ Nat) keys) (many (Rope) out) (many (Nat) ads) (many (IdMap $ Nat) adm) -> (many (Rope) o) (many (Nat) a) (many (IdMap $ Nat) m))
+  (let-match many keys (Cons _ key rest) ((Nil _) (values out ads adm)))
+  (match many (reg-ret reg key) _
+    ((Nil _) (tail $ tree-adapters env reg rest out ads adm))
+    (else (tail $ tree-adapters env reg rest (rcat out $ adapter-text env reg key ads) (Succ ads) $ idmap-set _ key ads adm))))
+
+(def-fns _ $ (many tree-text : (many (Px) px) (many (Nat) root) -> (many (Rope) r) (many (List $ Nat) keys))
+  (let-match many px (MkPx env d reg _ toks trees _))
+  (let ((many keys)) $ map-list trees root)
+  (let ((many defs) (many names) (many binds)) $ tree-parts env d reg toks keys (Nil _) (Nil _) $ MEmpty _)
+  (let-match many defs (Cons _ _ _) ((Nil _) (values (REmpty) keys)))
+  (let ((many bs)) $ pair-values _ (idmap-pairs _ binds 1 0 $ Nil _) $ Nil _)
+  (let ((many rec)) $ rcat (RStr "let rec ") $ rjoin defs "\nand ")
+  (let-match many bs (Cons _ _ _) ((Nil _) (values (rcat rec $ RStr "\n") keys)))
+  (let ((many ns)) $ commas names)
+  (values (rcat5 (RStr "let ") ns (rcat3 (RStr " =\n  let ") (rjoin bs " and ") $ RStr " in\n  ") (rcat rec $ RStr " in\n  ") $ rcat ns $ RStr "\n") keys))
+
+(def-fns _ $ (many flush-trees : (many (Px) px) (many (Maybe $ Nat) upto) (subterm many (List $ Nat) pending) (many (P3) st) -> (many (P3) r))
+  (let-match many pending (Cons _ root rest) ((Nil _) (match many st _ ((MkP3 out seg open _ ads adm) (MkP3 out seg open (Nil _) ads adm)))))
+  (let ((many (Bool) go)) $ match many upto _ ((None _) (BTrue)) ((Some _ u) (not $ nat-lt u root)))
+  (let-match many go (BTrue) ((BFalse) (match many st _ ((MkP3 out seg open _ ads adm) (MkP3 out seg open pending ads adm)))))
+  (let-match many px (MkPx env _ reg _ _ _ _))
+  (let-match many (p3-flush st) (MkP3 out seg open _ ads adm))
+  (let ((many text) (many keys)) $ tree-text px root)
+  (let ((many out2) (many ads2) (many adm2)) $ tree-adapters env reg keys (rcat out text) ads adm)
+  (tail $ flush-trees px upto rest $ MkP3 out2 seg open rest ads2 adm2))
+
+(def-fns _ $ (many inst-caps : (erased (Hist Block) a) (erased (List $ List $ Nat) ctx) (many (Frames (Ref Block a) ctx) fr) (many (Reg) reg) (many (IdMap $ Nat) slots) (many (IdMap $ String) toks) (subterm many (List $ Key) ks) -> (many (List $ String) r))
+  (let-match many ks (Cons _ k rest) ((Nil _) (Nil _)))
+  (let ((many (String) t))
+    (match many (frame-ref _ _ fr $ key-id k) _
+      ((None _) "x")
+      ((Some _ v) (match many k _ ((KVal _) (pos-tok toks $ ref-pos Block _ v)) ((KFn m) (member-tok reg slots (ref-pos Block _ v) m))))))
+  (Cons _ t $ notail $ inst-caps _ _ fr reg slots toks rest))
+
+(def-fns _ $ (many raw-binds : (many (Env) env) (many (IdMap $ String) toks) (subterm many (List $ Nat) ids) -> (many (Rope) r))
+  (let-match many ids (Cons _ x rest) ((Nil _) (REmpty)))
+  (let-match many (settled-pos env x) (Some _ p) ((None _) (tail $ raw-binds env toks rest)))
+  (rcat5 (RStr "let a") (nat-rope p) (RStr " = ") (tok-expr $ pos-tok toks p) $ rcat (RStr "\n") $ notail $ raw-binds env toks rest))
+
+(def-fns _ $ (many pass3 : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Ref Block hs) refs) (many (Px) px) (many (P3) st) -> (many (P3) r))
+  (let-match many refs (Cons _ v rest) ((Nil _) (flush-trees px (None _) (match many st _ ((MkP3 _ _ _ p _ _) p)) $ p3-flush st)))
+  (let-match many px (MkPx env d reg slots toks _ roots))
+  (let ((erased _) (many b) (erased _)) $ store-read Block hs hp v)
+  (let ((many (P3) st1))
+    (match many (cell-of _ b reg) _
+      ((CInst key)
+        (let ((many (Nat) root)) $ match many (idmap-get _ key roots) _ ((Hit _ _ _ r0 _) r0) ((Miss _ _ _ _) key))
+        (let-match many (flush-trees px (Some _ root) (match many st _ ((MkP3 _ _ _ p _ _) p)) st) (MkP3 out seg _ pending ads adm))
+        (let ((many (Nat) a)) $ match many (idmap-get _ key adm) _ ((Hit _ _ _ i _) i) ((Miss _ _ _ _) 0))
+        (let-match many b (BGroup _ _ _ _ fr) (else st))
+        (let ((many cs)) $ inst-caps _ _ fr reg slots toks $ fac-caps (reg-members reg key) $ reg-caps reg key)
+        (MkP3 out (rcat5 seg (RStr "c") (nat-rope a) (RStr " ") $ rcat3 (nat-rope $ list-length _ cs) (RStr " ") $ toks-rope cs) (BTrue) pending ads adm))
+      ((CExpr)
+        (let-match many (p3-flush st) (MkP3 out seg open pending ads adm))
+        (let ((many (Rope) pre) (many (Rope) e))
+          (match many b _
+            ((BTag _ c fs) (values (REmpty) $ build-rope d 0 c $ tok-exprs $ toks-of _ toks fs))
+            ((BExt _ p)
+              (let-match many p (PRaw f r) (else (values (REmpty) $ RStr "(Obj.repr ())")))
+              (let ((many _) (many ids)) $ decl-take-consts $ syn-handle-decl (MkDecls (Nil _) (Nil _) (Nil _) (Nil _)) r)
+              (values (raw-binds env toks ids) $ rcat3 (RStr "(Obj.repr ") (syn-rope env f r) $ RStr ")"))
+            ((BError _ m) (values (REmpty) $ rcat3 (RStr "(failwith ") (quoted m) $ RStr ")"))
+            (else (values (REmpty) $ RStr "(Obj.repr ())"))))
+        (MkP3 (rcat4 out pre (rcat3 (RStr "let () = rt_push (") e $ RStr ")\n") $ REmpty) seg open pending ads adm))
+      (else st)))
+  (tail $ pass3 _ hp rest px st1))
+
 ; ---- The walk from the roots: what a Settled or a final reaches, each value once. The worklist is
 ; tail recursive, which the seen set pays for: a stamp is below the store's next stamp, the trie
 ; holds at most that many keys (base.sl's bounded-le), so the keys it still lacks is a measure that
@@ -1182,16 +1951,6 @@
     ((FrNil _) acc)
     ((FrVals _ _ _ vs _ rest) (tail (frames-refs _ _ rest (rev-onto _ vs acc))))
     ((FrGroup _ _ _ g _ rest) (tail (frames-refs _ _ rest (Cons _ g acc))))))
-
-(def-fns _ $ (many block-refs : (erased (Hist Block) a) (many (Block (Ref Block a)) b) -> (many (List $ Ref Block a) r))
-  (match many b _
-    ((BTag _ _ fields) fields)
-    ((BArray _ n es) (idmap-prefix _ es n $ Nil _))
-    ((BSlots _ n ks _) (idmap-prefix _ ks n $ Nil _))
-    ((BTup _ fields) fields)
-    ((BFn _ g _ _) (Cons _ g $ Nil _))
-    ((BGroup _ _ _ _ fr) (frames-refs _ _ fr (Nil _)))
-    (else (Nil _))))
 
 (def-fns _ $ (many settled-refs : (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (subterm many (List $ Nat) ids)
     (many (List $ Ref Block hs) acc) -> (many (List $ Ref Block hs) r))
@@ -1206,81 +1965,52 @@
           ((SSettled _ v _) (Cons _ v acc))))))
   (tail $ settled-refs _ en rest acc1))
 
-; [rest] the stamps the seen set still lacks, [work] the worklist; the call in each branch decreases
-; the first of those two that it can.
+(def-fns _ $ (many block-refs : (erased (Hist Block) a) (many (Block (Ref Block a)) b) (many (Maybe $ Reg) reg) -> (many (List $ Ref Block a) r))
+  (let-match many b (BGroup _ _ _ g fr)
+    ((BTag _ _ fields) fields)
+    ((BArray _ n es) (idmap-prefix _ es n $ Nil _))
+    ((BSlots _ n ks _) (idmap-prefix _ ks n $ Nil _))
+    ((BTup _ fields) fields)
+    ((BFn _ g _ _) (Cons _ g $ Nil _))
+    (else (Nil _)))
+  (match many reg _ ((None _) (frames-refs _ _ fr (Nil _))) ((Some _ rg) (group-refs _ _ _ g fr rg))))
+
+(def-fns _ $ (many trace-step : (erased (Hist Block) a) (many (Block (Ref Block a)) blk) (many (Env) env) (many (Decls) d) (many (Maybe $ Reg) mode) (many (Reg) r) -> (many (Decls) d2) (many (List $ Nat) cids) (many (Reg) r2))
+  (let-match many blk (BGroup _ _ _ g _)
+    ((BExt _ _)
+      (let ((many d3) (many cids)) $ decl-take-consts $ collect-block _ blk env d)
+      (values d3 cids r))
+    (else
+      (let-match many mode (None _) ((Some _ _) (values d (Nil _) r)))
+      (let ((many d3) (many cids)) $ decl-take-consts $ collect-block _ blk env d)
+      (values d3 cids r)))
+  (let-match many g (MkGroup _ gids _ _))
+  (let ((many (Reg) r2)) $ match many mode _ ((None _) (reg-block _ blk r)) ((Some _ _) r))
+  (let-match many (reg-get r2 $ group-key gids) (Some _ info) ((None _) (values d (Nil _) r2)))
+  (let-match many info (MkGInfo _ _ _ _ _ _ cs _ _ _))
+  (values d cs r2))
+
 (def-fns _ $ (many trace-loop : (erased (Hist Block) hs) (erased (Nat) bound) (erased (Len Block hs bound) lb) (many (Store Block hs) hp)
     (erased (Nat) size) (subterm erased (Nat) rest) (erased (Add size rest bound) sum)
     (many (IdMap $ Unit) seen) (erased (Bounded (Unit) seen size bound) bd)
     (subterm many (List $ Ref Block hs) work) (many (List $ Ref Block hs) acc)
-    (many (Env) env) (many (IdMap $ EInfo hs) en) (many (Decls) d) -> (many (List $ Ref Block hs) acc2) (many (Decls) d2))
-  (let-match many work (Cons _ at2 wrest) ((Nil _) (values acc d)))
+    (many (Env) env) (many (IdMap $ EInfo hs) en) (many (Decls) d) (many (Maybe $ Reg) reg) (many (Reg) rg) -> (many (List $ Ref Block hs) acc2) (many (Decls) d2) (many (Reg) rg2))
+  (let-match many work (Cons _ at2 wrest) ((Nil _) (values acc d rg)))
   (let ((many k) (erased lk)) (ref-key Block _ bound lb at2))
   (let-match many (idmap-get _ k seen) (Miss _ _ _ ab)
-    ((Hit _ _ _ _ _) (tail (trace-loop _ bound lb hp size rest sum seen bd wrest acc env en d))))
+    ((Hit _ _ _ _ _) (tail (trace-loop _ bound lb hp size rest sum seen bd wrest acc env en d reg rg))))
   (let ((many seen2) (erased rest2) (erased bd2) (erased sum2) (erased less))
     (seen-add (Unit) k (MkUnit) seen size rest bound bd sum ab lk))
   (let ((erased rs) (many blk) (erased tsf)) $ store-read Block hs hp at2)
-  (let ((many kids)) (block-refs _ blk))
+  (let ((many kids)) (block-refs _ blk reg))
   (let ((erased _) (erased pk)) (refs-widen Block rs hs tsf kids))
-  (let ((many d3) (many cids)) $ decl-take-consts $ collect-block _ blk env d)
+  (let ((many d3) (many cids) (many rg3)) $ trace-step _ blk env d reg rg)
   (tail (trace-loop _ bound lb hp (Succ size) (subterm (lt-subterm rest2 rest less)) rest2 sum2 seen2 bd2
-          (rev-onto _ (coerce kids pk) $ settled-refs _ en cids wrest) (Cons _ at2 acc) env en d3)))
-
-; A group's block is its members' top-level let rec over the names of the frames it closed over.
-(def-fns _ $ (many block-let : (erased (Hist Block) hs) (many (Ref Block hs) addr) (erased (Hist Block) a) (subterm many (Block (Ref Block a)) b) (many (Env) env) (many (Decls) d) -> (many (Rope) r))
-  (let-match many b (BGroup _ _ _ g env2)
-    (else (rcat5 (RStr "let ") (addr-rope _ addr) (RStr " : Obj.t = ") (block-rope _ b env d) $ RStr "\n")))
-  (let-match many g (MkGroup _ ids fns _))
-  (let ((many suffix)) $ str-cat "_" $ addr-str _ addr)
-  (match many (emit-group _ _ fns env (push-fn-names _ ids fns env suffix $ frame-names _ _ env2 env) d suffix) _
-    ((Nil _) (REmpty))
-    ((Cons _ f1 more) (rcat3 (RStr "let rec ") (rjoin (Cons _ f1 more) "\nand ") $ RStr "\n"))))
+          (rev-onto _ (coerce kids pk) $ settled-refs _ en cids wrest) (Cons _ at2 acc) env en d3 reg rg3)))
 
 (def-lvl REF-CMP)
 
 (let ((erased REF-SORT-L) (many ref-sort)) (sort-factory REF-CMP))
-
-(def-fns _ $ (many blank-words : (subterm many (Nat) n) -> (many (List $ Rope) r))
-  (match many n _ ((Zero) (Nil _)) ((Succ k) (Cons _ (RStr "(Obj.repr ())") $ notail $ blank-words k))))
-
-(def-fns _ $ (many block-stores : (erased (Hist Block) hs) (many (Decls) d) (many (Ctor) c) (subterm many (List $ Ref Block hs) fields) (many (Rope) dest) (many (Nat) index) (many (List $ Rope) acc) -> (many (List $ Rope) r))
-  (let-match many fields (Cons _ f rest) ((Nil _) acc))
-  (Cons _ (field-store-rope d c dest (Cons _ index $ Nil _) (Cons _ (addr-rope _ f) $ Nil _) "bf") $ notail $ block-stores _ d c rest dest (Succ index) acc))
-
-(def-fns _ $ (many array-stores : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) fields) (many (Rope) dest) (many (Nat) index) (many (List $ Rope) acc) -> (many (List $ Rope) r))
-  (let-match many fields (Cons _ f rest) ((Nil _) acc))
-  (Cons _ (rcat5 (RStr "Array.unsafe_set (Obj.obj ") dest (rcat3 (RStr " : Ffi_core.word array) ") (nat-rope index) $ RStr " (Obj.obj ") (addr-rope _ f) $ RStr " : Ffi_core.word)")
-    $ notail $ array-stores _ rest dest (Succ index) acc))
-
-(def-fns _ $ (many slots-stores : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) keys) (many (Rope) dest) (many (List $ Rope) acc) -> (many (List $ Rope) r))
-  (let-match many keys (Cons _ k rest) ((Nil _) acc))
-  (Cons _ (rcat5 (RStr "ignore (Ffi_core.slots_add (Obj.obj ") dest (RStr ") ") (addr-rope _ k) $ RStr ")") $ notail $ slots-stores _ rest dest acc))
-
-(def-fns _ $ (many fill-chunks : (subterm many (List $ Rope) fills) (many (Nat) k) (many (Nat) n) -> (many (Rope) r))
-  (let-match many fills (Cons _ f rest) ((Nil _) (REmpty)))
-  (let ((many name)) $ str-cat "fill_" $ nat-str k)
-  (let ((many (Rope) start)) $ match many n _ ((Zero) (RStr $ str-cat3 "let[@inline never] " name " () =\n  ")) (else (REmpty)))
-  (let ((many (Bool) more)) $ match many rest _ ((Nil _) (BFalse)) ((Cons _ _ _) (nat-lt (Succ n) 100)))
-  (rcat3 start f $ match many more _
-    ((BTrue) (rcat (RStr ";\n  ") $ notail $ fill-chunks rest k $ Succ n))
-    ((BFalse) (rcat (RStr $ str-cat3 "\nlet () = " name " ()\n") $ notail $ fill-chunks rest (Succ k) 0))))
-
-(def-fns _ $ (many emit-blocks : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Ref Block hs) order)
-    (many (Env) env) (many (Decls) d) -> (many (Rope) skeletons) (many (Rope) defs) (many (List $ Rope) fills))
-  (let-match many order (Cons _ at2 rest) ((Nil _) (values (REmpty) (REmpty) $ Nil _)))
-  (let ((erased _) (many blk) (erased _)) $ store-read Block hs hp at2)
-  (let ((many before) (many middle) (many after)) $ notail $ emit-blocks _ hp rest env d)
-  (match many blk _
-    ((BTag _ c fields)
-      (let ((many skeleton)) $ rcat5 (RStr "let ") (addr-rope _ at2) (RStr " : Obj.t = ") (plain-build d c $ blank-words $ list-length _ fields) $ RStr "\n")
-      (values (rcat skeleton before) middle $ block-stores _ d c fields (addr-rope _ at2) 0 after))
-    ((BArray _ n es)
-      (let ((many skeleton)) $ rcat5 (RStr "let ") (addr-rope _ at2) (RStr " : Obj.t = Obj.repr (Array.make ") (nat-rope n) $ RStr " (Obj.repr ()))\n")
-      (values (rcat skeleton before) middle $ array-stores _ (idmap-prefix _ es n $ Nil _) (addr-rope _ at2) 0 after))
-    ((BSlots _ n ks _)
-      (let ((many skeleton)) $ rcat3 (RStr "let ") (addr-rope _ at2) $ RStr " : Obj.t = Obj.repr (Ffi_core.slots_new ())\n")
-      (values (rcat skeleton before) middle $ slots-stores _ (idmap-prefix _ ks n $ Nil _) (addr-rope _ at2) after))
-    (else (values before (rcat (block-let _ at2 _ blk env d) middle) after))))
 
 ; ---- The driver (lib/driver_core.ml): its operations on the prelude's values, each a direct build or match
 
@@ -1499,18 +2229,69 @@
     ((Nil _) acc))
   (match many p _ ((MkPair _ _ v _) (tail (roots-of-finals _ rest env en $ Cons _ v acc)))))
 
+(def-lvl NAT-CMP)
+
+(def-fns NAT-CMP $ (many nat-leq : (many (Nat) x) (many (Nat) y) -> (many (Bool) b))
+  (not $ nat-lt y x))
+
+(let ((erased NAT-SORT-L) (many nat-sort)) (sort-factory NAT-CMP))
+
+(def-fns _ $ (many trace-from : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Maybe $ Reg) reg) (many (List $ Ref Block hs) roots) (many (Env) env) (many (IdMap $ EInfo hs) en) (many (Decls) d) (many (Reg) rg) -> (many (List $ Ref Block hs) acc) (many (Decls) d2) (many (Reg) rg2))
+  (let-match many hp (MkStore _ _ bound lb _))
+  (trace-loop _ bound lb hp (Zero) bound (AddZero bound) (MEmpty _) (BdEmpty _ bound) roots (Nil _) env en d reg rg))
+
+(def-fns _ $ (many pos-set : (erased (Hist Block) a) (subterm many (List $ Ref Block a) vs) (many (IdMap $ Unit) acc) -> (many (IdMap $ Unit) r))
+  (let-match many vs (Cons _ v rest) ((Nil _) acc))
+  (tail $ pos-set _ rest $ idmap-set _ (ref-pos Block _ v) (MkUnit) acc))
+
+(def-fns _ $ (many all-traced : (erased (Hist Block) a) (subterm many (List $ Ref Block a) vs) (many (IdMap $ Unit) seen) -> (many (Bool) r))
+  (let-match many vs (Cons _ v rest) ((Nil _) (BTrue)))
+  (and (idmap-mem _ (ref-pos Block _ v) seen) $ tail $ all-traced _ rest seen))
+
+(def-fns _ $ (many exact : (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Reg) reg) (many (List $ Ref Block hs) roots) (many (Env) env) (many (IdMap $ EInfo hs) en) (many (Decls) d) -> (many (List $ Ref Block hs) acc) (many (Decls) d2) (many (IdMap $ Unit) reached))
+  (let ((many acc) (many d1) (many _)) $ trace-from _ hp (Some _ reg) roots env en d reg)
+  (let ((many reached)) $ reach 100000000 reg (instance-keys _ hp acc $ Nil _) $ MEmpty _)
+  (let ((many extra)) $ settled-refs _ en (reached-consts reg (pair-keys _ (idmap-pairs _ reached 1 0 $ Nil _) $ Nil _) $ Nil _) $ Nil _)
+  (let-match many fuel (Succ k) ((Zero) (values acc d1 reached)))
+  (match many (all-traced _ extra $ pos-set _ acc $ MEmpty _) _
+    ((BTrue) (values acc d1 reached))
+    ((BFalse) (tail $ exact k _ hp reg (rev-onto _ extra roots) env en d))))
+
+(def-fns _ $ (many final-binds : (erased (Hist Block) hs) (subterm many (List $ Pair (Ref Block hs) $ Term) fs) (many (IdMap $ String) toks) -> (many (Rope) r))
+  (let-match many fs (Cons _ p rest) ((Nil _) (REmpty)))
+  (let-match many p (MkPair _ _ v _))
+  (let ((many pos)) $ ref-pos Block _ v)
+  (rcat5 (RStr "let a") (nat-rope pos) (RStr " = ") (tok-expr $ pos-tok toks pos) $ rcat (RStr "\n") $ notail $ final-binds _ rest toks))
+
 (def-fns _ $ (many emit-program : (many (Bool) templates) (many (List $ String) reads) (many (List $ String) writes) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (Bool) with-exec) (many (Env) env) (many (List $ Adt) natives) -> (many (Rope) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
   (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "Program" $ Cons _ "Request" $ Cons _ "Stopwatch" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Unit" $ Cons _ "Usage" $ Cons _ "Exited" $ Cons _ "ExecJob" $ Cons _ "ExecResults" $ Nil _) env $ MkDecls (Nil _) (Nil _) (match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on extern-templates #\newline)) ((BFalse) (Nil _))) (Nil _))
-  (let-match many hp (MkStore _ _ bound lb _))
   (let ((many d0b) (many _)) $ emit-finals _ hp (list-rev _ fi) env natives (Zero) d0)
   (let ((many d0c) (many cids)) $ decl-take-consts d0b)
   (let ((many roots)) $ settled-refs _ en cids $ roots-of-finals _ fi env en (Nil _))
-  (let ((many acc2) (many d2))
-    $ trace-loop _ bound lb hp (Zero) bound (AddZero bound) (MEmpty _) (BdEmpty _ bound) roots (Nil _) env en d0c)
+  (let ((many _) (many d1) (many reg0)) $ trace-from _ hp (None _) roots env en d0c reg-empty)
+  (let ((many reg1)) $ analyse 100000 reg0)
+  (let ((many acc2) (many d2) (many reached)) $ exact 8 _ hp reg1 roots env en d1)
+  (let ((many keys)) $ pair-keys _ (idmap-pairs _ reached 1 0 $ Nil _) $ Nil _)
+  (let ((many d3) (many _)) $ decl-take-consts $ collect-reached reg1 keys env d2)
   (def-fns REF-CMP $ (many ref-le : (many (Ref Block hs) x) (many (Ref Block hs) y) -> (many (Bool) b))
     (nat-lt (ref-pos Block _ x) (ref-pos Block _ y)))
   (let ((many order)) $ ref-sort (Ref Block hs) ref-le acc2)
-  (let ((many skeletons) (many defs) (many fills)) $ emit-blocks _ hp order env d2)
-  (let ((many d3) (many finals)) $ emit-finals _ hp (list-rev _ fi) env natives (Zero) d2)
-  (rcat5 (RStr runtime-header) (decls-rope d3) (driver-rope d3 env reads writes bytes with-env with-exec) (rcat3 skeletons defs $ fill-chunks fills 0 0) finals))
+  (let ((many reg)) $ set-rets reg1 keys (held-pass _ hp order reg1 $ MEmpty _) $ want-pass reg1 keys $ MEmpty _)
+  (let ((many trees) (many rootmap)) $ tree-map reg reached keys (MEmpty _) $ MEmpty _)
+  (let ((many n2) (many slots2)) $ assign-pass _ hp order reg (BFalse) 0 $ MEmpty _)
+  (let ((many n3) (many slots)) $ assign-pass _ hp order reg (BTrue) n2 slots2)
+  (let ((many toks)) $ tok-pass _ hp order reg slots $ MEmpty _)
+  (let-match many (pass2 _ hp order env d3 reg slots toks $ MkP2 (REmpty) (REmpty) (Nil _) 0) (MkP2 allocs fills globals _))
+  (let ((many sorted)) $ nat-sort (Nat) nat-leq $ pair-keys _ (idmap-pairs _ trees 1 0 $ Nil _) $ Nil _)
+  (let-match many (pass3 _ hp order (MkPx env d3 reg slots toks trees rootmap) $ MkP3 (REmpty) (REmpty) (BFalse) sorted 0 $ MEmpty _) (MkP3 p3 _ _ _ ads _))
+  (let ((many d4) (many finals)) $ emit-finals _ hp (list-rev _ fi) env natives (Zero) d3)
+  (let ((many d5) (many scids)) $ decl-take-consts d4)
+  (let ((many data))
+    (rcat5 (rcat5 (RStr "let () = rt_data := Array.make ") (nat-rope n3) (RStr " (Obj.magic 0 : Ffi_core.word); rt_adapters := Array.make ") (nat-rope ads) $ RStr " (fun _ -> [||])\n")
+      (rcat3 (RStr "let () = rt_globals := [| ") (rjoin (list-rev _ globals) "; ") $ RStr " |]\n")
+      (rcat3 (RStr "let () = rt_run ") (quoted $ rope-str allocs) $ RStr "\n")
+      p3
+      (rcat3 (RStr "let () = rt_run ") (quoted $ rope-str fills) $ RStr "\n")))
+  (rcat5 (RStr runtime-header) (decls-rope d5) (driver-rope d5 env reads writes bytes with-env with-exec) data
+    (rcat4 (final-binds _ fi toks) (raw-binds env toks $ pair-keys _ (idmap-pairs _ (set-add-all scids $ MEmpty _) 1 0 $ Nil _) $ Nil _) (RStr "let () = rt_data := [||]; rt_globals := [||]; rt_adapters := [||]\n") finals)))

@@ -19,3 +19,43 @@ let show_any (v : Obj.t) : string = "?"
 let flush_to oc s o l = output_substring oc s o l; flush oc
 let print_final = print_endline
 let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline; exec = true; fence = ref Driver_core.unconfined; limit = ref None; used = ref 0 }
+let rt_data : Ffi_core.word array ref = ref [||]
+let rt_next = ref 0
+let rt_get k : Obj.t = Obj.magic (Array.unsafe_get !rt_data k)
+let rt_push (v : Obj.t) = Array.unsafe_set !rt_data !rt_next (Obj.magic v : Ffi_core.word); incr rt_next
+let rt_globals : Obj.t array ref = ref [||]
+let rt_adapters : (Obj.t array -> Obj.t array) array ref = ref [||]
+let rt_src = ref ""
+let rt_pos = ref 0
+let rt_num () =
+  let s = !rt_src in
+  let neg = s.[!rt_pos] = '-' in
+  if neg then incr rt_pos;
+  let n = ref 0 in
+  while !rt_pos < String.length s && s.[!rt_pos] >= '0' && s.[!rt_pos] <= '9' do n := 10 * !n + Char.code s.[!rt_pos] - 48; incr rt_pos done;
+  incr rt_pos;
+  if neg then - !n else !n
+let rt_ref () = if (!rt_src).[!rt_pos] = 'i' then (incr rt_pos; Obj.repr (rt_num ())) else rt_get (rt_num ())
+let rt_text () = let n = rt_num () in let t = String.sub !rt_src !rt_pos n in rt_pos := !rt_pos + n + 1; t
+let rt_run s =
+  rt_src := s;
+  rt_pos := 0;
+  while !rt_pos < String.length s do
+    let op = s.[!rt_pos] in
+    incr rt_pos;
+    match op with
+    | 'b' -> let t = rt_num () in rt_push (Obj.new_block t (rt_num ()))
+    | 't' -> ignore (rt_num ()); rt_push (Obj.repr (Ffi_core.slots_new ()))
+    | 's' -> let t = rt_text () in rt_push (Obj.repr ((t, 0, String.length t) : Ffi_core.slice))
+    | 'y' -> rt_push (Obj.repr (Bytes.of_string (rt_text ())))
+    | 'z' -> rt_push (Obj.repr (Z.of_string (rt_text ())))
+    | 'g' -> rt_push (!rt_globals).(rt_num ())
+    | 'c' ->
+        let a = rt_num () in
+        let caps = Array.make (rt_num ()) (Obj.repr 0) in
+        for i = 0 to Array.length caps - 1 do caps.(i) <- rt_ref () done;
+        Array.iter rt_push ((!rt_adapters).(a) caps)
+    | 'f' -> let b = rt_get (rt_num ()) in for i = 0 to rt_num () - 1 do Obj.set_field b i (rt_ref ()) done
+    | 'k' -> let t = rt_get (rt_num ()) in for _ = 1 to rt_num () do ignore (Ffi_core.slots_add (Obj.obj t) (rt_ref ())) done
+    | _ -> failwith "malformed data"
+  done

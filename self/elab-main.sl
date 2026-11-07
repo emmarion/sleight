@@ -35,7 +35,7 @@
 (def-fns _ $ (many compile-args : (many (Bool) byte) (many (Maybe $ String) inline) (many (String) exe) -> (many (List $ String) r))
   (let ((many rest)) $ Cons _ "-package" $ Cons _ "zarith,unix" $ Cons _ "-linkpkg" $ Cons _ "main.ml" $ Cons _ "-o" $ Cons _ exe $ Nil _)
   (let-match many byte (BFalse) ((BTrue) (Cons _ "ocamlc" rest)))
-  (Cons _ "ocamlopt" $ match many inline (((List $ String) _)) ((Some _ n) (Cons _ "-inline" $ Cons _ n rest)) ((None _) rest)))
+  (Cons _ "ocamlopt" $ Cons _ "-linscan" $ match many inline (((List $ String) _)) ((Some _ n) (Cons _ "-inline" $ Cons _ n rest)) ((None _) rest)))
 
 (def-fns _ $ (many native-run : (many (Maybe $ String) inline) (many (String) ml) (many (Nat) n) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (many (Result $ List $ Result $ Nat) r))
   (let ((unique w1) (many tmp)) $ host-exec "mktemp" (Cons _ "-d" $ Nil _) (None _) w)
