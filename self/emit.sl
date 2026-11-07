@@ -1791,19 +1791,26 @@
 
 (def-adts $ (P2 : -> Type)
   enum
-  (many MkP2 : (many (Rope) allocs) (many (Rope) fills) (many (List $ Rope) globals) (many (Nat) count) (many (IdMap $ Nat) ctors) -> (P2)))
+  (many MkP2 : (many (Rope) allocs) (many (Rope) fills) (many (List $ Rope) globals) (many (Nat) count) (many (IdMap $ Nat) ctors) (many (List $ Pair (String) (Nat)) texts) -> (P2)))
 
 (def-fns _ $ (many p2-alloc : (many (P2) p) (many (Rope) a) (many (Rope) f) -> (many (P2) r))
-  (match many p _ ((MkP2 al fi gs n cs) (MkP2 (rcat al a) (rcat fi f) gs n cs))))
+  (match many p _ ((MkP2 al fi gs n cs ts) (MkP2 (rcat al a) (rcat fi f) gs n cs ts))))
 
 (def-fns _ $ (many p2-global : (many (P2) p) (many (Rope) g) -> (many (P2) r))
-  (match many p _ ((MkP2 al fi gs n cs) (MkP2 (rcat3 al (RStr "g") $ rcat (nat-rope n) $ RStr " ") fi (Cons _ g gs) (Succ n) cs))))
+  (match many p _ ((MkP2 al fi gs n cs ts) (MkP2 (rcat3 al (RStr "g") $ rcat (nat-rope n) $ RStr " ") fi (Cons _ g gs) (Succ n) cs ts))))
+
+(def-fns _ $ (many text-index : (subterm many (List $ Pair (String) (Nat)) ts) (many (String) t) -> (many (Maybe $ Nat) r))
+  (let-match many ts (Cons _ p rest) ((Nil _) (None _)))
+  (let-match many p (MkPair _ _ u i))
+  (match many (str-eqb t u) _ ((BTrue) (Some _ i)) ((BFalse) (tail $ text-index rest t))))
 
 (def-fns _ $ (many p2-ctor : (many (P2) p) (many (Decls) d) (many (Ctor) c) -> (many (P2) r))
-  (let-match many p (MkP2 al fi gs n cs))
-  (match many (idmap-get _ (ctor-id c) cs) _
-    ((Hit _ _ _ i _) (MkP2 (rcat3 al (RStr "g") $ rcat (nat-rope i) $ RStr " ") fi gs n cs))
-    ((Miss _ _ _ _) (MkP2 (rcat3 al (RStr "g") $ rcat (nat-rope n) $ RStr " ") fi (Cons _ (ctor-fn-rope d c) gs) (Succ n) $ idmap-set _ (ctor-id c) n cs))))
+  (let-match many p (MkP2 al fi gs n cs ts))
+  (let-match many (idmap-get _ (ctor-id c) cs) (Miss _ _ _ _) ((Hit _ _ _ i _) (MkP2 (rcat3 al (RStr "g") $ rcat (nat-rope i) $ RStr " ") fi gs n cs ts)))
+  (let ((many text)) $ rope-str $ ctor-fn-rope d c)
+  (match many (text-index ts text) _
+    ((Some _ i) (MkP2 (rcat3 al (RStr "g") $ rcat (nat-rope i) $ RStr " ") fi gs n (idmap-set _ (ctor-id c) i cs) ts))
+    ((None _) (MkP2 (rcat3 al (RStr "g") $ rcat (nat-rope n) $ RStr " ") fi (Cons _ (RStr text) gs) (Succ n) (idmap-set _ (ctor-id c) n cs) $ Cons _ (MkPair _ _ text n) ts))))
 
 (def-fns _ $ (many mult-tok : (many (Multiplicity) m) -> (many (String) t))
   (match many m _ ((Erased) "i0") ((Many) "i1") ((Once) "i2")))
@@ -2289,7 +2296,7 @@
   (let ((many n2) (many slots2)) $ assign-pass _ hp order reg (BFalse) 0 $ MEmpty _)
   (let ((many n3) (many slots)) $ assign-pass _ hp order reg (BTrue) n2 slots2)
   (let ((many toks)) $ tok-pass _ hp order reg slots $ MEmpty _)
-  (let-match many (pass2 _ hp order env d3 reg slots toks $ MkP2 (REmpty) (REmpty) (Nil _) 0 $ MEmpty _) (MkP2 allocs fills globals _ _))
+  (let-match many (pass2 _ hp order env d3 reg slots toks $ MkP2 (REmpty) (REmpty) (Nil _) 0 (MEmpty _) $ Nil _) (MkP2 allocs fills globals _ _ _))
   (let ((many sorted)) $ nat-sort (Nat) nat-leq $ pair-keys _ (idmap-pairs _ trees 1 0 $ Nil _) $ Nil _)
   (let-match many (pass3 _ hp order (MkPx env d3 reg slots toks trees rootmap) $ MkP3 (REmpty) (REmpty) (BFalse) sorted 0 $ MEmpty _) (MkP3 p3 _ _ _ ads _))
   (let ((many d4) (many finals)) $ emit-finals _ hp (list-rev _ fi) env natives (Zero) d3)
