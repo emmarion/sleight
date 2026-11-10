@@ -277,8 +277,8 @@ counts. Under `--goal open` and `--goal proved` there is no such warning: a
 unit that elaborates a `sorry` anywhere fails, with an error at the first,
 whether or not the goal depends on it (`tests/sorry_goal_proved_bad.sl`).
 ASSUMPTIONS.md 230 to 246 record the reference's choices where the rules of
-taint are silent. slc's `sorry` (`self/`) follows an earlier form of these
-rules, and is to be ported from the reference again.
+taint are silent, and slc makes the same ones (`self/README.md` says how it
+carries taint and where its output seems to differ).
 
 `--hints file` reads the hints that diagnostics attach to special forms
 and pieces of grammar from `file`, in place of `lib/specials.txt` and in

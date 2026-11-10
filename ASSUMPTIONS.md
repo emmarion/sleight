@@ -2417,3 +2417,20 @@ reference takes more taint than they ask for.
      or `native-compute` reads no value, so it does not require its
      `Matchable` to hold one; what `native-compute` checks of the type's
      layout is then read from the `Matchable`'s type.
+
+247. **slc's `sorry`, where the reference does not decide for it.** slc
+     (`self/`) makes the choices of items 230 to 246, and these of its
+     own, each of which `self/README.md` describes. It gives the warning
+     of item 237 once it has elaborated the files: before the program it
+     writes exists, and under `--interpret` before a final value is
+     performed. A final value is printed, and its kind read, against the
+     run-position facts dispatch reads, so a fact forced from
+     a tainted operand after the final value does not change how it is
+     shown; the reference's interpreter prints each final value as its
+     file ends, and seems to agree on every test, while a program the
+     reference's `--extract` writes seems to read the facts in force at
+     the end. In a `def-fns` block only some of whose functions are
+     tainted, a tainted function stays in the block's code with the body
+     an `absurd` function has. A value a `match` branch computes for a
+     result another branch taints is not computed. And a `_` taints its
+     form only where the solving that mentions a tainted entry is kept.
