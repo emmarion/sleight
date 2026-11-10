@@ -257,21 +257,28 @@ goal is checked.
 `(sorry ann)` produces values the program does not compute, one entry per
 entry of `ann`, a telescope as a match's annotation is, or `_` for the one its
 position expects, at any multiplicity; checking goes on past it. What depends
-on a `sorry` is tainted and is never run: a run-position form all of whose
-results are tainted runs nothing and its entries hold the erased token, code in
-a function or a branch that produces only tainted results compiles to that token,
-a tainted function's values and calls are not computed, and a tainted final
-value is not run: the driver prints `sorry` in its place, and so does a program
-`--extract` writes. A tainted head is an error where it would be dispatched as a
-special form or a macro, and so is a tainted message of `compile-warn` or
-`compile-error`. Once every file named has been elaborated and run, one warning
-names the first `sorry` and says how many the unit elaborated (WARNINGS.md 12),
-which `--warnings-as-errors` counts; `--repl` input is not counted. Under
-`--goal open` and `--goal proved` there is no such warning: a unit that
-elaborates a `sorry` anywhere fails, with an error at the first, whether or not
-the goal depends on it (`tests/sorry_goal_proved_bad.sl`). ASSUMPTIONS.md 230 to
-242 record the reference's choices where the rules of taint are silent. slc takes
-`sorry` too, and `self/bootstrap.sh` compares the two on `tests/sorry_*.sl`.
+on a `sorry` is tainted, and a tainted position is stripped from the code that
+runs as an erased one is: a tainted `let` binder binds nothing, a `match` or
+`values` only some of whose results are tainted produces the others alone, and
+a form all of whose results are tainted leaves no code. At run position a
+tainted entry is `Settled` with the erased token, a tainted function has no
+code, and a tainted final value is not run: the driver prints `sorry` in its
+place, and so does a program `--extract` writes. Whatever needs an entry's
+value takes a tainted entry as it takes an erased one: a tainted head is an
+error where it would be dispatched as a special form or a macro, a tainted
+message of `compile-warn` or `compile-error` is refused, an `at` result is
+never read back from a tainted entry, and `resolve` answers `RTainted`. Once
+a run-position statement has tainted the scope, dispatch, a message,
+`settled-eq`, `settled-ty-apply`, `settled-val-apply`, a handle and the
+erased-by-kind warning (WARNINGS.md 11) read the run-position facts as they
+stood before that statement. One warning names the first `sorry` and says how
+many the unit elaborated (WARNINGS.md 12), which `--warnings-as-errors`
+counts. Under `--goal open` and `--goal proved` there is no such warning: a
+unit that elaborates a `sorry` anywhere fails, with an error at the first,
+whether or not the goal depends on it (`tests/sorry_goal_proved_bad.sl`).
+ASSUMPTIONS.md 230 to 246 record the reference's choices where the rules of
+taint are silent. slc's `sorry` (`self/`) follows an earlier form of these
+rules, and is to be ported from the reference again.
 
 `--hints file` reads the hints that diagnostics attach to special forms
 and pieces of grammar from `file`, in place of `lib/specials.txt` and in

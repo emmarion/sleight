@@ -151,13 +151,18 @@ Tests: `tests/erased_kind_warn.sl`, `tests/erased_kind_forced_warn.sl`,
 ## 12. `sorry`
 
 ``this unit uses `sorry` once, here; nothing that depends on it runs``,
-or ``… `sorry` N times, first here; …``. Given once, after every file
-named on the command line has been elaborated and run, at the first
+or ``… `sorry` N times, first here; …``. Given once, at the first
 `sorry` the unit elaborated, wherever it stands: erased code, a
 library file, a macro's expansion. There is none at each `sorry`. It
-is not given under `--goal open` or `--goal proved`, where a `sorry`
-fails the run instead (MANUAL.md). `--warnings-as-errors` counts it.
-`lib/elab.ml` (`close_goal`), `self/elab-main.sl` (`sorry-warned`,
-`close-goal`).
-Tests: `tests/sorry_*.sl`, and for `--warnings-as-errors`
-`test/sorry_strict.expected` and, for slc, `test/sorry_strict_slc.expected`.
+comes after everything else: once every file named on the command line
+has been elaborated and its final value printed or run, a `Program`
+that exits and a final value whose run fails included. It is not given
+when elaboration fails, nor under `--goal open` or `--goal proved`,
+where a `sorry` fails the run instead (MANUAL.md).
+`--warnings-as-errors` counts it, and then no final value is run
+(ASSUMPTIONS 237).
+`lib/elab.ml` (`warn_sorries`), `bin/main.ml`; `self/elab-main.sl`
+(`sorry-warned`, `close-goal`).
+Tests: `tests/sorry_*.sl`; for `--warnings-as-errors`
+`test/sorry_strict.expected` and, for slc, `test/sorry_strict_slc.expected`;
+for a `Program`, `test/sorry_program.expected`.

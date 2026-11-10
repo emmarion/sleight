@@ -2315,22 +2315,25 @@ The rules of taint the reference follows are not yet worded in DESIGN.md;
 these are the session's choices where they say nothing, or where the
 reference takes more taint than they ask for.
 
-230. **What counts as an operand.** For a form other than `values` and
-     `match`, the reference reads "an operand is tainted" as: anything the
-     elaborator refers to while elaborating the form is tainted (a name, a
-     handle, a fetch form's argument, the head, an argument, a type, an
-     annotation, a proof, or a statement of the form's own body, as a
-     `cell-match`'s), or a result of a form nested in it is, or the form
-     stands in a tainted scope. A `match`'s annotation is not counted, the
-     rule for `match` naming only the scrutinee and the branches. A form a
-     macro produced is judged as the form its expansion gave.
+230. **What counts as an operand.** For a form with no rule of its own, the
+     reference reads "an operand is tainted" as: anything the elaborator
+     refers to while elaborating the form is tainted (a name, a handle, a
+     fetch form's argument and the entry it fetches, the head, an argument,
+     a type, an annotation, a proof, or a statement of the form's own body,
+     as a `cell-match`'s), or a result of a form nested in it is, or the
+     form stands in a tainted scope. `values`, `let` and `match` judge each
+     result by its own entry, right-hand side or branches, but whatever
+     else they elaborate counts for every result: a `match`'s annotation as
+     well as its scrutinee, and the types and `is` clauses of a `let`'s
+     binders. A form a macro produced is judged as the form its expansion
+     gave.
 
 231. **A refutation that rests on `sorry`.** The rules say nothing of
      absurd code. An `absurd` function whose body refers to a tainted entry
-     is tainted, and so is every result of a `match` one of whose
-     absurd-by-proof branches does, since the code that runs relies on the
-     refutation. An automatically absurd branch adds nothing beyond the rule
-     for scopes.
+     is tainted. An absurd-by-proof branch that does taints every result of
+     its `match`, or, under a `let-match`, the scope after it, since the
+     code that runs relies on the refutation. An automatically absurd branch
+     adds nothing beyond the rule for scopes.
 
 232. **Taint spreads through a `def-fns` block by reference.** The bodies of
      a block are compiled before the block's taint is settled, so a body may
@@ -2338,42 +2341,40 @@ reference takes more taint than they ask for.
      that is found tainted afterwards. To keep such code from running, a
      function of the block is tainted when its signature or body refers to a
      tainted function of the block at all, whether or not one of its results
-     depends on that reference. This seems to be more taint than spreading
-     result by result would give. A reference to a function outside the block
-     is judged result by result.
+     depends on that reference; a `_` solved to a term that mentions the
+     function counts as a reference. This seems to be more taint than
+     spreading result by result would give. A reference to a function
+     outside the block is judged result by result.
 
 233. **Which statements taint the scope.** Besides the statements the rules
      name, every statement other than `let`, `def-fns` and `def-unique` that
      refers to a tainted entry, or stands in a tainted scope, taints the rest
      of the scope and the entries it binds, `def-adts` included, and its code
-     is dropped. Every entry bound in a tainted scope is tainted.
-
-234. **Tainted `let-match` and `comptime-match` in run position.** Their
-     fields are `Settled` with the erased token. A tainted `comptime-match`
-     whose constructor the facts in force refute is refused with "the
-     scrutinee contradicts the facts in force".
-
-235. **A tainted result holds the token even where a value was at hand.** A
-     run-position `match` that runs for its untainted results stores the
-     token for its tainted ones, though the branch taken computed a value for
-     them. A tainted function in run position is `Settled` with the token,
-     not a closure, and the functions extraction writes leave it out.
-
-236. **The tainted final value.** The driver prints `sorry` in its place
-     whatever its type, a `Program` or a function included, and runs
-     nothing; a program `--extract` writes prints the same. Under
-     `--goal open` or `--goal proved`, where the driver is off, nothing is
-     printed.
+     is dropped. Every entry bound in a tainted scope is tainted, and every
+     function defined in one.
 
 237. **When the warning and the goal failure are given.** The warning is
-     given once, after every file on the command line, at the first `sorry`
-     in elaboration order, before any `--repl` input, whose `sorry`s are not
-     counted. Under `--goal open` and `--goal proved` the failure is an error
-     at the first `sorry`, giving the count, reported before any other
-     failure of the goal.
+     given once every file on the command line has been elaborated, at the
+     first `sorry` in elaboration order, after the final value has been
+     printed or run. The reference also gives it as the process exits where
+     a `Program` exits or the run of the final value fails. It is not given
+     where elaboration fails, a run-position form that fails included: the
+     count would be of part of the unit. Under `--warnings-as-errors` it is
+     given before any final value is consumed, and then none is. `--repl`
+     input is elaborated after it and is not counted; where the files held
+     no `sorry`, the warning is given when the REPL ends, for what it
+     elaborated. Under `--goal open` and `--goal proved` the failure is an
+     error at the first `sorry`, giving the count, reported once the files
+     have been elaborated, before a missing `goal` or `qed` is.
 
-238. **A `_` meta.** A form is tainted when a `_` minted while elaborating it
-     is solved to a term that, canonicalized, mentions a tainted entry.
+238. **Where a `_` meta is judged.** A `_` is judged when it is solved: the
+     form or statement being elaborated when a `_` takes a solution that
+     mentions a tainted entry is tainted as if it had referred to that entry,
+     even where the attempt at solving is then abandoned. A constructor
+     application is no boundary (DESIGN.md section 50), so at run position
+     one may have run before the `let` binding it solves its `_`; the `_`
+     stands for an erased argument, so what ran seems not to depend on it,
+     and the binder is tainted by the rule of item 230.
 
 239. **`sorry`'s annotation and position.** The annotation is read exactly as
      a match's, so `(at (...))` is accepted around it, with no effect, and its
@@ -2382,14 +2383,37 @@ reference takes more taint than they ask for.
 
 240. **Calling-convention marks around a tainted call.** `tail`, `notail` and
      `delegate` around a tainted call do not require the call to remain in the
-     code, which is the token. A function whose `delegate` body is tainted is
+     code, which holds none. A function whose `delegate` body is tainted is
      not refused for not delegating, and is not made an alias of its callee.
 
-241. **A tainted message.** The message of `compile-warn` or `compile-error`
-     is read as a head is (DESIGN.md section 4), so a tainted one is refused
-     as a tainted head is.
+242. **Checks that read compiled code do not see tainted code.** A tainted
+     form leaves no code for the `tail` and at-function checks to read, the
+     code hoisted out for its arguments (DESIGN.md section 15) included, and
+     the unmarked same-level call warning (WARNINGS.md 4) is not given for a
+     call in it.
 
-242. **Checks that read compiled code do not see tainted code.** Code
-     replaced by the token is what the `tail` and at-function checks read,
-     and the unmarked same-level call warning (WARNINGS.md 4) is not given
-     for a call in it.
+243. **What a wholly tainted form leaves in scope.** Every entry such a form
+     minted and left in scope is tainted with its results: the binders the
+     elaborator makes for its head and arguments, and the entries of the
+     forms nested in it. At run position each holds the token, one whose own
+     form had run included: an operand that does not itself depend on a
+     `sorry` runs when it is elaborated, before the taint of the form around
+     it is known.
+
+244. **A match result at an earlier result.** An entry of a `match`'s
+     annotation written `at` an earlier entry of it is tainted when any
+     earlier entry is, in any branch: its word would be read back from an
+     entry that has none. This is more taint than the rule for `match` gives.
+
+245. **A head by a tainted fact alone.** Where the scope is tainted, an
+     untainted `Settled`, non-erased entry whose type is `(Special)` or the
+     prelude's `(Macro)` by the facts in force, and not by those dispatch
+     reads, is refused wherever a head or an annotation token is looked for,
+     as a tainted head is, in words that name the fact. The message of a
+     `compile-warn` or `compile-error` that is a `String` in that way is
+     refused in the same words.
+
+246. **A `Matchable`'s value in a tainted form.** A tainted `comptime-match`
+     or `native-compute` reads no value, so it does not require its
+     `Matchable` to hold one; what `native-compute` checks of the type's
+     layout is then read from the `Matchable`'s type.
