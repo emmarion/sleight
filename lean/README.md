@@ -1,6 +1,6 @@
-# lean/: the minimal language in Lean 4, with a soundness proof
+# lean/: a large fragment of the language in Lean 4, with a soundness proof
 
-A Lean 4 prototype of a fragment of the language of DESIGN.md, the
+A Lean 4 prototype of a large fragment of the language of DESIGN.md, the
 minimal language of MINIMAL.md and the additions listed below: a reader
 and elaborator from the full language's surface syntax to a core
 language, a checker, an evaluator, and machine-checked theorems

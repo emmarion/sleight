@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
 title: Sleight
-abstract: "Sleight is an s-expression language pairing Kernel-style dynamism with static types: restricted dependent types, erased/many/unique multiplicities, termination checking, memory location tracking, and LLMs as intended authors. This repository holds its specification, a reference interpreter in OCaml, a self-hosted compiler to OCaml written in Sleight, and a Lean 4 interpreter for a minimal fragment with a machine-checked proof that well-typed programs evaluate to a value of their type."
+abstract: "Sleight is an s-expression language pairing Kernel-style dynamism with static types: restricted dependent types, erased/many/unique multiplicities, termination checking, memory location tracking, and LLMs as intended authors. This repository holds its specification, a reference interpreter in OCaml, a self-hosted compiler to OCaml written in Sleight, and a Lean 4 interpreter for a large fragment with a machine-checked proof that well-typed programs evaluate to a value of their type."
 authors:
   - family-names: Marion
     given-names: Eric Michael

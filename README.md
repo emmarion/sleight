@@ -54,7 +54,7 @@ Three implementations, and proofs about one of them.
 |---|---|---|
 | The reference interpreter and compiler, [`lib/`](lib/) and [`bin/`](bin/) | OCaml | defines the behavior; interprets a program, or extracts it to standalone OCaml |
 | slc, [`self/`](self/) | Sleight | compiles Sleight to OCaml; bootstrapped through the reference, it compiles itself and its output compiles itself again to identical output |
-| The Lean model, [`lean/`](lean/) | Lean 4 | a checker and evaluator for a fragment of the language, with machine-checked theorems about them |
+| The Lean model, [`lean/`](lean/) | Lean 4 | a checker and evaluator for a large fragment of the language, with machine-checked theorems about them |
 
 Over a thousand programs under [`tests/`](tests/) are the shared test
 suite: `dune test` runs each through the reference, interpreted and

@@ -3,7 +3,7 @@
 A reader who knows Girard's and Curry's paradoxes will expect §10 of
 DESIGN.md, `Type : Type` with no positivity requirement, to make this
 language unsound. This note argues that it does not. Claude sessions
-wrote it. `lean/` checks the argument by machine for a fragment of the
+wrote it. `lean/` checks the argument by machine for a large fragment of the
 language (part 10); for the rest it is a sketch. Section numbers are
 DESIGN.md's.
 
@@ -369,7 +369,7 @@ revisiting:
 
 ## 10. What `lean/` checks
 
-`lean/` defines a full semantics like part 3's for a fragment of the
+`lean/` defines a full semantics like part 3's for a large fragment of the
 language and proves theorems about it in Lean 4. `lean/README.md` is
 the authority on what that fragment is ("Beyond MINIMAL.md"), what is
 proved ("What is proved"), and what is outside the proof
