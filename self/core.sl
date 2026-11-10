@@ -619,6 +619,7 @@
     (many CWorldDo : (erased (List $ List $ Nat) ctx) (many (Code ctx many-one) req) -> (Code ctx many-one))
     (many CPrim : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ms) (many (Sp) prim) (many (List $ Code ctx many-one) args) -> (Code ctx ms))
     (many CAbsurd : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ms) -> (Code ctx ms))
+    (many CTainted : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ms) (many (Code ctx ms) code) -> (Code ctx ms))
     (many CError : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ms) (many (String) msg) -> (Code ctx ms)))
   ((CC : -> Type)
     enum
@@ -766,6 +767,7 @@
       ((CWorldDo _ _) (CValues _ ns (Cons _ c $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) c (Nil _) $ PkNil _))
       ((CPrim _ _ p args) (CPrim _ ns p args))
       ((CAbsurd _ _) (CAbsurd _ ns))
+      ((CTainted _ _ c2) (CTainted _ ns $ notail $ recast _ ns ms same c2))
       ((CError _ _ m) (CError _ ns m)))
     (CMatch _ ns scrut shape (notail $ recast-branches _ ns ms same branches)
       (match many dfl (((Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) ns) _)) ((Some _ d) (Some _ $ notail $ recast _ ns ms same d)) ((None _) (None _))) live))
@@ -2322,6 +2324,10 @@
   (let-match many run (BFalse) ((BTrue) (TrustHere)))
   (match many rp _ ((TrustHere) (TrustThen (BFalse) _ _ c tb)) ((TrustThen _ _ _ c0 tb0) (TrustThen (BFalse) _ _ c0 tb0))))
 
+(def-adts $ (FinalAt : -> Type)
+  enum
+  (many MkFinal : (many (Term) ty) (many (Trusted) facts) -> (FinalAt)))
+
 (def-adts $ (LitTable : -> Type)
   enum
   (many MkLitTable : (many (NameMap $ Nat) spelled) (many (NameMap $ Nat) strings) -> (LitTable)))
@@ -2331,7 +2337,7 @@
     enum
     (many MkEnv : (erased (Hist Block) hl) (many (Store Block hl) store) (many (Scope) scope) (many (IdMap $ EInfo hl) entries) (erased (Nat) nfree) (erased (Facts nfree) ffacts) (many (Nat) fresh) (many (Table nfree ffacts fresh) table)
        (many (Trusted) run-pos) (many (List $ Nat) objects)
-       (many (LitTable) literals) (many (List $ Pair (Maybe $ Ref Block hl) $ Term) finals)
+       (many (LitTable) literals) (many (List $ Pair (Maybe $ Ref Block hl) $ FinalAt) finals)
        (many (Maybe $ Nat) level) (many (Enclosing) enclosing) (many (List $ Pair (String) $ Loc) claimed) (many (List $ Said) diagnostics) (many (Tracking) tracking)
        (many (List $ LitEntry) lits) (many (Loc) loc) (many (Scope) prelude) (many (UniqueState) us) (many (List $ String) help) (many (Macros) expansions) -> (Env)))
   ((EInfo : ((Hist Block) l) -> Type)
@@ -2365,23 +2371,23 @@
   (let ((erased two2) (erased p2)) (entries-widen b c le two))
   (values (MNode _ here2 one2 two2) (coercible-ctor (Shared) MNode (EInfo b) (EInfo c) ph p1 p2)))
 
-(def-fns _ $ (erased finals-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (subterm erased (List $ Pair (Maybe $ Ref Block b) $ Term) xs) -> (erased (List $ Pair (Maybe $ Ref Block c) $ Term) ys) (erased (Coercible (Shared) (List $ Pair (Maybe $ Ref Block b) $ Term) xs (Shared) (List $ Pair (Maybe $ Ref Block c) $ Term) ys) p))
+(def-fns _ $ (erased finals-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (subterm erased (List $ Pair (Maybe $ Ref Block b) $ FinalAt) xs) -> (erased (List $ Pair (Maybe $ Ref Block c) $ FinalAt) ys) (erased (Coercible (Shared) (List $ Pair (Maybe $ Ref Block b) $ FinalAt) xs (Shared) (List $ Pair (Maybe $ Ref Block c) $ FinalAt) ys) p))
   (let-match erased xs (Cons _ x rest)
-    ((Nil _) (values (Nil _) (coercible-ctor (Shared) Nil (Pair (Maybe $ Ref Block b) $ Term) (Pair (Maybe $ Ref Block c) $ Term)))))
+    ((Nil _) (values (Nil _) (coercible-ctor (Shared) Nil (Pair (Maybe $ Ref Block b) $ FinalAt) (Pair (Maybe $ Ref Block c) $ FinalAt)))))
   (let ((erased rest2) (erased pr)) (finals-widen b c le rest))
   (let-match erased x (MkPair _ _ v ty))
   (let ((erased (Maybe $ Ref Block c) v2) (erased (Coercible (Shared) (Maybe $ Ref Block b) v (Shared) (Maybe $ Ref Block c) v2) pv))
     (match erased v _
       ((None _) (values (None _) (coercible-ctor (Shared) None (Ref Block b) (Ref Block c))))
       ((Some _ r) (let ((erased r2) (erased p)) (ref-widen _ b c le r)) (values (Some _ r2) (coercible-ctor (Shared) Some (Ref Block b) (Ref Block c) p)))))
-  (values (Cons _ (MkPair _ _ v2 ty) rest2) (coercible-ctor (Shared) Cons (Pair (Maybe $ Ref Block b) $ Term) (Pair (Maybe $ Ref Block c) $ Term) (coercible-ctor (Shared) MkPair (Maybe $ Ref Block b) (Maybe $ Ref Block c) (Term) (Term) pv (coercible-refl (Shared) ty)) pr)))
+  (values (Cons _ (MkPair _ _ v2 ty) rest2) (coercible-ctor (Shared) Cons (Pair (Maybe $ Ref Block b) $ FinalAt) (Pair (Maybe $ Ref Block c) $ FinalAt) (coercible-ctor (Shared) MkPair (Maybe $ Ref Block b) (Maybe $ Ref Block c) (FinalAt) (FinalAt) pv (coercible-refl (Shared) ty)) pr)))
 
 ; The store with what holds its addresses, and the same put back; the caller keeps them consistent.
-(def-fns _ $ (many env-store : (many (Env) e) -> (erased (Hist Block) hl) (many (Store Block hl) hp) (many (IdMap $ EInfo hl) en) (many (List $ Pair (Maybe $ Ref Block hl) $ Term) fi))
+(def-fns _ $ (many env-store : (many (Env) e) -> (erased (Hist Block) hl) (many (Store Block hl) hp) (many (IdMap $ EInfo hl) en) (many (List $ Pair (Maybe $ Ref Block hl) $ FinalAt) fi))
   (match many e _ ((MkEnv hs hp _ en _ _ _ _ _ _ _ fi _ _ _ _ _ _ _ _ _ _ _) (values hs hp en fi))))
-(def-fns _ $ (many env-with-store : (many (Env) e) (erased (Hist Block) hl2) (many (Store Block hl2) hp2) (many (IdMap $ EInfo hl2) en2) (many (List $ Pair (Maybe $ Ref Block hl2) $ Term) fi2) -> (many (Env) r))
+(def-fns _ $ (many env-with-store : (many (Env) e) (erased (Hist Block) hl2) (many (Store Block hl2) hp2) (many (IdMap $ EInfo hl2) en2) (many (List $ Pair (Maybe $ Ref Block hl2) $ FinalAt) fi2) -> (many (Env) r))
   (match many e _ ((MkEnv _ _ sc _ _ _ fr tb rp ob li _ lv st cl wa tk lt lo pr us hn ex) (MkEnv _ hp2 sc en2 _ _ fr tb rp ob li fi2 lv st cl wa tk lt lo pr us hn ex))))
-(def-fns _ $ (many store-grow : (erased (Hist Block) hl) (erased (Hist Block) hl2) (erased (Suffix Block hl2 hl) le) (many (IdMap $ EInfo hl) en) (many (List $ Pair (Maybe $ Ref Block hl) $ Term) fi) -> (many (IdMap $ EInfo hl2) en2) (many (List $ Pair (Maybe $ Ref Block hl2) $ Term) fi2))
+(def-fns _ $ (many store-grow : (erased (Hist Block) hl) (erased (Hist Block) hl2) (erased (Suffix Block hl2 hl) le) (many (IdMap $ EInfo hl) en) (many (List $ Pair (Maybe $ Ref Block hl) $ FinalAt) fi) -> (many (IdMap $ EInfo hl2) en2) (many (List $ Pair (Maybe $ Ref Block hl2) $ FinalAt) fi2))
   (let ((erased _) (erased pe)) (entries-widen hl hl2 le en))
   (let ((erased _) (erased pf)) (finals-widen hl hl2 le fi))
   (values (coerce en pe) (coerce fi pf)))
@@ -2389,7 +2395,7 @@
 ; The store with the entries and finals that hold its addresses, threaded as one.
 (def-adts $ (Heap : ((Hist Block) hl) -> Type)
   enum
-  (many MkHeap : (erased (Hist Block) hl) (many (Store Block hl) st) (many (IdMap $ EInfo hl) en) (many (List $ Pair (Maybe $ Ref Block hl) $ Term) fi) (many (Maybe $ String) crash) -> (Heap hl)))
+  (many MkHeap : (erased (Hist Block) hl) (many (Store Block hl) st) (many (IdMap $ EInfo hl) en) (many (List $ Pair (Maybe $ Ref Block hl) $ FinalAt) fi) (many (Maybe $ String) crash) -> (Heap hl)))
 
 (def-fns _ $ (many env-heap : (many (Env) e) -> (erased (Hist Block) hl) (many (Heap hl) h))
   (let ((erased hl) (many hp) (many en) (many fi)) $ env-store e)
@@ -2404,13 +2410,13 @@
 (def-fns _ $ (many heap-entries : (erased (Hist Block) hl) (many (Heap hl) h) -> (many (IdMap $ EInfo hl) en))
   (match many h _ ((MkHeap _ _ en _ _) en)))
 
-(def-fns _ $ (many heap-finals : (erased (Hist Block) hl) (many (Heap hl) h) -> (many (List $ Pair (Maybe $ Ref Block hl) $ Term) fi))
+(def-fns _ $ (many heap-finals : (erased (Hist Block) hl) (many (Heap hl) h) -> (many (List $ Pair (Maybe $ Ref Block hl) $ FinalAt) fi))
   (match many h _ ((MkHeap _ _ _ fi _) fi)))
 
 (def-fns _ $ (many heap-with-entries : (erased (Hist Block) hl) (many (Heap hl) h) (many (IdMap $ EInfo hl) en) -> (many (Heap hl) r))
   (match many h _ ((MkHeap _ st _ fi c) (MkHeap _ st en fi c))))
 
-(def-fns _ $ (many heap-with-finals : (erased (Hist Block) hl) (many (Heap hl) h) (many (List $ Pair (Maybe $ Ref Block hl) $ Term) fi) -> (many (Heap hl) r))
+(def-fns _ $ (many heap-with-finals : (erased (Hist Block) hl) (many (Heap hl) h) (many (List $ Pair (Maybe $ Ref Block hl) $ FinalAt) fi) -> (many (Heap hl) r))
   (match many h _ ((MkHeap _ st en _ c) (MkHeap _ st en fi c))))
 
 (def-fns _ $ (many halloc : (erased (Hist Block) hl) (many (Heap hl) h) (many (Block (Ref Block hl)) b) ->
@@ -2910,6 +2916,13 @@
   (let ((erased _) (erased _) (many tb2)) $ reenter-lits (env-lits env) _ _ bnd tb0)
   (env-set-run-pos (env-set-table env _ _ bnd tb2) (BTrue)))
 
+(def-fns _ $ (many env-final : (many (Env) env) (many (Term) ty) -> (many (FinalAt) r))
+  (match many env _ ((MkEnv _ _ _ _ _ _ fr tb rp _ _ _ _ _ _ _ _ _ _ _ _ _ _) (MkFinal ty $ trusted-at (BFalse) _ _ fr tb rp))))
+
+(def-fns _ $ (many env-at-final : (many (Env) env) (many (FinalAt) fin) -> (many (Env) r) (many (Term) ty))
+  (let-match many fin (MkFinal ty facts))
+  (match many env _ ((MkEnv _ hp sc en _ _ fr tb _ ob li fi lv st cl wa tk lt lo pr us hn ex) (values (comptime-boundary $ MkEnv _ hp sc en _ _ fr tb facts ob li fi lv st cl wa tk lt lo pr us hn ex) ty))))
+
 (def-fns _ $ (many entry : (many (Env) env) (many (Nat) x) -> (erased (Hist Block) hs) (many (EInfo hs) r))
   (let ((erased hs) (many en)) $ env-entries env)
   (match many (idmap-get _ x en) _
@@ -3169,6 +3182,8 @@
   (match many (env-taint env) _ ((MkTaint ts n wt rs ss jn) (env-set-taint env $ MkTaint ts (Succ n) wt rs (Cons _ l ss) jn))))
 (def-fns _ $ (many env-sorries : (many (Env) env) -> (many (List $ Loc) r))
   (match many (env-taint env) _ ((MkTaint _ _ _ _ ss _) (list-rev _ ss))))
+(def-fns _ $ (many sorry-free : (many (Env) env) -> (many (Bool) r))
+  (match many (env-taint env) _ ((MkTaint _ _ _ _ ss _) (list-is-empty _ ss))))
 (def-fns _ $ (many taint-watch : (many (Env) env) (many (List $ Pair (Nat) (Nat)) wt) -> (many (Env) r))
   (match many (env-taint env) _ ((MkTaint ts n _ rs ss jn) (env-set-taint env $ MkTaint ts n wt (match many wt (((List $ Nat) _)) ((Nil _) (Nil _)) (else rs)) ss jn))))
 (def-fns _ $ (many taint-watched : (many (Env) env) -> (many (List $ Pair (Nat) (Nat)) r))

@@ -2416,21 +2416,13 @@ reference takes more taint than they ask for.
      layout is then read from the `Matchable`'s type.
 
 247. **slc's `sorry`, where the reference does not decide for it.** slc
-     (`self/`) makes the choices of items 230 to 246, and these of its
-     own, each of which `self/README.md` describes. It gives the warning
-     of item 237 once it has elaborated the files: before the program it
-     writes exists, and under `--interpret` before a final value is
-     performed. A final value is printed, and its kind read, against the
-     run-position facts dispatch reads, so a fact forced from
-     a tainted operand after the final value does not change how it is
-     shown; the reference's interpreter prints each final value as its
-     file ends, and a program its `--extract` writes shows each by the
-     facts in force at that final value; the three seem to agree on every
-     test. In a `def-fns` block only some of whose functions are
-     tainted, a tainted function stays in the block's code with the body
-     an `absurd` function has. A value a `match` branch computes for a
-     result another branch taints is not computed. And a `_` taints its
-     form only where the solving that mentions a tainted entry is kept.
+     (`self/`) makes the choices of items 230 to 248, and these of its
+     own, which `self/README.md` describes. It gives the warning of item
+     237 once it has elaborated the files: before the program it writes
+     exists, and under `--interpret` before a final value is performed.
+     And a `_` taints its form by being solved only where the solving
+     that mentions a tainted entry is kept; a result is still judged by
+     its solved term and type, as item 238 has it.
 
 248. **Prelude macros given a tainted constant.** `prove-literal-lt`, where
      `resolve` answers `RTainted` for an argument, expands to

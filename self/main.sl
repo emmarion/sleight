@@ -83,7 +83,7 @@
 
 (def-fns run-lvl $ (many run-program : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (many (Bool) with-exec) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let ((erased hs) (many h)) (env-heap env))
-  (interp-finals (comptime-boundary env) pargs with-env with-exec _ (list-rev _ $ heap-finals _ h) _ h (le-refl hs) w))
+  (interp-finals env pargs with-env with-exec _ (list-rev _ $ heap-finals _ h) _ h (le-refl hs) w))
 
 (def-fns util-lvl $ (many ocamlfind : (many (List $ String) args) (many (String) dir) (many (Result $ Unit) wrote) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (many (Result $ Exited) r))
   (let-match many wrote (Ok _ _) ((Fail _ m) (values w (Fail _ m))))
