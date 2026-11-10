@@ -93,7 +93,10 @@ unless `--no-prelude` is given.
 
 `lake build` checks every theorem; `Axioms.lean` prints the axioms
 each one rests on, which are Lean's own three (`propext`,
-`Classical.choice`, `Quot.sound`) and no `sorry`.
+`Classical.choice`, `Quot.sound`) and no `sorry`. The fragment has
+`Type : Type` and datatypes with no positivity requirement (DESIGN.md
+§10). The checker types `Type` as `Type` (`TmTy.univ`) and has no
+positivity check, so every theorem below covers programs that use both.
 
 - **`eval` is total, with no fuel.** It is a Lean definition by
   well-founded recursion, not `partial`, so Lean's kernel has checked

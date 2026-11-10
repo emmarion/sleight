@@ -9,7 +9,8 @@ references are to DESIGN.md.
 1. Consistency. Is the language sound with `Type : Type` and no
    positivity restriction (§10)? Termination is carried by the level
    and subterm order (§17), and types never compute (§9). The owner
-   holds that it is sound. `lean/` proves a form of it for a large fragment;
+   holds that it is sound. `lean/` proves a form of it for a large fragment,
+   `Type : Type` and non-positive datatypes included;
    SOUNDNESS.md part 10 says which. For the rest, SOUNDNESS.md sketches
    an argument, unchecked, that reduces the question to the lemmas it
    names.

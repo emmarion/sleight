@@ -4,8 +4,9 @@ A reader who knows Girard's and Curry's paradoxes will expect §10 of
 DESIGN.md, `Type : Type` with no positivity requirement, to make this
 language unsound. This note argues that it does not. Claude sessions
 wrote it. `lean/` checks the argument by machine for a large fragment of the
-language (part 10); for the rest it is a sketch. Section numbers are
-DESIGN.md's.
+language that includes `Type : Type` and datatypes that occur
+negatively in their own constructors (part 10); for the rest it is a
+sketch. Section numbers are DESIGN.md's.
 
 ## In short
 
@@ -376,6 +377,8 @@ the authority on what that fragment is ("Beyond MINIMAL.md"), what is
 proved ("What is proved"), and what is outside the proof
 ("Untrusted"); this part only maps this note's claims to its names:
 
+- §10 itself: the fragment has `Type : Type` (`TmTy.univ`) and no
+  positivity check, so none of the theorems below excludes either.
 - (T): `eval` and `checked_runs`, with part 5's measure.
 - (S): `checked_runs`, through `VTy`; part 1's consistency is
   `no_false`.

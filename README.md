@@ -54,7 +54,7 @@ Three implementations, and proofs about one of them.
 |---|---|---|
 | The reference interpreter and compiler, [`lib/`](lib/) and [`bin/`](bin/) | OCaml | defines the behavior; interprets a program, or extracts it to standalone OCaml |
 | slc, [`self/`](self/) | Sleight | compiles Sleight to OCaml; bootstrapped through the reference, it compiles itself and its output compiles itself again to identical output |
-| The Lean model, [`lean/`](lean/) | Lean 4 | a checker and evaluator for a large fragment of the language, with machine-checked theorems about them |
+| The Lean model, [`lean/`](lean/) | Lean 4 | a checker and evaluator for a large fragment of the language, `Type : Type` and non-positive datatypes included, with machine-checked theorems about them |
 
 Over a thousand programs under [`tests/`](tests/) are the shared test
 suite: `dune test` runs each through the reference, interpreted and
@@ -66,10 +66,11 @@ that a checked program runs to a value of its type (`checked_runs`),
 that no checked program proves `False` (`no_false`), that skipping the
 erased code does not change the result (`eval_sound`), and that running
 with in-place updates agrees with that (`machine_main`). They rest on
-Lean's own three axioms and no `sorry`. [`lean/README.md`](lean/README.md)
-says what the fragment leaves out, and [SOUNDNESS.md](SOUNDNESS.md)
-argues the rest of the language, in particular `Type : Type` with no
-positivity requirement (§10), does not undo this.
+Lean's own three axioms and no `sorry`. The fragment has `Type : Type`
+and no positivity requirement (§10), so the theorems hold with both.
+[`lean/README.md`](lean/README.md) says what the fragment leaves out,
+and [SOUNDNESS.md](SOUNDNESS.md) argues the rest of the language does
+not undo this.
 
 Certified programs written in the language: [`pal/`](pal/), the longest
 palindrome by Manacher's algorithm; [`heapsort/`](heapsort/), an
@@ -129,7 +130,8 @@ files end in `.sl`; GitHub shows them as Scheme.
   review found in it.
 - [EXAMPLES.md](EXAMPLES.md), the tests worth reading first.
 - [SOUNDNESS.md](SOUNDNESS.md), why `Type : Type` with no positivity
-  requirement appears sound here, and what that assumes.
+  requirement appears sound here, proved by `lean/` for its fragment
+  and argued for the rest, and what that assumes.
 - [ASSUMPTIONS.md](ASSUMPTIONS.md), the choices the implementations make
   where the specification is silent. [BUGS.md](BUGS.md), defects found
   in them. [WARNINGS.md](WARNINGS.md), the warnings they emit.
