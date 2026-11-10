@@ -2242,7 +2242,8 @@
   enum
   (many RSettled : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) h) -> (Resolution))
   (many RHypothetical : -> (Resolution))
-  (many RUnbound : -> (Resolution)))
+  (many RUnbound : -> (Resolution))
+  (many RTainted : -> (Resolution)))
 
 (def-prim $ (many resolve : (unique (MacroWorld) mw at vacant-slot) (many (Symbol) s) ->
     (unique mw is mw2 at mw) (many (Resolution) r)))

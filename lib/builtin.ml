@@ -7,7 +7,9 @@ let load ?(prelude = true) () =
   Env.trace := [];
   Elab.gensyms := 0;
   Elab.sorries := [];
+  Elab.sorry_warned := false;
   Hashtbl.reset Env.tainted;
+  Hashtbl.reset Env.watched;
   Hashtbl.reset Elab.prims;
   let env = if prelude then Elab.run_toplevel ~loading_prelude:true { Prelude.env with externs = true } (Reader.read "lib/prelude.sl" Prelude_source.source) else Prelude.env in
   { env with prelude = env.scope; externs = not prelude }

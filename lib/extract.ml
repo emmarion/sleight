@@ -470,7 +470,7 @@ let collect env items =
   in
   IntMap.iter (fun _ v -> value v) env.Env.values;
   Hashtbl.iter (fun _ v -> value v) V.literal_values;
-  List.iter (function Env.Final (v, _, _) -> value v | Env.Native (_, v, a) -> adt a; value v | Env.Fns fs -> List.iter (fun (_, f) -> code f.V.body) fs) items;
+  List.iter (function Env.Final (v, _, _) -> Option.iter value v | Env.Native (_, v, a) -> adt a; value v | Env.Fns fs -> List.iter (fun (_, f) -> code f.V.body) fs) items;
   let adts = List.rev !adts in
   List.iter (fun a -> List.iter (fun c -> Hashtbl.replace defined c.V.cid (var c.cid)) a.V.ctors) adts;
   let closures =
@@ -643,16 +643,16 @@ let item cx = function
   | Env.Final (v, ty, path) ->
       let text =
         match (v, Program.final cx.env ty) with
+        | None, _ -> "print_final \"sorry\""
         (* a bare constructor prints `_`, as the type-directed printer gives it (section 45) *)
-        | V.VCtorFn _, Program.Plain -> "print_final \"_\""
-        | _, kind -> (
+        | Some (V.VCtorFn _), Program.Plain -> "print_final \"_\""
+        | Some v, kind -> (
             let e = value cx v in
             match kind with
             | Program.Main -> Printf.sprintf "run_main %s" e
             | Program -> Printf.sprintf "exit (run_program %s)" e
             | Thunk t -> Printf.sprintf "print_final (%s ((of_any %s : unit -> Obj.t) ()))" (show cx cx.env t) e
-            | Plain -> Printf.sprintf "print_final (%s %s)" (show cx cx.env ty) e
-            | Sorry -> "print_final \"sorry\"")
+            | Plain -> Printf.sprintf "print_final (%s %s)" (show cx cx.env ty) e)
       in
       Buffer.add_string cx.actions (Printf.sprintf "let () = source := %s; %s\n" (quote path) text)
   | Env.Native (i, v, a) ->

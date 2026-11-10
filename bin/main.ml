@@ -91,6 +91,9 @@ let () =
   if !Elab.goal_mode <> Elab.Unrequired then at_exit (fun () -> print_endline (Program.goal_verdict !Elab.goal_mode !passed));
   Option.iter fail (Program.goal_refusal !Elab.goal_mode (List.map fst flags));
   let consume = if extract = None && build = None then Program.consume (Program.start !Extract.reads !Extract.writes !Extract.output_bytes !Extract.with_env !Extract.with_exec (world program_args)) else fun _ _ _ -> () in
+  let running = ref false in
+  at_exit (fun () -> if !running then Elab.warn_sorries ());
+  let consume env ty v = running := true; consume env ty v; running := false in
   let warned = ref false and pending = ref [] in
   let strict = flag "--warnings-as-errors" in
   if strict then (let warn = !Env.warn in Env.warn := fun s -> warned := true; warn s);
@@ -107,9 +110,9 @@ let () =
   Elab.sources := List.filter_map (fun f -> if f = "-" then None else Some (f, Elab.source_dir f)) files @ List.map (fun v -> (v, Elab.source_dir v)) (values "--comptime-unconfine");
   let files = if files = [] && not (flag "--repl") then [ "-" ] else files in
   let env, final = List.fold_left (run held) (env, "-") files in
-  if !Elab.goal_mode = Elab.Unrequired then ignore (Elab.close_goal ());
+  Elab.warn_sorries ();
   let env = settle env in
-  if flag "--repl" then repl consume env;
+  if flag "--repl" then (repl consume env; Elab.warn_sorries ());
   let env = settle env in
   if !Elab.goal_mode <> Elab.Unrequired then
     match report final Elab.close_goal with Some report -> Option.iter prerr_endline report; passed := true | None -> exit 1

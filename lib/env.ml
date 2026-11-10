@@ -170,10 +170,11 @@ type t = {
   pending : (id * Value.code) list;
   prelude : scope;
   tainted_scope : bool;
+  form : int;
 }
 
 let empty =
-  { ctor_tele = []; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = NameMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = { facts = IntMap.empty; opens = { opened = []; touched = [] } }; values = IntMap.empty; pending = []; prelude = { ids = []; named = NameMap.empty }; tainted_scope = false }
+  { ctor_tele = []; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = NameMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = { facts = IntMap.empty; opens = { opened = []; touched = [] } }; values = IntMap.empty; pending = []; prelude = { ids = []; named = NameMap.empty }; tainted_scope = false; form = 0 }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -190,15 +191,21 @@ let tag_slots : (Z.t, id) Hashtbl.t = Hashtbl.create 8
 let () = Reader.handle_name := fun x -> match Hashtbl.find_opt literal_of x, Hashtbl.find_opt names x with Some r, _ -> Literal.spell r.lit | None, Some n -> Literal.name n | None, None -> "_"
 let reset_literals () = Hashtbl.reset literal_rows; Hashtbl.reset literal_of; Hashtbl.reset minted_rows; Hashtbl.reset Value.literal_values; Hashtbl.reset tag_slots; ladder := [||]
 
-type item = Fns of (id * Value.fn) list | Final of Value.value * term * string | Native of int * Value.value * Value.adt
+type item = Fns of (id * Value.fn) list | Final of Value.value option * term * string | Native of int * Value.value * Value.adt
 
 let trace : item list ref = ref []
 
 let tainted : (id, unit) Hashtbl.t = Hashtbl.create 16
-let taint_seen = ref false
-let watch : (id -> unit) ref = ref ignore
+let touches = ref 0
+let watched : (id, int) Hashtbl.t = Hashtbl.create 16
 let taint x = Hashtbl.replace tainted x ()
 let is_tainted x = Hashtbl.mem tainted x
+let touch () = incr touches
+let contained f = let outer = !touches in let r = f () in touches := outer; r
+let mention x =
+  if is_tainted x then touch ();
+  Option.iter (fun n -> Hashtbl.replace watched x (n + 1)) (Hashtbl.find_opt watched x)
+let referred before = Hashtbl.fold (fun x n xs -> if Hashtbl.find_opt before x = Some n then xs else x :: xs) watched []
 
 let entry env x = IntMap.find x env.entries
 let fact env x = IntMap.find x env.facts
@@ -238,7 +245,7 @@ let outside env = Seq.take_while (fun (x, _) -> x < 0) (IntMap.to_seq env.entrie
 let present_literals env = List.of_seq (Seq.filter_map (fun (x, _) -> Hashtbl.find_opt literal_of x) (outside env))
 let carry outer inner = Seq.fold_left (fun env (x, _) -> enter_row env x) outer (outside inner)
 
-let trusted env = if env.run_pos then { facts = env.facts; opens = env.opens } else env.trusted
+let trusted env = if env.run_pos && not env.tainted_scope then { facts = env.facts; opens = env.opens } else env.trusted
 let comptime_boundary env = let t = trusted env in { env with facts = t.facts; opens = t.opens; run_pos = true }
 let leave_run env = { env with run_pos = false; trusted = trusted env }
 
@@ -508,7 +515,7 @@ let bind env ?minted ?(minted_level = false) ?introduced ?(literal = false) ?(me
   let entries = IntMap.add x { name; mult; state = Hypothetical; minted = x; minted_level; introduced = Option.value introduced ~default:x; meta; word; temporary; at; slot } entries in
   let scope = if meta || literal then env.scope else { ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> NameMap.add n x env.scope.named) name } in
   let env = { env with scope; entries; facts = IntMap.add x { ty; rule } facts } in
-  if env.tainted_scope then taint x;
+  if env.tainted_scope && not literal then taint x;
   (x, set_state ?minted env x state)
 
 let covers env prior x =
@@ -575,6 +582,7 @@ let rec unify_in ?(force = false) env a b =
     let assign x t =
       if has_dangling t then contradiction ();
       if occurs x t then raise (Contradiction (lazy (qname env x ^ " occurs in " ^ qshow env t)));
+      if is_meta env x then fold_vars (fun _ () t -> match t with Var y -> mention y | _ -> ()) 0 () t;
       let env = add_rule env x t in
       let typed () = let tx = type_of env x and tt = infer env Reader.nowhere t in if equal tx tt then env else unify_in ~force env tx tt in
       if force then typed () else try typed () with Contradiction _ -> raise (Ill_typed (x, t))
@@ -688,8 +696,7 @@ let stand_for x y = if !warn_unused then (Hashtbl.replace refs y (Level (max (le
 let reset_tracking () = Hashtbl.reset tracked; Hashtbl.reset refs
 
 let refer ?(live = false) x =
-  if is_tainted x then taint_seen := true;
-  !watch x;
+  mention x;
   if !warn_unused then
     match Hashtbl.find_opt refs x with
     | None -> ()

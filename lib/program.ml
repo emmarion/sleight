@@ -7,7 +7,7 @@ let prelude_opt env name = Env.lookup { env with Env.scope = env.Env.prelude } (
 let prelude env name = Option.get (prelude_opt env name)
 let ctor env name = match (Env.entry env (prelude env name)).state with Env.Settled (V.VCtorFn c) -> c | _ -> assert false
 
-type final = Elab.final = Main | Program | Thunk of term | Plain | Sorry
+type final = Elab.final = Main | Program | Thunk of term | Plain
 
 let final = Elab.final
 
@@ -111,9 +111,9 @@ let build byte path ml =
 let goal_verdict mode passed = Printf.sprintf "--goal %s: %s" (Elab.goal_name mode) (if passed then "PASS" else "FAIL")
 
 let consume w env ty v =
-  match final env ty with
-  | Main -> (driver env).run_main w v
-  | Program -> let d = driver env in Eval.perform := d.perform w; w.exit (d.run_program w v)
-  | Thunk t -> print w (Elab.show_value env Reader.nowhere t (List.hd (Eval.apply v [])))
-  | Plain -> print w (Elab.show_value env Reader.nowhere ty v)
-  | Sorry -> print w "sorry"
+  match v, final env ty with
+  | None, _ -> print w "sorry"
+  | Some v, Main -> (driver env).run_main w v
+  | Some v, Program -> let d = driver env in Eval.perform := d.perform w; w.exit (d.run_program w v)
+  | Some v, Thunk t -> print w (Elab.show_value env Reader.nowhere t (List.hd (Eval.apply v [])))
+  | Some v, Plain -> print w (Elab.show_value env Reader.nowhere ty v)

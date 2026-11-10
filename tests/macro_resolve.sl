@@ -13,7 +13,8 @@
   (let ((many t)) $ match many r (((String) _))
     ((RSettled _ _ _ h) (str-append "settled " $ mult-name $ settled-mult _ _ _ h))
     ((RHypothetical) "hypothetical")
-    ((RUnbound) "unbound"))
+    ((RUnbound) "unbound")
+    ((RTainted) "tainted"))
   (let ((unique mw2) (many o)) (str-raw mw1 here t))
   (values mw2 $ Cons _ o $ Nil _))
 (let ((many probe)) (MkMacro _ probe-fn))
@@ -56,5 +57,5 @@
 (gen-probe)
 (MkPair _ _ (MkPair _ _ (probe k) $ MkPair _ _ (probe E) (probe nope)) $ MkPair _ _ (MkPair _ _ (inside 1) $ MkPair _ _ before (shadowing 2)) $
   MkPair _ _ (MkPair _ _ (probe u) $ MkPair _ _ (branch (None _)) (branch (Some _ 3))) $ MkPair _ _ before-gen $ MkPair _ _ after-gen gen-text)
-; warns: <**>:34:32: warning: declaration of `let` shadows a built-in
+; warns: <**>:35:32: warning: declaration of `let` shadows a built-in
 ; warn-unused: no
