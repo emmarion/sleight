@@ -442,6 +442,7 @@ and expr cx scope code = match code with
       Printf.sprintf "(to_any (match (of_any %s : %s) with (x, Ffi_core.MintedIs, _, _) -> (x, Ffi_core.MintedType, Ffi_core.Erased, to_any ()) | _ -> (%s, to_any ())))" (expr cx scope h) handle_ty (handle !Term.type_entry MintedIs Erased)
   | V.CPrim (p, _) -> Printf.sprintf "(failwith %s)" (quote ("`" ^ Special.name p ^ "` reached with no macro world"))
   | V.CAbsurd -> "(absurd ())"
+  | V.CTainted _ -> failwith "internal: code that rests on `sorry` reached"
 
 let collect env items =
   let adts = ref [] and defined = Hashtbl.create 64 in
@@ -470,7 +471,7 @@ let collect env items =
   in
   IntMap.iter (fun _ v -> value v) env.Env.values;
   Hashtbl.iter (fun _ v -> value v) V.literal_values;
-  List.iter (function Env.Final (v, _, _) -> Option.iter value v | Env.Native (_, v, a) -> adt a; value v | Env.Fns fs -> List.iter (fun (_, f) -> code f.V.body) fs) items;
+  List.iter (function Env.Final (v, _, _, _) -> Option.iter value v | Env.Native (_, v, a) -> adt a; value v | Env.Fns fs -> List.iter (fun (_, f) -> code f.V.body) fs) items;
   let adts = List.rev !adts in
   List.iter (fun a -> List.iter (fun c -> Hashtbl.replace defined c.V.cid (var c.cid)) a.V.ctors) adts;
   let closures =
@@ -640,9 +641,9 @@ let item cx = function
   | Env.Fns fns ->
       let text = concat "\nand " (List.map (fun (x, f) -> fn cx { capture = cx.env.values; locals = [] } (var x) f) fns) in
       Buffer.add_string cx.out ("let rec " ^ text ^ "\n")
-  | Env.Final (v, ty, path) ->
+  | Env.Final (v, ty, path, env) ->
       let text =
-        match (v, Program.final cx.env ty) with
+        match (v, Program.final env ty) with
         | None, _ -> "print_final \"sorry\""
         (* a bare constructor prints `_`, as the type-directed printer gives it (section 45) *)
         | Some (V.VCtorFn _), Program.Plain -> "print_final \"_\""
@@ -651,8 +652,8 @@ let item cx = function
             match kind with
             | Program.Main -> Printf.sprintf "run_main %s" e
             | Program -> Printf.sprintf "exit (run_program %s)" e
-            | Thunk t -> Printf.sprintf "print_final (%s ((of_any %s : unit -> Obj.t) ()))" (show cx cx.env t) e
-            | Plain -> Printf.sprintf "print_final (%s %s)" (show cx cx.env ty) e)
+            | Thunk t -> Printf.sprintf "print_final (%s ((of_any %s : unit -> Obj.t) ()))" (show cx env t) e
+            | Plain -> Printf.sprintf "print_final (%s %s)" (show cx env ty) e)
       in
       Buffer.add_string cx.actions (Printf.sprintf "let () = source := %s; %s\n" (quote path) text)
   | Env.Native (i, v, a) ->

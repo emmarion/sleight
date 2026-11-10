@@ -64,6 +64,7 @@ let rec eval env code =
       | Special.SettledType, [ VHandle (x, r, _, _) ] -> [ (match r with MintedIs -> VHandle (x, MintedType, Erased, VToken) | MintedType -> VHandle (!Term.type_entry, MintedIs, Erased, VToken)) ]
       | p, vs -> !prim p vs)
   | CAbsurd -> raise (Runtime "absurd code reached")
+  | CTainted _ -> raise (Runtime "internal: code that rests on `sorry` reached")
 
 and eval1 env code = match eval env code with [ v ] -> v | vs -> raise (Runtime (Printf.sprintf "expected one value, got %d" (List.length vs)))
 

@@ -44,6 +44,7 @@ and code =
   | CWorldDo of code
   | CPrim of Special.t * code list
   | CAbsurd
+  | CTainted of code
 
 (* Branches are keyed by discriminant (section 33). [shape] is how the scrutinee comes apart (section 24): an
    ADT the elaborator saw, or a Matchable read at runtime, its type having settled the shape its values take. *)
@@ -66,6 +67,7 @@ let map_code f = function
   | CCellRead (k, i, c) -> CCellRead (k, i, f c)
   | CWorldDo c -> CWorldDo (f c)
   | CPrim (p, cs) -> CPrim (p, List.map f cs)
+  | CTainted c -> CTainted (f c)
   | (CVar _ | CConst _ | CErased | CAbsurd) as c -> c
 
 let subcodes c =

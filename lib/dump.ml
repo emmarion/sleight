@@ -51,7 +51,7 @@ let unique_status env x =
 (* A value the final's printer can spell (section 45); a function or a Matchable adds nothing to its kind. *)
 let value ~show_value env l x =
   match (entry env x).state, (entry env x).mult with
-  | Settled v, (Many | Unique) when not (is_tainted x) -> (match show_value env l (type_of env x) v with "_" -> [] | s -> [ "= " ^ s ])
+  | Settled v, (Many | Unique) when not (is_tainted x) -> (match show_value (comptime_boundary env) l (fact env x).ty v with "_" -> [] | s -> [ "= " ^ s ])
   | _ -> []
 
 let entry_lines ~show_value env l x =

@@ -1,0 +1,4 @@
+(let ((many a)) (sorry (((Nat) x))))
+(let ((many b)) 5)
+a
+b

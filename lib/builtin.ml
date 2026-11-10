@@ -7,7 +7,6 @@ let load ?(prelude = true) () =
   Env.trace := [];
   Elab.gensyms := 0;
   Elab.sorries := [];
-  Elab.sorry_warned := false;
   Hashtbl.reset Env.tainted;
   Hashtbl.reset Env.watched;
   Hashtbl.reset Elab.prims;

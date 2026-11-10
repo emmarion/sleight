@@ -55,3 +55,17 @@
  (alias runtest)
  (action
   (diff sorry_program.expected sorry_program.out)))
+
+(rule
+ (deps sorry_repl.sl)
+ (action
+  (with-stdin-from
+   sorry_repl.in
+   (with-outputs-to
+    sorry_repl.out
+    (run %{exe:../bin/main.exe} --repl sorry_repl.sl)))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff sorry_repl.expected sorry_repl.out)))
