@@ -59,11 +59,12 @@ state, erased or not, holds a value of a type whose opened `Matchable`
 lists no constructors (§25), so
 no `(False)` token can justify a refutation that the run then relies on.
 
-The argument claims nothing about logical consistency in the
-Curry-Howard sense for types read as propositions independently of
-runs. It is the run-time reading that the language relies on: an erased
-proof is never checked again, so what matters is that it would have
-evaluated to a value had it run.
+For `lean/`'s fragment, this is consistency in the usual Curry-Howard
+sense too: no checked program returns a value of a type with no
+constructors (`no_false`, part 10). It is reached through runs, not
+through a model of types as propositions. An erased proof is never
+checked again, so what matters is that it would have evaluated to a
+value had it run, and the full semantics proves exactly that.
 
 These claims are meant relative to the shipped prelude,
 `lib/prelude.sl`: its extern models and its `def-prim` and `def-opaque`
