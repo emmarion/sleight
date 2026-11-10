@@ -157,6 +157,7 @@ named on the command line has been elaborated and run, at the first
 library file, a macro's expansion. There is none at each `sorry`. It
 is not given under `--goal open` or `--goal proved`, where a `sorry`
 fails the run instead (MANUAL.md). `--warnings-as-errors` counts it.
-`lib/elab.ml` (`close_goal`); slc does not implement `sorry` yet.
-Tests: `tests/sorry_*.sl`, and `test/sorry_strict.expected` for
-`--warnings-as-errors`.
+`lib/elab.ml` (`close_goal`), `self/elab-main.sl` (`sorry-warned`,
+`close-goal`).
+Tests: `tests/sorry_*.sl`, and for `--warnings-as-errors`
+`test/sorry_strict.expected` and, for slc, `test/sorry_strict_slc.expected`.

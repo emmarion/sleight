@@ -270,8 +270,8 @@ which `--warnings-as-errors` counts; `--repl` input is not counted. Under
 `--goal open` and `--goal proved` there is no such warning: a unit that
 elaborates a `sorry` anywhere fails, with an error at the first, whether or not
 the goal depends on it (`tests/sorry_goal_proved_bad.sl`). ASSUMPTIONS.md 230 to
-242 record the reference's choices where the rules of taint are silent; slc does
-not take `sorry` yet.
+242 record the reference's choices where the rules of taint are silent. slc takes
+`sorry` too, and `self/bootstrap.sh` compares the two on `tests/sorry_*.sl`.
 
 `--hints file` reads the hints that diagnostics attach to special forms
 and pieces of grammar from `file`, in place of `lib/specials.txt` and in

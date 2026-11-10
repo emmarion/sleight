@@ -142,6 +142,7 @@
         (values hl2 hq2 sf2 (Cons _ e $ Nil _) wo))
       (tail $ interp-program (env-fuel env) pcs (MkPerformer (ElabWorld) 0 0 perform world-prim) _ hp v w1))
     ((FPlain) (tail $ interp-finals env pargs with-env with-exec _ rest _ hp le $ say-to (BFalse) (str-cat (final-text _ hp v env ty) "\n") w))
+    ((FSorry) (tail $ interp-finals env pargs with-env with-exec _ rest _ hp le $ say-to (BFalse) "sorry\n" w))
     ((FThunk t)
       (let ((erased _) (many hp1) (erased le1) (many vs) (erased pk) (unique (Unit) _)) (apply 0 0 _ (env-fuel env) _ hp v (Nil _) many-one _ (compile-time 0 0) u))
       (let ((many r)) (vals-one _ vs pk))

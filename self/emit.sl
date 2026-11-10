@@ -1468,6 +1468,7 @@
       (values d1 $ rcat4 (rcat3 (RStr "let () = if Sys.argv.(1) = \"") (RStr $ nat-str idx) $ RStr "\" then let v = (of_any ") vr (RStr " : unit -> Obj.t) () in ") $ rcat (dispatch-rope d1 0 adt (all-live adt) (RStr "v") (ctor-arms d1 (adt-ctors adt) $ AkIndex) $ None _) $ RStr "\n")))
   (match many (classify-final env ty) _
     ((FMain) (values d $ rcat3 (RStr "let () = driver.run_main world ") vr $ RStr "\n"))
+    ((FSorry) (values d $ rcat3 (RStr "let () = print_final ") (quoted "sorry") $ RStr "\n"))
     ((FProgram) (values d $ rcat3 (RStr "let () = exit (driver.run_program world ") vr $ RStr ")\n"))
     ((FThunk t)
       (let ((many memo) (many name)) $ show-type show-fuel env t $ MkShowMemo (env-fresh-bound env) 0 (Nil _) (Nil _) d)

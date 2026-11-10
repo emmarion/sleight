@@ -12,7 +12,9 @@
 #   3. compiles slc with slc before step 2, then again with the result while step 2 runs, and requires the two
 #      outputs to be identical.
 # Each of the three builds of slc (steps 1 and 3) runs under --warnings-as-errors and --warn-unused, so a warning in self/*.sl,
-# lib/prelude.sl or lib/embed.sl fails, an unused binder included.
+# lib/prelude.sl or lib/embed.sl fails, an unused binder included. Step 2 also runs slc under --warnings-as-errors on
+# tests/sorry_comptime.sl, compiling and interpreting, and requires the output test/sorry_strict_slc.expected holds, as
+# test/dune does for the reference with test/sorry_strict.expected.
 # Usage: self/bootstrap.sh [build-dir]   (default _build/self)
 #        self/bootstrap.sh one tests/a.sl ...   step 2 for those tests alone, into _build/self, rebuilding slc only
 #        when self/*.sl or the reference binary changed; test/one.sh also runs them through test/runtest.ml
@@ -170,6 +172,8 @@ cat "$B/slc2.time"
 slc3=$!
 echo "== compiling the tests with slc, the extern, thunk, main, char, nat and bytes tests again with --no-templates, the native-compute tests again with --no-native, and every test again under --interpret"
 check_all tests/*.sl
+strict() { "$B/slc" --warnings-as-errors "$@" tests/sorry_comptime.sl > "$B/sorry_strict.out" 2>&1; [ $? = 1 ] && cmp -s "$B/sorry_strict.out" test/sorry_strict_slc.expected; }
+strict && strict --interpret || echo "FAIL sorry_strict: slc --warnings-as-errors on tests/sorry_comptime.sl differs from test/sorry_strict_slc.expected, see $B/sorry_strict.out" >> "$B/results.txt"
 grep "^FAIL" "$B/results.txt"
 fail=$(grep -c "^FAIL" "$B/results.txt")
 echo "$(grep -c '^ok ' "$B/results.txt") programs matched the interpreter, $(grep -c '^refused ' "$B/results.txt") programs refused with the expected message, $fail failed"
