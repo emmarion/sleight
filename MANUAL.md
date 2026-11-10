@@ -272,7 +272,12 @@ place, and so does a program `--extract` writes. Whatever needs an entry's
 value takes a tainted entry as it takes an erased one: a tainted head is an
 error where it would be dispatched as a special form or a macro, a tainted
 message of `compile-warn` or `compile-error` is refused, an `at` result is
-never read back from a tainted entry, and `resolve` answers `RTainted`. Once
+read back from an untainted entry wherever one holds its word, and `resolve`
+answers `RSettledSorry` for a tainted `Settled` entry and `RHypothetical` for
+a tainted local, as for any local. Given an argument that answers
+`RSettledSorry`, `prove-literal-lt` expands to a `sorry` of the `Lt` it would
+have minted, and `unary` to a `let-match` on a `sorry`, which creates no rule
+and taints the rest of its scope (`tests/sorry_macros.sl`). Once
 a run-position statement has tainted the scope, dispatch, a message,
 `settled-eq`, `settled-ty-apply`, `settled-val-apply`, a handle and the
 erased-by-kind warning (WARNINGS.md 11) read the run-position facts as they

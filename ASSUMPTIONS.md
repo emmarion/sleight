@@ -2410,10 +2410,13 @@ reference takes more taint than they ask for.
      `compile-warn` or `compile-error` that is a `String` in that way is
      refused in the same words.
 
-246. **A `Matchable`'s value in a tainted form.** A tainted `comptime-match`
-     or `native-compute` reads no value, so it does not require its
-     `Matchable` to hold one; what `native-compute` checks of the type's
-     layout is then read from the `Matchable`'s type.
+246. **A tainted `Matchable`'s value.** `comptime-match` and `native-compute`
+     require their `Matchable` to hold a value. A tainted `Matchable` that is
+     `many` and `Settled` holds the token, and is taken to meet the
+     requirement, as it would untainted; the form that reads it is tainted
+     and reads no value, and what `native-compute` checks of the type's
+     layout is then read from the `Matchable`'s type. An erased one is
+     refused as it is untainted.
 
 247. **slc's `sorry`, where the reference does not decide for it.** slc
      (`self/`) makes the choices of items 230 to 248, and these of its
@@ -2424,16 +2427,14 @@ reference takes more taint than they ask for.
      that mentions a tainted entry is kept; a result is still judged by
      its solved term and type, as item 238 has it.
 
-248. **Prelude macros given a tainted constant.** `prove-literal-lt`, where
-     `resolve` answers `RTainted` for an argument, expands to
+248. **`prove-literal-lt` given a tainted constant.** Where `resolve`
+     answers `RSettledSorry` for an argument, the macro expands to
      `(sorry (((Lt a b) _)))`, `a` and `b` the arguments as written, or the
      numeral of its code for an untainted character. A tainted argument is
-     so taken for a `Nat`: the code of a tainted `Char` cannot be named, and
-     the `Lt` then fails to check. `unary` cannot state its rule, the number
-     of successors being what the value would give, so it expands to
-     `(let-match erased (sorry (((Eq Type (Nat) (Nat)) _))) (Refl _ _))`,
-     which creates no rule, taints the rest of the scope as the rule would,
-     and counts as a `sorry`; code that needs the rule does not check. The
-     `qq` of `std/macro.sl` still refuses a tainted name in a template, and
-     a macro that tells a head apart by `resolve` takes a tainted name for
-     none of the heads it knows.
+     so taken for a `Nat`: `RSettledSorry` carries no handle, and nothing
+     else the macro world offers tells a macro the type of an entry, so the
+     code of a tainted `Char` cannot be named, and the `Lt` then fails to
+     check. The `qq` of `std/macro.sl` refuses a name that answers
+     `RSettledSorry` in a template, having no handle to splice, and a macro
+     that tells a head apart by `resolve` takes such a name for none of the
+     heads it knows.
