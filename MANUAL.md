@@ -254,6 +254,25 @@ them, and then writes no OCaml. Warnings are reported as they are without
 the flag, and `--warnings-as-errors` fails a run that warns before any
 goal is checked.
 
+`(sorry ann)` produces values the program does not compute, one entry per
+entry of `ann`, a telescope as a match's annotation is, or `_` for the one its
+position expects, at any multiplicity; checking goes on past it. What depends
+on a `sorry` is tainted and is never run: a run-position form all of whose
+results are tainted runs nothing and its entries hold the erased token, code in
+a function or a branch that produces only tainted results compiles to that token,
+a tainted function's values and calls are not computed, and a tainted final
+value is not run: the driver prints `sorry` in its place, and so does a program
+`--extract` writes. A tainted head is an error where it would be dispatched as a
+special form or a macro, and so is a tainted message of `compile-warn` or
+`compile-error`. Once every file named has been elaborated and run, one warning
+names the first `sorry` and says how many the unit elaborated (WARNINGS.md 12),
+which `--warnings-as-errors` counts; `--repl` input is not counted. Under
+`--goal open` and `--goal proved` there is no such warning: a unit that
+elaborates a `sorry` anywhere fails, with an error at the first, whether or not
+the goal depends on it (`tests/sorry_goal_proved_bad.sl`). ASSUMPTIONS.md 230 to
+242 record the reference's choices where the rules of taint are silent; slc does
+not take `sorry` yet.
+
 `--hints file` reads the hints that diagnostics attach to special forms
 and pieces of grammar from `file`, in place of `lib/specials.txt` and in
 its format; slc takes the same flag. `--first-error`, slc's alone, stops
@@ -368,7 +387,8 @@ final expression.
 
 `(dump-context)` stops elaboration where it is written and reports, as one
 error, what the checker knows there: the goal, the level, every entry in scope
-with its type, `is` rule, multiplicity and uniqueness state, and the slots
+with its type, `is` rule, multiplicity and uniqueness state, whether it is
+tainted by `sorry`, whether the scope is, and the slots
 that two or more entries share. It can be used as an expression, a statement or a type;
 `(dump-context x ...)` reports just the terms named. It's a debugging aid, so
 its output isn't stable (ASSUMPTIONS 196).

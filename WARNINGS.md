@@ -147,3 +147,16 @@ empty type such as `(False)`.
 `lib/elab.ml` (`warn_erased_kind`), `self/elab.sl`.
 Tests: `tests/erased_kind_warn.sl`, `tests/erased_kind_forced_warn.sl`,
 `tests/erased_kind_let_warn_bad.sl`.
+
+## 12. `sorry`
+
+``this unit uses `sorry` once, here; nothing that depends on it runs``,
+or ``… `sorry` N times, first here; …``. Given once, after every file
+named on the command line has been elaborated and run, at the first
+`sorry` the unit elaborated, wherever it stands: erased code, a
+library file, a macro's expansion. There is none at each `sorry`. It
+is not given under `--goal open` or `--goal proved`, where a `sorry`
+fails the run instead (MANUAL.md). `--warnings-as-errors` counts it.
+`lib/elab.ml` (`close_goal`); slc does not implement `sorry` yet.
+Tests: `tests/sorry_*.sl`, and `test/sorry_strict.expected` for
+`--warnings-as-errors`.
