@@ -14,7 +14,10 @@
 # Each of the three builds of slc (steps 1 and 3) runs under --warnings-as-errors and --warn-unused, so a warning in self/*.sl,
 # lib/prelude.sl or lib/embed.sl fails, an unused binder included. Step 2 also runs slc under --warnings-as-errors on
 # tests/sorry_comptime.sl, compiling and interpreting, and requires the output test/sorry_strict_slc.expected holds, as
-# test/dune does for the reference with test/sorry_strict.expected.
+# test/dune does for the reference with test/sorry_strict.expected; and it runs tests/sorry_program.sl on
+# test/sorry_program.in, interpreted and compiled, and requires exit code 3 and the output
+# test/sorry_program_slc.expected holds, slc's warning coming before the program's own output where the
+# reference's comes as the program exits (test/sorry_program.expected).
 # Usage: self/bootstrap.sh [build-dir]   (default _build/self)
 #        self/bootstrap.sh one tests/a.sl ...   step 2 for those tests alone, into _build/self, rebuilding slc only
 #        when self/*.sl or the reference binary changed; test/one.sh also runs them through test/runtest.ml
@@ -174,6 +177,9 @@ echo "== compiling the tests with slc, the extern, thunk, main, char, nat and by
 check_all tests/*.sl
 strict() { "$B/slc" --warnings-as-errors "$@" tests/sorry_comptime.sl > "$B/sorry_strict.out" 2>&1; [ $? = 1 ] && cmp -s "$B/sorry_strict.out" test/sorry_strict_slc.expected; }
 strict && strict --interpret || echo "FAIL sorry_strict: slc --warnings-as-errors on tests/sorry_comptime.sl differs from test/sorry_strict_slc.expected, see $B/sorry_strict.out" >> "$B/results.txt"
+program() { "$@" < test/sorry_program.in > "$B/sorry_program.out" 2>&1; [ $? = 3 ] && cmp -s "$B/sorry_program.out" test/sorry_program_slc.expected; }
+compiled() { "$B/slc" --byte --build "$B/sorry_program_slc.exe" tests/sorry_program.sl && "$B/sorry_program_slc.exe"; }
+program "$B/slc" --interpret tests/sorry_program.sl && program compiled || echo "FAIL sorry_program: slc on tests/sorry_program.sl differs from test/sorry_program_slc.expected, see $B/sorry_program.out" >> "$B/results.txt"
 grep "^FAIL" "$B/results.txt"
 fail=$(grep -c "^FAIL" "$B/results.txt")
 echo "$(grep -c '^ok ' "$B/results.txt") programs matched the interpreter, $(grep -c '^refused ' "$B/results.txt") programs refused with the expected message, $fail failed"

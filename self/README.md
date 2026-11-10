@@ -196,7 +196,10 @@ every test again under `slc --interpret` and compares it the same way, and
 each test that writes `native-compute` again under `slc --no-native`,
 unless it says `; native: only`. It runs `slc --warnings-as-errors` on
 `tests/sorry_comptime.sl`, compiling and interpreting, and requires the
-output `test/sorry_strict_slc.expected` holds.
+output `test/sorry_strict_slc.expected` holds; and it runs
+`tests/sorry_program.sl` on `test/sorry_program.in`, interpreted and
+compiled, and requires exit code 3 and the output
+`test/sorry_program_slc.expected` holds.
 And it compiles `slc` with
 `slc`, then compiles `slc` again with the compiler that produced, and
 requires the two outputs to be byte-for-byte identical, which is the
@@ -312,20 +315,39 @@ the entry says otherwise, and recorded so it can be revisited.
   differences, so the number cannot quietly grow. A runtime error in the interpreter is an error
   block that prints as `<error: ...>`.
 - **`sorry`'s taint is carried in the environment.** The reference keeps
-  it in global tables and flags (`Env.tainted`, `taint_seen`, `watch`);
+  it in global tables and a counter (`Env.tainted`, `touches`, `watched`);
   here they are a `Taint` record in the environment's tracking, which
-  comes back out of a branch or a body as the entries do, while the flag
-  saying the scope is tainted sits in the environment's pragmas and, like
-  the scope, does not. Every reference to an entry passes through
-  `env-refer`, as through the reference's `Env.refer`, which there also
-  records a reference to a function of a `def-fns` block being
-  elaborated: the references the block's spreading of taint reads
-  (ASSUMPTIONS 232). Two things differ in the code written out, and no
-  test seems to observe either: a function found tainted keeps its code
-  in its group, unreachable, where the reference leaves it out; and a
-  statement whose own code the reference drops keeps the frames that code
-  would bind, each holding the erased token, so the code after it keeps
-  its shape.
+  comes back out of a branch or a body as the entries do: the tainted
+  entries, the count of touches, the references made to the functions of
+  the `def-fns` blocks being elaborated, which a block's spreading of
+  taint reads (ASSUMPTIONS 232), the `sorry` sites, and the taint a
+  `match` joins over its branches, result by result. The flag saying the
+  scope is tainted and the count a form started at sit in the
+  environment's pragmas and, like the scope, do not come back out; the
+  facts dispatch reads once a run-position scope is tainted are the
+  `Trusted` record's, kept where the scope was first tainted
+  (`env-taint-scope`). Every reference to an entry passes through
+  `env-refer`, and the unifier mentions what it solves a `_` to
+  (`bind-var`). `Code` is indexed by the multiplicities its position
+  expects, so a form cannot hand back code that lacks a tainted result:
+  that result is `CErased` there, as the code of an erased position is,
+  a reference to a tainted entry included, and whatever keeps the code
+  strips it to the untainted results first (`strip-code`: a `let`, a
+  form at run position, a `match` with `at` entries). The session's
+  reading is that neither the code that runs nor the OCaml written then
+  holds one; `self/bootstrap.sh` does not check it. Four things seem to
+  differ from the reference, and no test seems to observe any of them.
+  A solving of a `_` that is then abandoned leaves no touch here, where
+  the reference's counter keeps it (ASSUMPTIONS 238). A value one
+  branch of a `match` computes for a result another branch taints is not
+  computed, where the reference computes it and drops it. In a `def-fns`
+  block only some of whose functions are tainted, a tainted function
+  stays in its group with the body an `absurd` function has, since the
+  other bodies are indexed by the group's frame; a block all of whose
+  functions are tainted leaves no group, as in the reference. And an
+  entry is tainted where the elaborator binds a tainted result to it,
+  for a head or an argument, where the reference taints it once the
+  form around it is known to be tainted.
 - **`dump-context` is ported** (ASSUMPTIONS 196): the form is refused
   with the report `lib/dump.ml` writes, built the same way here -- the
   goal, the position, the entries in scope, the entries sharing a slot, the opened

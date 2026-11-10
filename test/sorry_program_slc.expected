@@ -1,0 +1,2 @@
+tests/sorry_program.sl:17:20: warning: this unit uses `sorry` once, here; nothing that depends on it runs
+> a

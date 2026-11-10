@@ -116,9 +116,10 @@
 ; ---- The finals in order, each as lib/program.ml's consume has it; the finals stay at the history they were
 ; recorded at and each is widened to the current one as it is reached, so the walk is structural.
 
-(def-fns finals-lvl $ (many interp-finals : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (many (Bool) with-exec) (erased (Hist Block) hs0) (subterm many (List $ Pair (Ref Block hs0) $ Term) fi) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (Suffix Block hs hs0) le) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
+(def-fns finals-lvl $ (many interp-finals : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (many (Bool) with-exec) (erased (Hist Block) hs0) (subterm many (List $ Pair (Maybe $ Ref Block hs0) $ Term) fi) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (Suffix Block hs hs0) le) (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let-match many fi (Cons _ f rest) ((Nil _) (values w (Exit _ exit-ok))))
-  (let-match many f (MkPair _ _ v0 ty))
+  (let-match many f (MkPair _ _ mv ty))
+  (let-match many mv (Some _ v0) ((None _) (tail $ interp-finals env pargs with-env with-exec _ rest _ hp le $ say-to (BFalse) "sorry\n" w)))
   (let ((many v)) (widen-ref _ _ le v0))
   (let ((unique (Unit) u)) (MkUnit))
   (match many (classify-final env ty) _
@@ -142,7 +143,6 @@
         (values hl2 hq2 sf2 (Cons _ e $ Nil _) wo))
       (tail $ interp-program (env-fuel env) pcs (MkPerformer (ElabWorld) 0 0 perform world-prim) _ hp v w1))
     ((FPlain) (tail $ interp-finals env pargs with-env with-exec _ rest _ hp le $ say-to (BFalse) (str-cat (final-text _ hp v env ty) "\n") w))
-    ((FSorry) (tail $ interp-finals env pargs with-env with-exec _ rest _ hp le $ say-to (BFalse) "sorry\n" w))
     ((FThunk t)
       (let ((erased _) (many hp1) (erased le1) (many vs) (erased pk) (unique (Unit) _)) (apply 0 0 _ (env-fuel env) _ hp v (Nil _) many-one _ (compile-time 0 0) u))
       (let ((many r)) (vals-one _ vs pk))
