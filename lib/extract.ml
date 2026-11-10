@@ -651,7 +651,8 @@ let item cx = function
             | Program.Main -> Printf.sprintf "run_main %s" e
             | Program -> Printf.sprintf "exit (run_program %s)" e
             | Thunk t -> Printf.sprintf "print_final (%s ((of_any %s : unit -> Obj.t) ()))" (show cx cx.env t) e
-            | Plain -> Printf.sprintf "print_final (%s %s)" (show cx cx.env ty) e)
+            | Plain -> Printf.sprintf "print_final (%s %s)" (show cx cx.env ty) e
+            | Sorry -> "print_final \"sorry\"")
       in
       Buffer.add_string cx.actions (Printf.sprintf "let () = source := %s; %s\n" (quote path) text)
   | Env.Native (i, v, a) ->

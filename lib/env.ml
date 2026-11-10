@@ -169,10 +169,11 @@ type t = {
   values : Value.venv;
   pending : (id * Value.code) list;
   prelude : scope;
+  tainted_scope : bool;
 }
 
 let empty =
-  { ctor_tele = []; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = NameMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = { facts = IntMap.empty; opens = { opened = []; touched = [] } }; values = IntMap.empty; pending = []; prelude = { ids = []; named = NameMap.empty } }
+  { ctor_tele = []; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = NameMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = { facts = IntMap.empty; opens = { opened = []; touched = [] } }; values = IntMap.empty; pending = []; prelude = { ids = []; named = NameMap.empty }; tainted_scope = false }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -192,6 +193,12 @@ let reset_literals () = Hashtbl.reset literal_rows; Hashtbl.reset literal_of; Ha
 type item = Fns of (id * Value.fn) list | Final of Value.value * term * string | Native of int * Value.value * Value.adt
 
 let trace : item list ref = ref []
+
+let tainted : (id, unit) Hashtbl.t = Hashtbl.create 16
+let taint_seen = ref false
+let watch : (id -> unit) ref = ref ignore
+let taint x = Hashtbl.replace tainted x ()
+let is_tainted x = Hashtbl.mem tainted x
 
 let entry env x = IntMap.find x env.entries
 let fact env x = IntMap.find x env.facts
@@ -501,6 +508,7 @@ let bind env ?minted ?(minted_level = false) ?introduced ?(literal = false) ?(me
   let entries = IntMap.add x { name; mult; state = Hypothetical; minted = x; minted_level; introduced = Option.value introduced ~default:x; meta; word; temporary; at; slot } entries in
   let scope = if meta || literal then env.scope else { ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> NameMap.add n x env.scope.named) name } in
   let env = { env with scope; entries; facts = IntMap.add x { ty; rule } facts } in
+  if env.tainted_scope then taint x;
   (x, set_state ?minted env x state)
 
 let covers env prior x =
@@ -680,6 +688,8 @@ let stand_for x y = if !warn_unused then (Hashtbl.replace refs y (Level (max (le
 let reset_tracking () = Hashtbl.reset tracked; Hashtbl.reset refs
 
 let refer ?(live = false) x =
+  if is_tainted x then taint_seen := true;
+  !watch x;
   if !warn_unused then
     match Hashtbl.find_opt refs x with
     | None -> ()

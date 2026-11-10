@@ -1,0 +1,2 @@
+../tests/sorry_comptime.sl:3:17: warning: this unit uses `sorry` once, here; nothing that depends on it runs
+warnings are treated as errors (--warnings-as-errors)

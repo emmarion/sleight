@@ -107,6 +107,7 @@ let () =
   Elab.sources := List.filter_map (fun f -> if f = "-" then None else Some (f, Elab.source_dir f)) files @ List.map (fun v -> (v, Elab.source_dir v)) (values "--comptime-unconfine");
   let files = if files = [] && not (flag "--repl") then [ "-" ] else files in
   let env, final = List.fold_left (run held) (env, "-") files in
+  if !Elab.goal_mode = Elab.Unrequired then ignore (Elab.close_goal ());
   let env = settle env in
   if flag "--repl" then repl consume env;
   let env = settle env in

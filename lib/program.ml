@@ -7,7 +7,7 @@ let prelude_opt env name = Env.lookup { env with Env.scope = env.Env.prelude } (
 let prelude env name = Option.get (prelude_opt env name)
 let ctor env name = match (Env.entry env (prelude env name)).state with Env.Settled (V.VCtorFn c) -> c | _ -> assert false
 
-type final = Elab.final = Main | Program | Thunk of term | Plain
+type final = Elab.final = Main | Program | Thunk of term | Plain | Sorry
 
 let final = Elab.final
 
@@ -116,3 +116,4 @@ let consume w env ty v =
   | Program -> let d = driver env in Eval.perform := d.perform w; w.exit (d.run_program w v)
   | Thunk t -> print w (Elab.show_value env Reader.nowhere t (List.hd (Eval.apply v [])))
   | Plain -> print w (Elab.show_value env Reader.nowhere ty v)
+  | Sorry -> print w "sorry"
