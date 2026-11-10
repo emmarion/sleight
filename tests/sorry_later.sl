@@ -1,6 +1,7 @@
 ; A result is judged by its solved term and type: the `_` of `MkAny` is solved by a later entry of the `values`,
 ; to an entry `sorry` made, and the `Any` it builds is tainted though nothing in its own entry named one. So it
-; is through a cell, through a constructor application nested in another, in a `let` and in a function's results.
+; is through a cell, through a constructor application nested in another, in a `let` and in a function's results,
+; and where the term mentions only the slot of such an entry.
 ; `use` would reach `absurd` code on any of them.
 (def-adts $ (Any : -> Type)
   enum
@@ -34,9 +35,18 @@
 (let ((erased (Eq (Bool) (BTrue) (BFalse)) e) (many (Any) a2) (erased (Eq (Any) a2 (MkAny e 7)) _b2))
   (values (sorry _) (MkAny _ 7) (Refl _ _)))
 (use a2)
+;! file "sorry/later-slot.sl"
+(def-adts $ (Placed2 : -> Type)
+  enum
+  (many MkPlaced2 : (erased (Slot) s) (many (Nat) n) -> (Placed2)))
+(let ((many _n) (many p) (erased _b3)) (match many 0 (((Nat) n) ((Placed2) p) ((Eq (Placed2) p (MkPlaced2 (slot-of n) 7)) b))
+  ((Zero) (values (sorry _) (MkPlaced2 _ 7) (Refl _ _)))
+  ((Succ _k) (values (sorry _) (MkPlaced2 _ 7) (Refl _ _)))))
+p
 ; expect: sorry
 ; expect: sorry
 ; expect: sorry
 ; expect: sorry
 ; expect: sorry
-; warns: tests/sorry_later.sl:15:23: warning: this unit uses `sorry` 5 times, first here; nothing that depends on it runs
+; expect: sorry
+; warns: tests/sorry_later.sl:16:23: warning: this unit uses `sorry` 7 times, first here; nothing that depends on it runs

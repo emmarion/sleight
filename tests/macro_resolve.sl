@@ -14,7 +14,7 @@
     ((RSettled _ _ _ h) (str-append "settled " $ mult-name $ settled-mult _ _ _ h))
     ((RHypothetical) "hypothetical")
     ((RUnbound) "unbound")
-    ((RTainted) "tainted"))
+    ((RSettledSorry) "tainted"))
   (let ((unique mw2) (many o)) (str-raw mw1 here t))
   (values mw2 $ Cons _ o $ Nil _))
 (let ((many probe)) (MkMacro _ probe-fn))

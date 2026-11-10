@@ -12,7 +12,7 @@
     ((RSettled _ _ _ h)
       (let ((unique mw3) (many e)) (settled-eq _ _ _ _ _ _ mw1 (settled-type _ _ _ h) (settled-of erased NatT)))
       (values mw3 $ match many e (((String) _)) ((ESome _ _) "a Nat") ((ENone _) "not a Nat")))
-    ((RTainted) (values mw1 "tainted"))
+    ((RSettledSorry) (values mw1 "tainted"))
     (else (values mw1 "not settled")))
   (let ((unique mw3) (many o)) (intern-string mw2 t))
   (values mw3 $ Cons _ (RawList here $ Cons _ (RawSettled here _ _ _ (settled-of many compile-warn)) $ Cons _ (RawSettled here _ _ _ o) $ Nil _) $ Nil _))

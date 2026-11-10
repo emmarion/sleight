@@ -1,7 +1,7 @@
-; A tainted final value is not run and prints `sorry` whatever its type: a function in neither of the driver's
-; forms, one in the form the driver applies to standard input, and a `Program`.
+; A tainted final value is not run and prints `sorry`: a function in the form the driver applies to standard
+; input, one it applies to nothing, and a `Program`.
 (def-lvl L)
-(sorry (((Fn L (many (Nat) a) -> (many (Nat) b)) f)))
+(sorry (((Fn L -> (many (Nat) b)) f)))
 ;! file "sorry/main.sl"
 (def-fns _ $ (many main : (many (String) _s) -> (many (String) t))
   (sorry _))

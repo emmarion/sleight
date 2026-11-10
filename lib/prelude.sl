@@ -2243,7 +2243,7 @@
   (many RSettled : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) h) -> (Resolution))
   (many RHypothetical : -> (Resolution))
   (many RUnbound : -> (Resolution))
-  (many RTainted : -> (Resolution)))
+  (many RSettledSorry : -> (Resolution)))
 
 (def-prim $ (many resolve : (unique (MacroWorld) mw at vacant-slot) (many (Symbol) s) ->
     (unique mw is mw2 at mw) (many (Resolution) r)))
@@ -2498,7 +2498,7 @@
       ((RawSettled _ _ _ _ c) (values mw (RSettled _ _ _ c)))
       ((RawSymbol _ s) (resolve mw s))
       (else (values mw (RUnbound)))))
-    (let-match many res (RSettled _ _ _ c) ((RTainted) (values mw0 (Some _ $ Tainted r))) (else (values mw0 (None _))))
+    (let-match many res (RSettled _ _ _ c) ((RSettledSorry) (values mw0 (Some _ $ Tainted r))) (else (values mw0 (None _))))
     (let-match many (settled-mult _ _ _ c) (MMany) (else (values mw0 (None _))))
     (let ((unique mw1) (many en)) (settled-eq _ _ _ _ _ _ mw0 (settled-type _ _ _ c) (settled-of erased nat-type)))
     (let-match many en (ENone _) ((ESome _ j) (let-match erased j (JMRefl _ _)) (values mw1 (Some _ $ MkConst _ c))))
