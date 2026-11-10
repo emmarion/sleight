@@ -260,7 +260,12 @@ position expects, at any multiplicity; checking goes on past it. What depends
 on a `sorry` is tainted, and a tainted position is stripped from the code that
 runs as an erased one is: a tainted `let` binder binds nothing, a `match` or
 `values` only some of whose results are tainted produces the others alone, and
-a form all of whose results are tainted leaves no code. At run position a
+a form all of whose results are tainted leaves no code. Nothing is checked
+differently for it: the checks that read the code that runs, `tail`, `notail`,
+`delegate`, an at-function's or at-match's body and the unmarked-call warning
+(WARNINGS.md 4), read it with the tainted parts in place, as if each `sorry`
+were a value, and those parts are removed before the code is run, embedded or
+extracted (`Elab.strip`; `tests/sorry_checks.sl`). At run position a
 tainted entry is `Settled` with the erased token, a tainted function has no
 code, and a tainted final value is not run: the driver prints `sorry` in its
 place, and so does a program `--extract` writes. Whatever needs an entry's
@@ -276,7 +281,7 @@ many the unit elaborated (WARNINGS.md 12), which `--warnings-as-errors`
 counts. Under `--goal open` and `--goal proved` there is no such warning: a
 unit that elaborates a `sorry` anywhere fails, with an error at the first,
 whether or not the goal depends on it (`tests/sorry_goal_proved_bad.sl`).
-ASSUMPTIONS.md 230 to 246 record the reference's choices where the rules of
+ASSUMPTIONS.md 230 to 248 record the reference's choices where the rules of
 taint are silent, and slc makes the same ones (`self/README.md` says how it
 carries taint and where its output seems to differ).
 

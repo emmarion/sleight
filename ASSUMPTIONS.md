@@ -2357,40 +2357,36 @@ reference takes more taint than they ask for.
      given once every file on the command line has been elaborated, at the
      first `sorry` in elaboration order, after the final value has been
      printed or run. The reference also gives it as the process exits where
-     a `Program` exits or the run of the final value fails. It is not given
-     where elaboration fails, a run-position form that fails included: the
-     count would be of part of the unit. Under `--warnings-as-errors` it is
-     given before any final value is consumed, and then none is. `--repl`
-     input is elaborated after it and is not counted; where the files held
-     no `sorry`, the warning is given when the REPL ends, for what it
-     elaborated. Under `--goal open` and `--goal proved` the failure is an
-     error at the first `sorry`, giving the count, reported once the files
-     have been elaborated, before a missing `goal` or `qed` is.
+     the driver's use of a final value ends the process: a `Program` that
+     exits, or a final function whose application fails. It is not given
+     where elaboration fails, and a run-position form that fails, the final
+     expression included, is elaboration failing: the count would be of
+     part of the unit. Under `--warnings-as-errors` it is given before any
+     final value is consumed, and then none is. Each warning counts the
+     `sorry`s elaborated since the last, so `--repl` input, elaborated
+     after the files' warning, gets one of its own when the REPL ends.
+     Under `--goal open` and `--goal proved` the failure is an error at the
+     first `sorry`, giving the count, reported once the files have been
+     elaborated, before a missing `goal` or `qed` is.
 
 238. **Where a `_` meta is judged.** A `_` is judged when it is solved: the
      form or statement being elaborated when a `_` takes a solution that
      mentions a tainted entry is tainted as if it had referred to that entry,
-     even where the attempt at solving is then abandoned. A constructor
-     application is no boundary (DESIGN.md section 50), so at run position
-     one may have run before the `let` binding it solves its `_`; the `_`
-     stands for an erased argument, so what ran seems not to depend on it,
-     and the binder is tainted by the rule of item 230.
+     even where the attempt at solving is then abandoned. A `_` may also be
+     solved after the form that wrote it, a constructor application or a cell
+     invocation being no boundary (DESIGN.md section 50). So each result is
+     judged again where it is taken result by result, an entry of `values`,
+     a branch's results, a `let`'s, a function's: it is tainted when its term
+     or type, as solved and as canonicalized there, mentions a tainted entry,
+     and a form with no rule of its own is tainted whole when a result of it
+     is found so. At run position such an application may have run before
+     its `_` was solved; the `_` stands for an erased argument, so what ran
+     seems not to depend on it.
 
 239. **`sorry`'s annotation and position.** The annotation is read exactly as
      a match's, so `(at (...))` is accepted around it, with no effect, and its
      entries may be written `at`. Like every form that is not a type former or
      a fetch form, `sorry` is refused in a type.
-
-240. **Calling-convention marks around a tainted call.** `tail`, `notail` and
-     `delegate` around a tainted call do not require the call to remain in the
-     code, which holds none. A function whose `delegate` body is tainted is
-     not refused for not delegating, and is not made an alias of its callee.
-
-242. **Checks that read compiled code do not see tainted code.** A tainted
-     form leaves no code for the `tail` and at-function checks to read, the
-     code hoisted out for its arguments (DESIGN.md section 15) included, and
-     the unmarked same-level call warning (WARNINGS.md 4) is not given for a
-     call in it.
 
 243. **What a wholly tainted form leaves in scope.** Every entry such a form
      minted and left in scope is tainted with its results: the binders the
@@ -2400,10 +2396,11 @@ reference takes more taint than they ask for.
      `sorry` runs when it is elaborated, before the taint of the form around
      it is known.
 
-244. **A match result at an earlier result.** An entry of a `match`'s
-     annotation written `at` an earlier entry of it is tainted when any
-     earlier entry is, in any branch: its word would be read back from an
-     entry that has none. This is more taint than the rule for `match` gives.
+244. **A match result at a tainted result.** An entry of a `match`'s
+     annotation written `at` an earlier entry of it is tainted when that
+     entry is, in any branch, directly or through further such entries: its
+     word would be read back from an entry that has none. This is more taint
+     than the rule for `match` gives.
 
 245. **A head by a tainted fact alone.** Where the scope is tainted, an
      untainted `Settled`, non-erased entry whose type is `(Special)` or the
@@ -2427,10 +2424,24 @@ reference takes more taint than they ask for.
      run-position facts dispatch reads, so a fact forced from
      a tainted operand after the final value does not change how it is
      shown; the reference's interpreter prints each final value as its
-     file ends, and seems to agree on every test, while a program the
-     reference's `--extract` writes seems to read the facts in force at
-     the end. In a `def-fns` block only some of whose functions are
+     file ends, and a program its `--extract` writes shows each by the
+     facts in force at that final value; the three seem to agree on every
+     test. In a `def-fns` block only some of whose functions are
      tainted, a tainted function stays in the block's code with the body
      an `absurd` function has. A value a `match` branch computes for a
      result another branch taints is not computed. And a `_` taints its
      form only where the solving that mentions a tainted entry is kept.
+
+248. **Prelude macros given a tainted constant.** `prove-literal-lt`, where
+     `resolve` answers `RTainted` for an argument, expands to
+     `(sorry (((Lt a b) _)))`, `a` and `b` the arguments as written, or the
+     numeral of its code for an untainted character. A tainted argument is
+     so taken for a `Nat`: the code of a tainted `Char` cannot be named, and
+     the `Lt` then fails to check. `unary` cannot state its rule, the number
+     of successors being what the value would give, so it expands to
+     `(let-match erased (sorry (((Eq Type (Nat) (Nat)) _))) (Refl _ _))`,
+     which creates no rule, taints the rest of the scope as the rule would,
+     and counts as a `sorry`; code that needs the rule does not check. The
+     `qq` of `std/macro.sl` still refuses a tainted name in a template, and
+     a macro that tells a head apart by `resolve` takes a tainted name for
+     none of the heads it knows.

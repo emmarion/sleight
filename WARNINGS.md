@@ -156,7 +156,8 @@ or ``… `sorry` N times, first here; …``. Given once, at the first
 library file, a macro's expansion. There is none at each `sorry`. It
 comes after everything else: once every file named on the command line
 has been elaborated and its final value printed or run, a `Program`
-that exits and a final value whose run fails included; slc gives it
+that exits and a final function whose application fails included, and
+again when a `--repl` session that elaborated more ends; slc gives it
 when it has elaborated them, before the program it writes exists and,
 under `--interpret`, before a final value is performed. It is not given
 when elaboration fails, nor under `--goal open` or `--goal proved`,
@@ -167,5 +168,6 @@ where a `sorry` fails the run instead (MANUAL.md).
 (`sorry-warned`, `close-goal`).
 Tests: `tests/sorry_*.sl`; for `--warnings-as-errors`
 `test/sorry_strict.expected` and, for slc, `test/sorry_strict_slc.expected`;
-for a `Program`, `test/sorry_program.expected` and, for slc,
+for a `Program`, `test/sorry_program.expected`, for `--repl`,
+`test/sorry_repl.expected`, and, for slc,
 `test/sorry_program_slc.expected`.
