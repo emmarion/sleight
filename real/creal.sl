@@ -502,3 +502,10 @@
           (match erased (creal-lt-dec sz sx sy z x y h) _ ((SplitBelow _ _ _ l) (f-yz l)) ((SplitAbove _ _ _ l) (f-xy l)))))
       (values (level-of gzx) (MkCRealEq (level-of gzx) sx sz (MkCRealLe (level-of gzx) sz sx gzx) (MkCRealLe (level-of gzx) sx sz gxz)))))
   (values (level-of creal-cauchy-at) creal-cauchy-at creal-bound-at creal-seq-term creal-seq-fn creal-lt-above-at creal-lt-irrefl creal-eq-refl (level-of creal-lt-dec) creal-lt-dec creal-eq-trans))
+
+(def-adts $ (Near : ((Spec) s) ((Z) j) ((Q) a) -> Type)
+  enum
+  (many MkNear : (erased (Spec) s) (erased (Z) j) (erased (Q) a t d e c w)
+      (erased (SeqAt s j t) ht) (erased (QMinus a t d) hd) (erased (QAbs d e) he)
+      (erased (QPower qtwo j c) hc) (erased (QMult qtwo c w) hw) (erased (QLe e w) le)
+      -> (Near s j a)))
