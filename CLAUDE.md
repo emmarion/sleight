@@ -138,3 +138,6 @@ by the owner and apply to every session.
     vetted mode"); at other times, don't. In either mode, DECISIONS.md
     is an exception to rule 11: it records proposed answers to open
     questions, each marked as not approved.
+
+22. **Oxford commas.** In prose you write, a list of three or more
+    items takes a comma before its final `and` or `or`.

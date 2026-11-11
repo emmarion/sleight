@@ -93,6 +93,21 @@ sessions; the heap sort above was written that way. The October 14,
 2026 talk ([`talk/slides.md`](talk/slides.md), PDF at
 https://github.com/emmarion/sleight/releases/download/v0.2.0/slides.pdf) reports how the models did.
 
+## Logic and strength
+
+Sleight's logic is anticlassical.
+[`tests/anticlassical.sl`](tests/anticlassical.sl) checks that excluded
+middle at any level `L`, with `¬P` read as a level-`L` function, gives a
+function that returns `False`.
+
+The author asserts that each Sleight function terminates by a
+lexicographic order of type about ω^(k+2), on the level, the `subterm`
+arguments, and the position in the function body, where k is the largest
+number of `subterm` parameters on any function in the program.
+Correspondingly, the language as a whole computes exactly the multiply
+recursive functions, so its strength is about IΣ₂ (anticlassicality
+aside), with proof-theoretic ordinal ω^ω^ω, well below Peano arithmetic.
+
 ## What might be new
 
 The talk lists these as what might be new. The list is the talk's; this
