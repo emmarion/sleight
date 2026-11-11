@@ -6,12 +6,12 @@
   enum
   (many MkREdge : (erased (Level) M) (many (RPoint M) a) (many (RPoint M) b) -> (REdge M)))
 
-(def-adts $ (RPointEq : ((Level) M) ((RPoint M) p) ((RPoint M) q) -> Type)
+(def-adts $ (RPointEq : ((Level) M) ((Level) N) ((RPoint M) p) ((RPoint M) q) -> Type)
   enum
-  (many MkRPointEq : (erased (Level) M) (erased (Spec) px py qx qy)
+  (many MkRPointEq : (erased (Level) M N) (erased (Spec) px py qx qy)
       (erased (CReal M px) xp) (erased (CReal M py) yp) (erased (CReal M qx) xq) (erased (CReal M qy) yq)
-      (erased (CRealEq px qx) ex) (erased (CRealEq py qy) ey)
-      -> (RPointEq M (MkRPoint M px py xp yp) (MkRPoint M qx qy xq yq))))
+      (erased (CRealEq N px qx) ex) (erased (CRealEq N py qy) ey)
+      -> (RPointEq M N (MkRPoint M px py xp yp) (MkRPoint M qx qy xq yq))))
 
 (def-adts $ (RPointApart : ((Level) M) ((RPoint M) p) ((RPoint M) q) -> Type)
   enum
@@ -51,36 +51,36 @@
   (many RBothRight : (erased (Level) M) (erased (RPoint M) a b c d) (erased (RLeft M b a c) lc) (erased (RLeft M b a d) ld)
       -> (RSameSide M a b c d)))
 
-(def-adts $ (RCompatible : ((Level) M) ((RPoint M) a) ((RPoint M) b) ((RPoint M) c) ((RPoint M) d) -> Type)
+(def-adts $ (RCompatible : ((Level) M) ((Level) N) ((RPoint M) a) ((RPoint M) b) ((RPoint M) c) ((RPoint M) d) -> Type)
   enum
-  (many RShareCA : (erased (Level) M) (erased (RPoint M) a b c d) (erased (RPointEq M c a) e) (erased (ROffLine M a b d) o)
-      -> (RCompatible M a b c d))
-  (many RShareCB : (erased (Level) M) (erased (RPoint M) a b c d) (erased (RPointEq M c b) e) (erased (ROffLine M a b d) o)
-      -> (RCompatible M a b c d))
-  (many RShareDA : (erased (Level) M) (erased (RPoint M) a b c d) (erased (RPointEq M d a) e) (erased (ROffLine M a b c) o)
-      -> (RCompatible M a b c d))
-  (many RShareDB : (erased (Level) M) (erased (RPoint M) a b c d) (erased (RPointEq M d b) e) (erased (ROffLine M a b c) o)
-      -> (RCompatible M a b c d))
-  (many RSplitByAB : (erased (Level) M) (erased (RPoint M) a b c d)
+  (many RShareCA : (erased (Level) M N) (erased (RPoint M) a b c d) (erased (RPointEq M N c a) e) (erased (ROffLine M a b d) o)
+      -> (RCompatible M N a b c d))
+  (many RShareCB : (erased (Level) M N) (erased (RPoint M) a b c d) (erased (RPointEq M N c b) e) (erased (ROffLine M a b d) o)
+      -> (RCompatible M N a b c d))
+  (many RShareDA : (erased (Level) M N) (erased (RPoint M) a b c d) (erased (RPointEq M N d a) e) (erased (ROffLine M a b c) o)
+      -> (RCompatible M N a b c d))
+  (many RShareDB : (erased (Level) M N) (erased (RPoint M) a b c d) (erased (RPointEq M N d b) e) (erased (ROffLine M a b c) o)
+      -> (RCompatible M N a b c d))
+  (many RSplitByAB : (erased (Level) M N) (erased (RPoint M) a b c d)
       (erased (RSameSide M a b c d) cd) (erased (ROffLine M c d a) oa) (erased (ROffLine M c d b) ob)
-      -> (RCompatible M a b c d))
-  (many RSplitByCD : (erased (Level) M) (erased (RPoint M) a b c d)
+      -> (RCompatible M N a b c d))
+  (many RSplitByCD : (erased (Level) M N) (erased (RPoint M) a b c d)
       (erased (ROffLine M a b c) oc) (erased (ROffLine M a b d) od) (erased (RSameSide M c d a b) ab)
-      -> (RCompatible M a b c d)))
+      -> (RCompatible M N a b c d)))
 
-(def-adts $ (RCompatibleAll : ((Level) M) ((RPoint M) a) ((RPoint M) b) ((List (REdge M)) es) -> Type)
+(def-adts $ (RCompatibleAll : ((Level) M) ((Level) N) ((RPoint M) a) ((RPoint M) b) ((List (REdge M)) es) -> Type)
   enum
-  (many RCANil : (erased (Level) M) (erased (RPoint M) a b) -> (RCompatibleAll M a b (Nil (REdge M))))
-  (many RCACons : (erased (Level) M) (erased (RPoint M) a b c d) (erased (List (REdge M)) es)
-      (erased (RCompatible M a b c d) h) (erased (RCompatibleAll M a b es) rest)
-      -> (RCompatibleAll M a b (Cons (REdge M) (MkREdge M c d) es))))
+  (many RCANil : (erased (Level) M N) (erased (RPoint M) a b) -> (RCompatibleAll M N a b (Nil (REdge M))))
+  (many RCACons : (erased (Level) M N) (erased (RPoint M) a b c d) (erased (List (REdge M)) es)
+      (erased (RCompatible M N a b c d) h) (erased (RCompatibleAll M N a b es) rest)
+      -> (RCompatibleAll M N a b (Cons (REdge M) (MkREdge M c d) es))))
 
-(def-adts $ (RDrawing : ((Level) M) ((List (REdge M)) es) -> Type)
+(def-adts $ (RDrawing : ((Level) M) ((Level) N) ((List (REdge M)) es) -> Type)
   enum
-  (many RDrawNil : (erased (Level) M) -> (RDrawing M (Nil (REdge M))))
-  (many RDrawCons : (erased (Level) M) (erased (RPoint M) a b) (erased (List (REdge M)) es)
-      (erased (RPointApart M a b) nondegenerate) (erased (RCompatibleAll M a b es) compatible) (erased (RDrawing M es) rest)
-      -> (RDrawing M (Cons (REdge M) (MkREdge M a b) es))))
+  (many RDrawNil : (erased (Level) M N) -> (RDrawing M N (Nil (REdge M))))
+  (many RDrawCons : (erased (Level) M N) (erased (RPoint M) a b) (erased (List (REdge M)) es)
+      (erased (RPointApart M a b) nondegenerate) (erased (RCompatibleAll M N a b es) compatible) (erased (RDrawing M N es) rest)
+      -> (RDrawing M N (Cons (REdge M) (MkREdge M a b) es))))
 
 (def-adts $ (RPaint : ((Level) M) -> Type)
   enum
@@ -88,8 +88,8 @@
 
 (def-adts $ (RColorOf : ((Level) M) ((List (RPaint M)) ks) ((RPoint M) p) ((Nat) c) -> Type)
   enum
-  (many RColorHere : (erased (Level) M) (erased (List (RPaint M)) ks) (erased (RPoint M) p q) (erased (Nat) c)
-      (erased (RPointEq M p q) e)
+  (many RColorHere : (erased (Level) M N) (erased (List (RPaint M)) ks) (erased (RPoint M) p q) (erased (Nat) c)
+      (erased (RPointEq M N p q) e)
       -> (RColorOf M (Cons (RPaint M) (MkRPaint M q c) ks) p c))
   (many RColorThere : (erased (Level) M) (erased (List (RPaint M)) ks) (erased (RPoint M) p q) (erased (Nat) c d)
       (erased (RPointApart M p q) skip) (erased (RColorOf M ks p c) rest)
@@ -108,7 +108,7 @@
 (def-adts $ (FourColorR : -> Type)
   enum
   (many MkFourColorR : (erased (Level) K)
-      (erased (Fn K (erased (Level) M) -> (erased (Level) L)
-          (erased (Fn L (erased (List (REdge M)) es) (erased (RDrawing M es) drawn) ->
+      (erased (Fn K (erased (Level) M N) -> (erased (Level) L)
+          (erased (Fn L (erased (List (REdge M)) es) (erased (RDrawing M N es) drawn) ->
               (erased (List (RPaint M)) ks) (erased (RProper M ks es) proper)) thm)) thms)
       -> (FourColorR)))

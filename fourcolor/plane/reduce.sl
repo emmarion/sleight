@@ -5,17 +5,17 @@
       -> (Rounding M es)))
 
 (def-fns _ $ (erased four-color-r-of : (erased (FourColor) h) (erased (Level) G)
-    (erased (Fn G (erased (Level) M) -> (erased (Level) L)
-        (erased (Fn L (erased (List (REdge M)) es) (erased (RDrawing M es) drawn) -> (erased (Rounding M es) r)) round)) rounds)
+    (erased (Fn G (erased (Level) M N) -> (erased (Level) L)
+        (erased (Fn L (erased (List (REdge M)) es) (erased (RDrawing M N es) drawn) -> (erased (Rounding M es) r)) round)) rounds)
     -> (erased (FourColorR) r))
   (let-match erased h (MkFourColor _ t))
   (def-lvl K)
-  (def-fns K $ (erased thms : (erased (Level) M) -> (erased (Level) L)
-      (erased (Fn L (erased (List (REdge M)) es) (erased (RDrawing M es) drawn) ->
+  (def-fns K $ (erased thms : (erased (Level) M N) -> (erased (Level) L)
+      (erased (Fn L (erased (List (REdge M)) es) (erased (RDrawing M N es) drawn) ->
           (erased (List (RPaint M)) ks) (erased (RProper M ks es) proper)) thm))
-    (let ((erased L1) (erased round)) (rounds M))
+    (let ((erased L1) (erased round)) (rounds M N))
     (def-lvl L)
-    (def-fns L $ (erased thm : (erased (List (REdge M)) es) (erased (RDrawing M es) drawn) ->
+    (def-fns L $ (erased thm : (erased (List (REdge M)) es) (erased (RDrawing M N es) drawn) ->
         (erased (List (RPaint M)) ks) (erased (RProper M ks es) proper))
       (let-match erased (round es drawn) (MkRounding _ _ ns xs en coh dn))
       (let ((erased ks) (erased pr)) (t ns dn))

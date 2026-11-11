@@ -73,9 +73,11 @@
 
 (let ((erased qlt-0-2)) (qlt-int (Z0) (Zpos (Succ (Zero))) (zpos-is-pos _)))
 
-(def-fns _ $ (erased creal-self-eq : (erased (Spec) s) (erased (CReal example-level s) x) -> (erased (CRealEq s s) e))
+(def-lvl example-eq-level)
+
+(def-fns _ $ (erased creal-self-eq : (erased (Spec) s) (erased (CReal example-level s) x) -> (erased (CRealEq example-eq-level s s) e))
   (let-match erased x (MkCReal _ _ _ functional _ _))
-  (def-fns _ $ (erased not-lt-self : (erased (CRealLt s s) h) -> (erased (False) f))
+  (def-fns example-eq-level $ (erased not-lt-self : (erased (CRealLt s s) h) -> (erased (False) f))
     (let-match erased h (MkCRealLt _ _ n a b c d e ha hb hc hd he lt))
     (let-match erased (functional n a b ha hb) (Refl _ _))
     (let ((erased z) (erased ez)) (qminus-self a c hc))
@@ -84,12 +86,12 @@
     (let ((erased z2) (erased hz2)) (zpos-mul (Zero) dd))
     (let ((erased pos)) (qmult-lt-compat-r _ _ _ _ _ (qpower2-pos n d hd) qlt-0-2 (MkQMult (Z0) nd (Z0) (Zero) dd z2 (zmul-0-l nd) hz2) he))
     (qle-not-lt _ _ (qle-zeros z z2) (qlt-trans _ _ _ pos lt)))
-  (let ((erased le)) (MkCRealLe s s (level-of not-lt-self) not-lt-self))
-  (MkCRealEq s s le le))
+  (let ((erased le)) (MkCRealLe example-eq-level s s not-lt-self))
+  (MkCRealEq example-eq-level s s le le))
 
-(def-fns _ $ (erased rpoint-self-eq : (erased (RPoint example-level) p) -> (erased (RPointEq example-level p p) e))
+(def-fns _ $ (erased rpoint-self-eq : (erased (RPoint example-level) p) -> (erased (RPointEq example-level example-eq-level p p) e))
   (let-match erased p (MkRPoint _ sx sy x y))
-  (MkRPointEq _ sx sy sx sy x y x y (creal-self-eq sx x) (creal-self-eq sy y)))
+  (MkRPointEq _ _ sx sy sx sy x y x y (creal-self-eq sx x) (creal-self-eq sy y)))
 
 (let ((many example-real-0))
   (const-real (Qmake (Z0) (Zero)) (Zpos (Zero)) _ _ (MkQAbs _ _ _ (ZAbs0)) (QPowerZpos _ _ (Zero) (QPowerOne _)) qlt-0-2))
@@ -113,10 +115,10 @@
 
 (let ((erased example-edges)) (Cons (REdge example-level) (MkREdge example-level example-p00 example-p10) (Nil (REdge example-level))))
 
-(let ((erased (RDrawing example-level example-edges) example-edge-drawing))
-  (RDrawCons _ _ _ _
+(let ((erased (RDrawing example-level example-eq-level example-edges) example-edge-drawing))
+  (RDrawCons _ _ _ _ _
     (RApartX _ _ _ _ _ _ _ _ _ (AppartLt _ _ (creal-lt-0-1 _ _ (const-at) (const-at))))
-    (RCANil _ _ _) (RDrawNil _)))
+    (RCANil _ _ _ _) (RDrawNil _ _)))
 
 (def-macro (int-spec args)
   (qq (MkSpec (Q) (Qmake (~@ args) (Zero)) ConstSeq (Zpos (Zero)))))
@@ -192,11 +194,11 @@
     $ Cons (REdge example-level) (MkREdge example-level example-p10 example-p01)
     $ Cons (REdge example-level) (MkREdge example-level example-p01 example-p00) $ Nil (REdge example-level)))
 
-(let ((erased (RDrawing example-level example-triangle) example-triangle-drawing))
-  (RDrawCons _ _ _ _ (RApartX _ _ _ _ _ _ _ _ _ (AppartLt _ _ (creal-lt-0-1 _ _ (const-at) (const-at))))
-    (RCACons _ _ _ _ _ _ (RShareCB _ _ _ _ _ (rpoint-self-eq example-p10) (ROffLeft _ _ _ _ left-00-10-01))
-      (RCACons _ _ _ _ _ _ (RShareDA _ _ _ _ _ (rpoint-self-eq example-p00) (ROffLeft _ _ _ _ left-00-10-01)) (RCANil _ _ _)))
-    (RDrawCons _ _ _ _ (RApartX _ _ _ _ _ _ _ _ _ (AppartGt _ _ (creal-lt-0-1 _ _ (const-at) (const-at))))
-      (RCACons _ _ _ _ _ _ (RShareCB _ _ _ _ _ (rpoint-self-eq example-p01) (ROffLeft _ _ _ _ left-10-01-00)) (RCANil _ _ _))
-      (RDrawCons _ _ _ _ (RApartY _ _ _ _ _ _ _ _ _ (AppartGt _ _ (creal-lt-0-1 _ _ (const-at) (const-at))))
-        (RCANil _ _ _) (RDrawNil _)))))
+(let ((erased (RDrawing example-level example-eq-level example-triangle) example-triangle-drawing))
+  (RDrawCons _ _ _ _ _ (RApartX _ _ _ _ _ _ _ _ _ (AppartLt _ _ (creal-lt-0-1 _ _ (const-at) (const-at))))
+    (RCACons _ _ _ _ _ _ _ (RShareCB _ _ _ _ _ _ (rpoint-self-eq example-p10) (ROffLeft _ _ _ _ left-00-10-01))
+      (RCACons _ _ _ _ _ _ _ (RShareDA _ _ _ _ _ _ (rpoint-self-eq example-p00) (ROffLeft _ _ _ _ left-00-10-01)) (RCANil _ _ _ _)))
+    (RDrawCons _ _ _ _ _ (RApartX _ _ _ _ _ _ _ _ _ (AppartGt _ _ (creal-lt-0-1 _ _ (const-at) (const-at))))
+      (RCACons _ _ _ _ _ _ _ (RShareCB _ _ _ _ _ _ (rpoint-self-eq example-p01) (ROffLeft _ _ _ _ left-10-01-00)) (RCANil _ _ _ _))
+      (RDrawCons _ _ _ _ _ (RApartY _ _ _ _ _ _ _ _ _ (AppartGt _ _ (creal-lt-0-1 _ _ (const-at) (const-at))))
+        (RCANil _ _ _ _) (RDrawNil _ _)))))

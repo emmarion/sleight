@@ -177,16 +177,16 @@
       (erased (QLt e c) lt)
       -> (CRealLt x y)))
 
-(def-adts $ (CRealLe : ((Spec) x) ((Spec) y) -> Type)
+(def-adts $ (CRealLe : ((Level) L) ((Spec) x) ((Spec) y) -> Type)
   enum
-  (many MkCRealLe : (erased (Spec) x y) (erased (Level) L)
+  (many MkCRealLe : (erased (Level) L) (erased (Spec) x y)
       (erased (Fn L (erased (CRealLt y x) h) -> (erased (False) f)) le)
-      -> (CRealLe x y)))
+      -> (CRealLe L x y)))
 
-(def-adts $ (CRealEq : ((Spec) x) ((Spec) y) -> Type)
+(def-adts $ (CRealEq : ((Level) L) ((Spec) x) ((Spec) y) -> Type)
   enum
-  (many MkCRealEq : (erased (Spec) x y) (erased (CRealLe y x) yx) (erased (CRealLe x y) xy)
-      -> (CRealEq x y)))
+  (many MkCRealEq : (erased (Level) L) (erased (Spec) x y) (erased (CRealLe L y x) yx) (erased (CRealLe L x y) xy)
+      -> (CRealEq L x y)))
 
 (def-adts $ (CRealAppart : ((Spec) x) ((Spec) y) -> Type)
   enum

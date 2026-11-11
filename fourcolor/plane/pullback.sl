@@ -4,7 +4,7 @@
 
 (def-adts $ (EqApart : ((Level) M) ((RN M) x) ((RN M) y) -> Type)
   enum
-  (many EAEq : (erased (Level) M) (erased (RPoint M) u w) (erased (Point) v) (erased (RPointEq M u w) e)
+  (many EAEq : (erased (Level) M N) (erased (RPoint M) u w) (erased (Point) v) (erased (RPointEq M N u w) e)
       -> (EqApart M (MkRN M u v) (MkRN M w v)))
   (many EAApart : (erased (Level) M) (erased (RPoint M) u w) (erased (Point) v z) (erased (RPointApart M u w) d)
       -> (EqApart M (MkRN M u v) (MkRN M w z))))
@@ -18,8 +18,8 @@
 (def-adts $ (Coh : ((Level) M) ((List (RN M)) xs) -> Type)
   enum
   (many CohNil : (erased (Level) M) -> (Coh M (Nil (RN M))))
-  (many CohCons : (erased (Level) M) (erased (RPoint M) u) (erased (Point) v) (erased (List (RN M)) xs)
-      (erased (RPointEq M u u) refl) (erased (AllEA M (MkRN M u v) xs) here) (erased (Coh M xs) rest)
+  (many CohCons : (erased (Level) M N) (erased (RPoint M) u) (erased (Point) v) (erased (List (RN M)) xs)
+      (erased (RPointEq M N u u) refl) (erased (AllEA M (MkRN M u v) xs) here) (erased (Coh M xs) rest)
       -> (Coh M (Cons (RN M) (MkRN M u v) xs))))
 
 (def-adts $ (Ends : ((Level) M) ((List (REdge M)) es) ((List (Edge)) ns) ((List (RN M)) xs) -> Type)
@@ -52,12 +52,10 @@
       (let-match erased k2 (ColorThere _ _ _ _ _ _ r2) (absurd (ColorHere _ _ _) (point-apart-irrefl p skip)))
       (colorof-fn ks1 p c d r1 r2))))
 
-(def-fns _ $ (erased rpointeq-sym : (erased (Level) M) (erased (RPoint M) p q) (erased (RPointEq M p q) e)
-    -> (erased (RPointEq M q p) r))
-  (let-match erased e (MkRPointEq _ px py qx qy xp yp xq yq ex ey))
-  (let-match erased ex (MkCRealEq _ _ ex1 ex2))
-  (let-match erased ey (MkCRealEq _ _ ey1 ey2))
-  (MkRPointEq M qx qy px py xq yq xp yp (MkCRealEq qx px ex2 ex1) (MkCRealEq qy py ey2 ey1)))
+(def-fns _ $ (erased rpointeq-sym : (erased (Level) M N) (erased (RPoint M) p q) (erased (RPointEq M N p q) e)
+    -> (erased (RPointEq M N q p) r))
+  (let-match erased e (MkRPointEq _ _ px py qx qy xp yp xq yq ex ey))
+  (MkRPointEq M N qx qy px py xq yq xp yp (creal-eq-sym N px qx ex) (creal-eq-sym N py qy ey)))
 
 (def-fns _ $ (erased appart-sym : (erased (Spec) x y) (erased (CRealAppart x y) d) -> (erased (CRealAppart y x) r))
   (match erased d _
@@ -81,19 +79,19 @@
     (erased (RPoint M) u) (erased (Point) v) (erased (Nat) c)
     (subterm erased (Coh M xs) coh) (erased (Painted M ks xs ps) pd) (erased (Elem (RN M) (MkRN M u v) xs) el)
     (erased (ColorOf ks v c) k) -> (erased (RColorOf M ps u c) r))
-  (let-match erased coh (CohCons _ u0 v0 xs1 refl here rest) (absurd (CohNil _) el))
+  (let-match erased coh (CohCons _ N0 u0 v0 xs1 refl here rest) (absurd (CohNil _) el))
   (let-match erased pd (PdCons _ _ _ _ c0 _ ps1 k0 pd1))
   (match erased el _
     ((ElHere _ _ _)
       (let-match erased (colorof-fn ks v c0 c k0 k) (Refl _ _))
-      (RColorHere M ps1 u u c refl))
+      (RColorHere M N0 ps1 u u c refl))
     ((ElThere _ _ _ _ el1)
-      (let-match erased (allea-elem M (MkRN M u0 v0) (MkRN M u v) xs1 here el1) (EAEq _ _ _ _ e)
+      (let-match erased (allea-elem M (MkRN M u0 v0) (MkRN M u v) xs1 here el1) (EAEq _ Lq _ _ _ e)
         ((EAApart _ _ _ _ _ d)
           (RColorThere M ps1 u u0 c c0 (rpointapart-sym M u0 u d)
             (find-color M ks xs1 ps1 u v c rest pd1 el1 k))))
       (let-match erased (colorof-fn ks v c0 c k0 k) (Refl _ _))
-      (RColorHere M ps1 u u0 c (rpointeq-sym M u0 u e)))))
+      (RColorHere M Lq ps1 u u0 c (rpointeq-sym M Lq u0 u e)))))
 
 (def-fns _ $ (erased painted-of : (erased (Level) M) (erased (List (Paint)) ks) (erased (List (REdge M)) es) (erased (List (Edge)) ns)
     (erased (List (RN M)) xs) (subterm erased (Ends M es ns xs) en) (erased (Proper ks ns) pr)
