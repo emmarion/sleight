@@ -1,0 +1,28 @@
+(def-fns _ $ (many no-lpo : (erased (Level) B) (erased (Level) K) (erased (Predates (Level) B K) bk)
+    (erased (Fn K (erased (Level) N) (erased (Level) D) (erased (Level) E)
+        (erased (Predates (Level) E N) en) (erased (Predates (Level) D K) dk)
+        (erased (TyCtor ((Nat) n) -> Type) Q)
+        (erased (Fn D (erased (Nat) n) -> (erased (Or (Q n) (Fn E (erased (Q n) q) -> (erased (False) f))) r)) dec) ->
+        (erased (Or (Ex Q) (Fn N (erased (Nat) n) (erased (Q n) q) -> (erased (False) f))) r)) lpo) ->
+    (erased (Level) Z) (many (Fn Z -> (many (False) f)) absurdity))
+  (def-lvl E)
+  (def-lvl N)
+  (let ((erased en)) (prove-predates E N))
+  (def-adts $ (Bad : ((Nat) i) -> Type)
+    enum
+    (many MkBad : (erased (Nat) i) (erased (Level) l) (erased (Predates (Level) l E) pl)
+       (many (Fn l (erased (Nat) n) (erased (Bad n) q) -> (erased (False) f)) g) -> (Bad i)))
+  (def-fns B $ (erased dec : (erased (Nat) n) -> (erased (Or (Bad n) (Fn E (erased (Bad n) q) -> (erased (False) f))) r))
+    (def-fns E $ (erased omega : (erased (Bad n) q) -> (erased (False) f))
+      (let-match erased q (MkBad _ l pl g))
+      (g (predates pl) n q))
+    (Inr _ _ omega))
+  (def-fns _ $ (many absurd absurd absurdity : -> (many (False) f))
+    (match erased (lpo N B E en bk Bad dec) _
+      (absurd (Inl _ _ x) (let-match erased x (MkEx _ n q)) (let-match erased q (MkBad _ l pl g))
+        (let ((erased pz)) (prove-predates E (level-of absurdity)))
+        (g (predates (predates-trans pl pz)) n q))
+      (absurd (Inr _ _ h)
+        (let ((erased pne)) (prove-predates N E))
+        (h (Zero) (MkBad (Zero) N pne h)))))
+  (values (level-of absurdity) absurdity))

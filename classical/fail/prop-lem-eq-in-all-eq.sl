@@ -1,0 +1,35 @@
+(def-fns _ $ (erased eq-prop : (erased Type A) (erased A a) (erased A b)
+    (erased (Eq A a b) x) (erased (Eq A a b) y) -> (erased (Eq (Eq A a b) x y) e))
+  (let-match erased x (Refl _ _))
+  (match erased y _ ((Refl _ _) (Refl (Eq A a a) x))))
+
+(def-fns _ $ (many attack : (erased (Level) K)
+    (erased (Fn K (erased (Level) M) (erased (Level) N) (erased (Predates (Level) M N) mn)
+         (erased Type P) (erased (IsProp M P) h) ->
+         (erased (Or P (Fn N (erased P p) -> (erased (False) f))) d)) lem) ->
+    (erased (Level) Z) (many (Fn Z -> (many (False) f)) absurdity))
+  (def-lvl M2)
+  (def-lvl N2)
+  (let ((erased m2n2)) (prove-predates M2 N2))
+  (def-lvl M)
+  (let ((erased n2m)) (prove-predates N2 M))
+  (let ((erased km)) (prove-predates K M))
+  (def-lvl N)
+  (let ((erased mn)) (prove-predates M N))
+  (def-adts $ (Bad : -> Type)
+    enum
+    (many MkBad : (many (Fn N (erased (Bad) b) -> (erased (False) f)) g) -> (Bad)))
+  (def-fns M $ (erased bad-prop : (erased (Bad) x) (erased (Bad) y) -> (erased (Eq (Bad) x y) e))
+    (def-fns M2 $ (erased eqp : (erased (Eq (Bad) x y) u) (erased (Eq (Bad) x y) v) -> (erased (Eq (Eq (Bad) x y) u v) e))
+      (eq-prop (Bad) x y u v))
+    (match erased (lem (predates km) M2 N2 m2n2 (Eq (Bad) x y) (MkIsProp M2 (Eq (Bad) x y) eqp)) _
+      ((Inl _ _ e) e)
+      (absurd (Inr _ _ h) (h (predates n2m) (Refl (Bad) x)))))
+  (def-fns _ $ (erased omega : (many (Bad) b) -> (many (False) f))
+    (let-match erased b (MkBad g))
+    (g b))
+  (def-fns _ $ (many absurd absurdity : -> (many (False) f))
+    (match erased (lem M N mn (Bad) (MkIsProp M (Bad) bad-prop)) _
+      (absurd (Inl _ _ b) (omega b))
+      (absurd (Inr _ _ n) (omega (MkBad n)))))
+  (values (level-of absurdity) absurdity))

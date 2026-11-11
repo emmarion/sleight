@@ -1,0 +1,23 @@
+llpo-a-below-n.sl	`N` was not in scope when level `A` was minted
+lpo-e-below-n-stored-level.sl	`N` was not in scope when level `E` was minted
+lpo-e-below-n.sl	`N` was not in scope when level `E` was minted
+lpo-e-equals-n.sl	same-level call to `g` decreases no subterm argument
+mp-e-below-n.sl	`N0` was not in scope when level `E0` was minted
+mp-o-equals-n.sl	same-level call to `ne` decreases no subterm argument
+prop-lem-all-eq-calls-field.sl	`N` was not in scope when level `M` was minted
+prop-lem-eq-in-all-eq.sl	argument 1, `p`, of `h`: type mismatch: expected `(Eq (Bad) 
+prop-lem-level-eq.sl	same-level call to `g` takes a `(subterm p)` annotation, not
+prop-lem-lower-field.sl	argument 1, `g`, of `MkBad`: type mismatch: expected `(Fn G 
+prop-lem-m-below-n.sl	argument 3, `all-eq`, of `MkIsProp`: type mismatch: expected
+prop-lem-matchable-pin.sl	type mismatch: expected `(Eq (P T) (MkP T g2 C2 m1) (MkP T g
+prop-lem-placed-eq.sl	argument 5, `q`, of `placed-eq`: type mismatch: expected `(P
+prop-lem-same-level-call.sl	same-level call to `g` decreases no subterm argument
+prop-lem-same-level.sl	argument 3, `all-eq`, of `MkIsProp`: type mismatch: expected
+prop-lem-self-passing-all-eq.sl	same-level call to `g3` decreases no subterm argument
+prop-lem-twin-types.sl	`(level-of omegaA)` was not in scope when level `A` was mint
+prop-lem-type-eq-cycle.sl	cannot match on `n` : `(Fn N (erased (Eq Type X (Fn N (erase
+wem-n-below-w-2.sl	same-level call to `x` decreases no subterm argument
+wem-n-below-w.sl	`W` was not in scope when level `N` was minted
+wem-w-equals-n.sl	same-level call to `k` decreases no subterm argument
+wlpo-n-below-w.sl	`W` was not in scope when level `N` was minted
+wlpo-w-equals-n.sl	same-level call to `k` decreases no subterm argument

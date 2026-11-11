@@ -1,0 +1,32 @@
+(def-fns _ $ (many no-wlpo : (erased (Level) K)
+    (erased (Fn K (erased (Level) N) (erased (Level) W) (erased (Level) D) (erased (Level) E)
+        (erased (Predates (Level) N W) nw)
+        (erased (TyCtor ((Nat) n) -> Type) Q)
+        (erased (Fn D (erased (Nat) n) -> (erased (Or (Q n) (Fn E (erased (Q n) q) -> (erased (False) f))) r)) dec) ->
+        (erased (Or (Fn N (erased (Nat) n) (erased (Q n) q) -> (erased (False) f))
+                    (Fn W (erased (Fn N (erased (Nat) n) (erased (Q n) q) -> (erased (False) f)) a) -> (erased (False) f))) r)) wlpo) ->
+    (erased (Level) Z) (many (Fn Z -> (many (False) f)) absurdity))
+  (def-lvl N)
+  (def-lvl W)
+  (def-lvl E)
+  (let ((erased nw)) (prove-predates N W))
+  (def-adts $ (WQ : ((Nat) i) -> Type)
+    enum
+    (many MkQ : (erased (Nat) i) (many (Fn N (erased (Nat) n) (erased (WQ n) q) -> (erased (False) f)) all) -> (WQ i)))
+  (def-fns _ $ (erased dec : (erased (Nat) n) -> (erased (Or (WQ n) (Fn E (erased (WQ n) q) -> (erased (False) f))) r))
+    (match erased (wlpo N W (level-of dec) E nw WQ dec) _
+      ((Inl _ _ all) (Inl _ _ (MkQ n all)))
+      ((Inr _ _ k)
+        (def-fns E $ (erased r : (erased (WQ n) q) -> (erased (False) f))
+          (let-match erased q (MkQ _ all))
+          (k all))
+        (Inr _ _ r))))
+  (def-fns _ $ (many absurd absurd absurdity : -> (many (False) f))
+    (match erased (wlpo N W (level-of dec) E nw WQ dec) _
+      (absurd (Inl _ _ all) (all (Zero) (MkQ (Zero) all)))
+      (absurd (Inr _ _ k)
+        (def-fns N $ (erased all : (erased (Nat) n) (erased (WQ n) q) -> (erased (False) f))
+          (let-match erased q (MkQ _ all2))
+          (k all2))
+        (all (Zero) (MkQ (Zero) all)))))
+  (values (level-of absurdity) absurdity))

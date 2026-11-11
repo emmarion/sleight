@@ -1,0 +1,12 @@
+(def-fns _ $ (erased fneq : (erased (Level) N) (erased Type X)
+    (erased (Fn N (erased X b) -> (erased (False) f)) g1)
+    (erased (Fn N (erased X b) -> (erased (False) f)) g2)
+    (erased (TyCtor -> Type) T)
+    (erased (ValCtor (erased g1 is w) -> (T)) C1)
+    (erased (ValCtor (erased g2 is w) -> (T)) C2)
+    (many (Matchable enum T (many C1)) m1)
+    (many (Matchable enum T (many C2)) m2) ->
+    (erased (Eq (Fn N (erased X b) -> (erased (False) f)) g1 g2) e))
+  (open-adt erased m1)
+  (open-adt erased m2)
+  (Refl _ g1))
