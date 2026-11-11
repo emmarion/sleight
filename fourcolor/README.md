@@ -51,6 +51,7 @@ Then, from the repository root:
 fourcolor/check.sh final slc    # FourColor with slc
 fourcolor/check.sh final ref    # FourColor with the reference compiler
 fourcolor/check.sh many slc     # FourColorM with slc
+fourcolor/check.sh plane slc    # FourColorR (plane/README.md) with slc
 ```
 
 Each prints `--goal proved: PASS` on standard output on success, with the

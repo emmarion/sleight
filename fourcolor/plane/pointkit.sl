@@ -1,5 +1,5 @@
 (def-fns _ $ (erased point-kit : (erased (Level) M N) -> (erased (Level) P) (erased (PointKit M N P) k))
-  (let ((erased K1) (erased _) (erased creal-appart-eq-compat) (erased creal-appart-irrefl) (erased _) (erased K2) (erased _)) (creal-eq-kit M N))
+  (let ((erased Ka) (erased _) (erased creal-appart-eq-compat) (erased creal-appart-irrefl) (erased _) (erased K2) (erased _)) (creal-eq-kit M N))
   (def-fns _
     ((erased compat : (erased (RPoint M) x y z) (erased (RPointEq M N x y) a) (erased (RPointApart M y z) b) -> (erased (RPointApart M x z) r))
       (let-match erased a (MkRPointEq _ _ px py qx qy xp yp xq yq ex ey))

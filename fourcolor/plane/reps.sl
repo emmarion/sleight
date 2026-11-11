@@ -18,14 +18,14 @@
 
 (def-adts $ (DichAll : ((Level) M) ((Level) N) ((RPoint M) x) ((List (RPoint M)) ys) -> Type)
   enum
-  (many DANil : (erased (Level) M N) (erased (RPoint M) x) -> (DichAll M N x (Nil (RPoint M))))
-  (many DACons : (erased (Level) M N) (erased (RPoint M) x y) (erased (List (RPoint M)) ys)
+  (many DchNil : (erased (Level) M N) (erased (RPoint M) x) -> (DichAll M N x (Nil (RPoint M))))
+  (many DchCons : (erased (Level) M N) (erased (RPoint M) x y) (erased (List (RPoint M)) ys)
       (erased (Dich M N x y) d) (erased (DichAll M N x ys) rest) -> (DichAll M N x (Cons (RPoint M) y ys))))
 
 (def-adts $ (DichTab : ((Level) M) ((Level) N) ((List (RPoint M)) us) -> Type)
   enum
-  (many DTNil : (erased (Level) M N) -> (DichTab M N (Nil (RPoint M))))
-  (many DTCons : (erased (Level) M N) (erased (RPoint M) x) (erased (List (RPoint M)) us)
+  (many DtbNil : (erased (Level) M N) -> (DichTab M N (Nil (RPoint M))))
+  (many DtbCons : (erased (Level) M N) (erased (RPoint M) x) (erased (List (RPoint M)) us)
       (erased (DichAll M N x us) here) (erased (DichTab M N us) rest) -> (DichTab M N (Cons (RPoint M) x us))))
 
 (def-adts $ (FirstEq : ((Level) M) ((Level) N) ((List (RPoint M)) hs) ((RPoint M) u) ((RPoint M) r) -> Type)
@@ -38,7 +38,7 @@
 
 (def-fns _ $ (erased dichall-elem : (erased (Level) M N) (erased (RPoint M) x y) (erased (List (RPoint M)) ys)
     (subterm erased (DichAll M N x ys) d) (erased (Elem (RPoint M) y ys) el) -> (erased (Dich M N x y) r))
-  (let-match erased d (DACons _ _ _ _ ys1 d0 rest) (absurd (DANil _ _ _) el))
+  (let-match erased d (DchCons _ _ _ _ ys1 d0 rest) (absurd (DchNil _ _ _) el))
   (match erased el _
     ((ElHere _ _ _) d0)
     ((ElThere _ _ _ _ el1) (dichall-elem M N x y ys1 rest el1))))
@@ -62,7 +62,7 @@
 (def-fns _ $ (erased dich-of : (erased (Level) M N) (erased (List (RPoint M)) us) (erased (RPoint M) x y)
     (subterm erased (DichTab M N us) tab) (erased (Elem (RPoint M) x us) ex) (erased (Elem (RPoint M) y us) ey)
     -> (erased (Dich M N x y) d))
-  (let-match erased tab (DTCons _ _ h us1 here rest) (absurd (DTNil _ _) ex))
+  (let-match erased tab (DtbCons _ _ h us1 here rest) (absurd (DtbNil _ _) ex))
   (match erased ex _
     ((ElHere _ _ _)
       (match erased ey _

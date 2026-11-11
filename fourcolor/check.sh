@@ -1,5 +1,5 @@
 #!/bin/sh
-# usage: fourcolor/check.sh [final|many] [slc|ref] [extra compiler arguments...]
+# usage: fourcolor/check.sh [final|many|plane] [slc|ref] [extra compiler arguments...]
 set -eu
 cd "$(dirname "$0")/.."
 goal=${1:-final}; [ $# -gt 0 ] && shift
@@ -10,8 +10,10 @@ case $comp in
   *) echo "unknown compiler: $comp" >&2; exit 2 ;;
 esac
 case $goal in
-  final) mid=""; last=fcfinal ;;
-  many) mid="paint fcmany"; last=fcmanyfinal ;;
+  final) mid=""; last=fcfinal; tail="" ;;
+  many) mid="paint fcmany"; last=fcmanyfinal; tail="" ;;
+  plane) mid=""; last=""; tail="real/defs.sl real/zarith.sl real/qarith.sl real/creal.sl"
+    for x in defs spec grid pullback reps pairs pointkit approx reduce round final; do tail="$tail fourcolor/plane/$x.sl"; done ;;
   *) echo "unknown goal: $goal" >&2; exit 2 ;;
 esac
 F="std/macro.sl std/nat.sl std/list.sl fourcolor/ring.sl"
@@ -32,5 +34,6 @@ for x in embed birkhoff3 minarity embed3 embed5 contract3 embed6 fullred trivred
   red/chunks fcopen native embed4 red/pieces red/proof-c red/bproof unav/qztproof embed4proof fcproof $last; do
   F="$F fourcolor/$x.sl"
 done
+F="$F $tail"
 export OCAMLRUNPARAM="${OCAMLRUNPARAM:-o=400}"
 exec $C $F --goal proved --inline 50 "$@"

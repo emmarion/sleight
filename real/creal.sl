@@ -579,14 +579,14 @@
   (Some _ qr-near))
 
 (def-fns _ $ (erased creal-eq-kit : (erased (Level) M N) ->
-    (erased (Level) K1)
-    (erased (Fn K1 (erased (Spec) sx sy) (erased (CRealEq N sx sy) h) (erased (Z) n) (erased (Q) a b) (erased (SeqAt sx n a) ha) (erased (SeqAt sy n b) hb) ->
+    (erased (Level) Ka)
+    (erased (Fn Ka (erased (Spec) sx sy) (erased (CRealEq N sx sy) h) (erased (Z) n) (erased (Q) a b) (erased (SeqAt sx n a) ha) (erased (SeqAt sy n b) hb) ->
         (erased (Q) d e c w) (erased (QMinus a b d) hd) (erased (QAbs d e) he) (erased (QPower qtwo n c) hc) (erased (QMult qtwo c w) hw) (erased (QLe e w) le))
       creal-eq-diff)
-    (erased (Fn K1 (erased (Spec) sx sy sz) (erased (CReal M sx) x) (erased (CReal M sy) y) (erased (CReal M sz) z) (erased (CRealEq N sx sy) h)
+    (erased (Fn Ka (erased (Spec) sx sy sz) (erased (CReal M sx) x) (erased (CReal M sy) y) (erased (CReal M sz) z) (erased (CRealEq N sx sy) h)
         (erased (CRealAppart sy sz) d) -> (erased (CRealAppart sx sz) r)) creal-appart-eq-compat)
-    (erased (Fn K1 (erased (Spec) s) (erased (CReal M s) x) (erased (CRealAppart s s) d) -> (erased (False) f)) creal-appart-irrefl)
-    (erased (Fn K1 (erased (Spec) sx sy) (erased (CReal M sx) x) (erased (CReal M sy) y) (erased (Z) k j) (erased (Q) a b) (erased (LtNear sx sy k) h)
+    (erased (Fn Ka (erased (Spec) s) (erased (CReal M s) x) (erased (CRealAppart s s) d) -> (erased (False) f)) creal-appart-irrefl)
+    (erased (Fn Ka (erased (Spec) sx sy) (erased (CReal M sx) x) (erased (CReal M sy) y) (erased (Z) k j) (erased (Q) a b) (erased (LtNear sx sy k) h)
         (erased (ZLe j k) hj) (erased (Near sx j a) nx) (erased (Near sy j b) ny) -> (erased (QLt a b) lt)) creal-lt-near-at)
     (erased (Level) K2)
     (erased (Fn K2 (erased (Spec) sx sy) (erased (CReal M sx) x) (erased (CRealEq N sx sy) h) (erased (Z) j) (erased (Q) t) (erased (SeqAt sy j t) ht)

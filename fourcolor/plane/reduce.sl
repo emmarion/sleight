@@ -1,7 +1,7 @@
 (def-adts $ (Rounding : ((Level) M) ((List (REdge M)) es) -> Type)
   enum
   (many MkRounding : (erased (Level) M) (erased (List (REdge M)) es) (erased (List (Edge)) ns) (erased (List (RN M)) xs)
-      (erased (Ends M es ns xs) en) (erased (Coh M xs) coh) (erased (Drawing ns) drawn)
+      (erased (EndPairs M es ns xs) en) (erased (Coh M xs) coh) (erased (Drawing ns) drawn)
       -> (Rounding M es)))
 
 (def-fns _ $ (erased four-color-r-of : (erased (FourColor) h) (erased (Level) G)

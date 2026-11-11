@@ -499,7 +499,7 @@
     (let ((erased tol)) (MkTol j v cj cv k dl hcj hcv hk hdl (zle-trans j J v hj jv)))
     (let ((erased x1) (erased i1) (erased j1) (erased e1) (erased hx1) (erased hi1) (erased hj1) (erased he1) (erased w1))
       (shoe-approx p q r s1 h1 m j v rb d dl hb hd a b c na nb nc sp sq sr tol))
-    (let ((erased x2) (erased i2) (erased j2) (erased e2) (erased hx2) (erased hi2) (erased hj2) (erased he2) (erased w2))
+    (let ((erased x2) (erased i2) (erased jw) (erased e2) (erased hx2) (erased hi2) (erased hj2) (erased he2) (erased w2))
       (shoe-approx r q p s2 h2 m j v ra d dl ha hd c b a nc nb na sr sq sp tol))
     (let-match erased w1 (MkQClose _ _ _ z1 f1 hz1 hf1 l1))
     (let-match erased w2 (MkQClose _ _ _ z2 f2 hz2 hf2 l2))

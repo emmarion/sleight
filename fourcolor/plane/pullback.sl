@@ -22,12 +22,12 @@
       (erased (RPointEq M N u u) refl) (erased (AllEA M (MkRN M u v) xs) here) (erased (Coh M xs) rest)
       -> (Coh M (Cons (RN M) (MkRN M u v) xs))))
 
-(def-adts $ (Ends : ((Level) M) ((List (REdge M)) es) ((List (Edge)) ns) ((List (RN M)) xs) -> Type)
+(def-adts $ (EndPairs : ((Level) M) ((List (REdge M)) es) ((List (Edge)) ns) ((List (RN M)) xs) -> Type)
   enum
-  (many EndsNil : (erased (Level) M) -> (Ends M (Nil (REdge M)) (Nil (Edge)) (Nil (RN M))))
+  (many EndsNil : (erased (Level) M) -> (EndPairs M (Nil (REdge M)) (Nil (Edge)) (Nil (RN M))))
   (many EndsCons : (erased (Level) M) (erased (RPoint M) a b) (erased (Point) a2 b2) (erased (List (REdge M)) es)
-      (erased (List (Edge)) ns) (erased (List (RN M)) xs) (erased (Ends M es ns xs) rest)
-      -> (Ends M (Cons (REdge M) (MkREdge M a b) es) (Cons (Edge) (MkEdge a2 b2) ns)
+      (erased (List (Edge)) ns) (erased (List (RN M)) xs) (erased (EndPairs M es ns xs) rest)
+      -> (EndPairs M (Cons (REdge M) (MkREdge M a b) es) (Cons (Edge) (MkEdge a2 b2) ns)
             (Cons (RN M) (MkRN M a a2) (Cons (RN M) (MkRN M b b2) xs)))))
 
 (def-adts $ (Painted : ((Level) M) ((List (Paint)) ks) ((List (RN M)) xs) ((List (RPaint M)) ps) -> Type)
@@ -94,7 +94,7 @@
       (RColorHere M Lq ps1 u u0 c (rpointeq-sym M Lq u0 u e)))))
 
 (def-fns _ $ (erased painted-of : (erased (Level) M) (erased (List (Paint)) ks) (erased (List (REdge M)) es) (erased (List (Edge)) ns)
-    (erased (List (RN M)) xs) (subterm erased (Ends M es ns xs) en) (erased (Proper ks ns) pr)
+    (erased (List (RN M)) xs) (subterm erased (EndPairs M es ns xs) en) (erased (Proper ks ns) pr)
     -> (erased (List (RPaint M)) ps) (erased (Painted M ks xs ps) pd))
   (let-match erased en (EndsCons _ a b a2 b2 es1 ns1 xs1 en1) ((EndsNil _) (values (Nil _) (PdNil M ks))))
   (let-match erased pr (ProperCons _ _ _ ca cb _ ka kb _ _ _ pr1))
@@ -104,7 +104,7 @@
 
 (def-fns _ $ (erased rproper-of : (erased (Level) M) (erased (List (Paint)) ks) (erased (List (RN M)) xs ys) (erased (List (RPaint M)) ps)
     (erased (List (REdge M)) es) (erased (List (Edge)) ns)
-    (erased (Coh M xs) coh) (erased (Painted M ks xs ps) pd) (subterm erased (Ends M es ns ys) en)
+    (erased (Coh M xs) coh) (erased (Painted M ks xs ps) pd) (subterm erased (EndPairs M es ns ys) en)
     (erased (Suffix (RN M) ys xs) suf) (erased (Proper ks ns) pr) -> (erased (RProper M ps es) r))
   (let-match erased en (EndsCons _ a b a2 b2 es1 ns1 ys1 en1) ((EndsNil _) (RProperNil M ps)))
   (let-match erased pr (ProperCons _ _ _ ca cb _ ka kb ba bb differ pr1))
@@ -117,7 +117,7 @@
     ba bb differ (rproper-of M ks xs ys1 ps es1 ns1 coh pd en1 (SufNext _ yb ys1 xs sufb) pr1)))
 
 (def-fns _ $ (erased pullback : (erased (Level) M) (erased (List (REdge M)) es) (erased (List (Edge)) ns) (erased (List (RN M)) xs)
-    (erased (Ends M es ns xs) en) (erased (Coh M xs) coh) (erased (List (Paint)) ks) (erased (Proper ks ns) pr)
+    (erased (EndPairs M es ns xs) en) (erased (Coh M xs) coh) (erased (List (Paint)) ks) (erased (Proper ks ns) pr)
     -> (erased (List (RPaint M)) ps) (erased (RProper M ps es) r))
   (let ((erased ps) (erased pd)) (painted-of M ks es ns xs en pr))
   (values ps (rproper-of M ks xs xs ps es ns coh pd en (SufHere _ xs) pr)))
