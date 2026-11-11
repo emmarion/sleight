@@ -92,7 +92,8 @@ by the owner and apply to every session.
     spec was silent and the code had to do something. An entry there
     saying the owner decided something is a contradiction in terms.
     When the owner does decide, the decision goes to DESIGN.md under
-    rules 11 and 12, the audit or bug index is marked
+    rules 11 and 12, it leaves DECISIONS.md once DESIGN.md states it,
+    the audit or bug index is marked
     as those files' own conventions have it, and any ASSUMPTIONS entry
     that stood in for the question is removed rather than amended. Do
     not add an entry recording what the owner just said in chat,
@@ -100,7 +101,7 @@ by the owner and apply to every session.
     do so as the pattern to follow.
 
 15. **Numbered items are never renumbered.** DESIGN.md's sections and
-    the items of ASSUMPTIONS.md, SPEC-REVIEW.md, OPEN.md,
+    the items of ASSUMPTIONS.md, DECISIONS.md, SPEC-REVIEW.md, OPEN.md,
     TOOLING-WISHLIST.md, MINIMAL.md, BUGS.md and WARNINGS.md are
     cited by number from the code and from each other. An item or
     section that goes away is deleted and its number left as a gap;
@@ -131,3 +132,9 @@ by the owner and apply to every session.
     marker, with a bounded loop. Never poll with `pgrep -f`/`pkill -f`
     on a pattern: the polling shell's own command line contains the
     pattern, so it matches itself and the loop never ends.
+
+21. **Vetted mode.** When the owner starts vetted mode ("start
+    vetted mode"), follow WORKFLOW.md until the owner ends it ("end
+    vetted mode"); at other times, don't. In either mode, DECISIONS.md
+    is an exception to rule 11: it records proposed answers to open
+    questions, each marked as not approved.
