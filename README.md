@@ -91,6 +91,10 @@ two each checked in about 35 s; most of the work runs
 as native code in parallel jobs. Each directory's README says how to
 check it and what the proof rests on.
 
+[`higman/`](higman/) proves Higman's lemma constructively and with no
+`native-compute`: for a two-letter alphabet, and for each fixed finite
+alphabet through a macro that writes the proof out for its size.
+
 [`agent/`](agent/) runs LLM agents on Sleight programming tasks over many
 sessions; the heap sort above was written that way. The October 14,
 2026 talk ([`talk/slides.md`](talk/slides.md), PDF at

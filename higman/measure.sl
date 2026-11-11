@@ -1,0 +1,103 @@
+; u : p zeros, then 1, then j zeros.
+(def-adts $ (UnitP : ((Nat) p) ((Nat) j) ((List (Nat)) u) -> Type)
+  enum
+  (many UPZ : (erased (Nat) j) (erased (List (Nat)) z) (erased (Repeat (Nat) j (Zero) z) r)
+     -> (UnitP (Zero) j (Cons (Nat) (Succ (Zero)) z)))
+  (many UPS : (erased (Nat) p j) (erased (List (Nat)) u) (erased (UnitP p j u) up)
+     -> (UnitP (Succ p) j (Cons (Nat) (Zero) u))))
+
+(def-adts $ (ZP : ((Nat) k) ((List (Nat)) w) -> Type)
+  enum
+  (many ZPZ : (erased (List (Nat)) w) -> (ZP (Zero) w))
+  (many ZPS : (erased (Nat) k) (erased (List (Nat)) w) (erased (ZP k w) z) -> (ZP (Succ k) (Cons (Nat) (Zero) w))))
+
+(def-adts $ (VAdd : ((List (Nat)) a) ((List (Nat)) b) ((List (Nat)) c) -> Type)
+  enum
+  (many VANil : -> (VAdd (Nil (Nat)) (Nil (Nat)) (Nil (Nat))))
+  (many VACons : (erased (Nat) x y z) (erased (Add x y z) ad) (erased (List (Nat)) a b c) (erased (VAdd a b c) va)
+     -> (VAdd (Cons (Nat) x a) (Cons (Nat) y b) (Cons (Nat) z c))))
+
+(def-fns _ $ (erased vadd-exists : (erased (Nat) n) (erased (List (Nat)) a b) (subterm erased (Length (Nat) a n) la)
+    (erased (Length (Nat) b n) lb) -> (erased (List (Nat)) c) (erased (VAdd a b c) va) (erased (Length (Nat) c n) lc))
+  (let-match erased la (LengthCons _ x a1 n1 la1)
+    ((LengthNil _) (let-match erased lb (LengthNil _)) (values (Nil (Nat)) (VANil) (LengthNil (Nat)))))
+  (let-match erased lb (LengthCons _ y b1 _ lb1))
+  (let ((erased z) (erased ad)) (add x y))
+  (let ((erased c1) (erased va1) (erased lc1)) (vadd-exists n1 a1 b1 la1 lb1))
+  (values (Cons (Nat) z c1) (VACons x y z ad a1 b1 c1 va1) (LengthCons (Nat) z c1 n1 lc1)))
+
+(def-fns _ $ (erased vadd-comm : (erased (List (Nat)) a b c) (subterm erased (VAdd a b c) va) -> (erased (VAdd b a c) vb))
+  (let-match erased va (VACons x y z ad a1 b1 c1 va1) ((VANil) (VANil)))
+  (VACons y x z (add-comm x y z ad) b1 a1 c1 (vadd-comm a1 b1 c1 va1)))
+
+(def-fns _ $ (erased lexpos-add : (erased (Nat) n p) (erased (List (Nat)) a b w s t) (subterm erased (LexPos n p a b) lp)
+    (erased (VAdd a w s) va) (erased (VAdd b w t) vb) -> (erased (LexPos n p s t) l))
+  (match erased lp _
+    ((LPHead n1 h2 h lt t2 t0)
+      (let-match erased va (VACons _ y z1 ad1 _ w1 s1 _))
+      (let-match erased vb (VACons _ _ z2 ad2 _ _ t1 _))
+      (LPHead n1 z1 z2 (add-lt-mono y h2 h z1 z2 (add-comm h2 y z1 ad1) (add-comm h y z2 ad2) lt) s1 t1))
+    ((LPTail n1 p1 h t2 t0 lp1)
+      (let-match erased va (VACons _ y z1 ad1 _ w1 s1 va1))
+      (let-match erased vb (VACons _ _ z2 ad2 _ _ t1 vb1))
+      (let-match erased (add-fn h y z1 z2 ad1 ad2) (Refl _ _))
+      (LPTail n1 p1 z1 s1 t1 (lexpos-add n1 p1 t2 t0 w1 s1 t1 lp1 va1 vb1)))))
+
+(def-fns _ $ (erased zp-unit : (erased (Nat) k p j) (erased (List (Nat)) u) (subterm erased (UnitP p j u) up)
+    (erased (Lt k (Succ p)) l) -> (erased (ZP k u) z))
+  (let-match erased k (Succ k1) ((Zero) (ZPZ u)))
+  (let-match erased up (UPS p1 _ u1 up1) (absurd (UPZ _ _ _) (let-match erased l (LtS _ _ l1)) l1))
+  (let-match erased l (LtS _ _ l1))
+  (ZPS k1 u1 (zp-unit k1 p1 j u1 up1 l1)))
+
+(def-fns _ $ (erased zp-repeat : (erased (Nat) k n) (erased (List (Nat)) z) (subterm erased (Repeat (Nat) n (Zero) z) r)
+    (erased (Lt k (Succ n)) l) -> (erased (ZP k z) zp))
+  (let-match erased k (Succ k1) ((Zero) (ZPZ z)))
+  (let-match erased r (RepeatCons _ n1 _ z1 r1) (absurd (RepeatNil _ _) (let-match erased l (LtS _ _ l1)) l1))
+  (let-match erased l (LtS _ _ l1))
+  (ZPS k1 z1 (zp-repeat k1 n1 z1 r1 l1)))
+
+(def-fns _ $ (erased zp-vadd : (erased (Nat) k) (erased (List (Nat)) a b c) (subterm erased (ZP k a) za) (erased (ZP k b) zb)
+    (erased (VAdd a b c) va) -> (erased (ZP k c) zc))
+  (let-match erased za (ZPS k1 a1 za1) ((ZPZ _) (ZPZ c)))
+  (let-match erased zb (ZPS _ b1 zb1))
+  (let-match erased va (VACons _ _ _ ad _ _ c1 va1))
+  (let-match erased ad (AddZero _))
+  (ZPS k1 c1 (zp-vadd k1 a1 b1 c1 za1 zb1 va1)))
+
+(def-fns _ $ (erased lexpos-unit : (erased (Nat) p j m) (erased (List (Nat)) w u) (subterm erased (UnitP p j u) up)
+    (erased (ZP (Succ p) w) zw) (erased (Add p j m) ad) -> (erased (LexPos (Succ m) p w u) l))
+  (let-match erased zw (ZPS _ w1 zw1))
+  (let-match erased up (UPS p1 _ u1 up1) ((UPZ _ z _) (LPHead m (Zero) (Succ (Zero)) (LtZ (Zero)) w1 z)))
+  (let-match erased ad (AddSucc _ _ m1 ad1))
+  (LPTail (Succ m1) p1 (Zero) w1 u1 (lexpos-unit p1 j m1 w1 u1 up1 zw1 ad1)))
+
+(def-fns _ $ (erased unit-length : (erased (Nat) p j m) (erased (List (Nat)) u) (subterm erased (UnitP p j u) up)
+    (erased (Add p j m) ad) -> (erased (Length (Nat) u (Succ m)) l))
+  (match erased up _
+    ((UPZ _ z r)
+      (let-match erased ad (AddZero _))
+      (LengthCons (Nat) _ z j (repeat-length (Nat) j (Zero) z r)))
+    ((UPS p1 _ u1 up1)
+      (let-match erased ad (AddSucc _ _ m1 ad1))
+      (LengthCons (Nat) (Zero) u1 (Succ m1) (unit-length p1 j m1 u1 up1 ad1)))))
+
+(def-fns _ $ (erased unit-exists : (subterm erased (Nat) p) (erased (Nat) j) -> (erased (List (Nat)) u) (erased (UnitP p j u) up))
+  (let-match erased p (Succ p1)
+    ((Zero)
+      (let ((erased z) (erased r)) (repeat-exists (Nat) j (Zero)))
+      (values (Cons (Nat) (Succ (Zero)) z) (UPZ j z r))))
+  (let ((erased u1) (erased up1)) (unit-exists p1 j))
+  (values (Cons (Nat) (Zero) u1) (UPS p1 j u1 up1)))
+
+(def-fns _ $ (erased vadd-length : (erased (Nat) n) (erased (List (Nat)) a b c) (subterm erased (VAdd a b c) va)
+    (erased (Length (Nat) a n) la) -> (erased (Length (Nat) c n) lc))
+  (let-match erased va (VACons x y z _ a1 b1 c1 va1) ((VANil) la))
+  (let-match erased la (LengthCons _ _ _ n1 la1))
+  (LengthCons (Nat) z c1 n1 (vadd-length n1 a1 b1 c1 va1 la1)))
+
+(def-fns _ $ (erased add-cancel : (erased (Nat) j a b m) (subterm erased (Add j a m) p) (erased (Add j b m) q)
+    -> (erased (Eq (Nat) a b) e))
+  (let-match erased p (AddSucc j1 _ m1 p1) ((AddZero _) (let-match erased q (AddZero _)) (Refl (Nat) a)))
+  (let-match erased q (AddSucc _ _ _ q1))
+  (add-cancel j1 a b m1 p1 q1))
