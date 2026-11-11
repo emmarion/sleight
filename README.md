@@ -89,8 +89,8 @@ in the style of Joachimski and Matthes rather than by reducibility
 candidates. [`fourcolor/plane/`](fourcolor/plane/) extends the four colour
 theorem to drawings whose points have constructive real coordinates, the
 Cauchy reals of [`real/`](real/), which restates the Rocq standard
-library's. In single measurements on a 12-core Mac with slc, the first
-two each checked in about 35 s; most of the work runs
+library's. In single measurements on a 12-core Mac with slc, `bb/` and
+`fourcolor/` each checked in about 35 s; most of the work runs
 as native code in parallel jobs. Each directory's README says how to
 check it and what the proof rests on.
 
