@@ -80,11 +80,14 @@ sort on unique lists certified against [`msort/spec.sl`](msort/spec.sl).
 [`mini/`](mini/) writes the semantics of the fragment of
 [MINIMAL.md](MINIMAL.md) as relations in the language itself.
 
-Two larger proofs, both translated from existing ones (each directory's
+Three proofs, all translated from existing ones (each directory's
 NOTICE.md credits them): [`bb/`](bb/) proves that the fifth busy beaver
-value is 47,176,870, and [`fourcolor/`](fourcolor/) proves the four
-colour theorem for straight-line drawings. In single measurements on a
-12-core Mac with slc, each checked in about 35 s; most of the work runs
+value is 47,176,870, [`fourcolor/`](fourcolor/) proves the four colour
+theorem for straight-line drawings, and [`stlc/`](stlc/) proves that the
+simply typed λ-calculus is strongly normalizing, by an induction on types
+in the style of Joachimski and Matthes rather than by reducibility
+candidates. In single measurements on a 12-core Mac with slc, the first
+two each checked in about 35 s; most of the work runs
 as native code in parallel jobs. Each directory's README says how to
 check it and what the proof rests on.
 
