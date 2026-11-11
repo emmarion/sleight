@@ -16,7 +16,7 @@
   (let ((many n) (many rest)) (sc-num s))
   (values (nat-eqb n 1) rest))
 
-(def-fns _ $ (many sc-z : (many (String) s) -> (many (Z) z) (many (String) rest))
+(def-fns _ $ (many sc-z : (many (String) s) -> (many (ZInt) z) (many (String) rest))
   (let ((many a) (many s1)) (sc-num s))
   (let ((many b) (many s2)) (sc-num s1))
   (values (MkZ a b) s2))

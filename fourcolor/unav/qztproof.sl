@@ -22,7 +22,7 @@
 ; The obligations obl pass redpart against a quiz tree built from cfs'.
 (def-adts $ (RedE : ((List (Config)) cfs') ((List (List (Sub))) obl) -> Type)
   enum
-  (many MkRedE : (erased (List (Config)) cfs') (erased (List (List (Sub))) obl) (erased (Qzt) qt) (erased (QInv cfs' (Nil (Nat)) qt) qi)
+  (many MkRedE : (erased (List (Config)) cfs') (erased (List (List (Sub))) obl) (erased (Qzt) qt) (erased (QzInv cfs' (Nil (Nat)) qt) qi)
       (erased (AllRedQ qt obl) a) -> (RedE cfs' obl)))
 
 ; The cap checks for drs, their obligations passing redpart.
@@ -119,7 +119,7 @@
   enum
   (many MkRegOK : (erased (List (Config)) cfs') (erased (List (List (Sub))) drs rt rs ct out) (erased (Nat) nhub) (erased (List (Sub)) p mp q mq)
       (erased (List (Bool)) path) (erased (Bool) root) (erased (OfSize nhub drs rs) sz) (erased (Tgt nhub drs rt) tg) (erased (Qzt) qt)
-      (erased (QInv cfs' (Nil (Nat)) qt) qi) (erased (PartIn p q) ip) (erased (PartIn mp mq) im) (erased (Pres nhub rt rs ct q out) d0)
+      (erased (QzInv cfs' (Nil (Nat)) qt) qi) (erased (PartIn p q) ip) (erased (PartIn mp mq) im) (erased (Pres nhub rt rs ct q out) d0)
       (erased (Pres nhub rt rs ct mq out) d1) (erased (AllRedQ qt out) ar) (erased (List (Region)) t) (erased (CutsIn ct t) ci)
       -> (RegOK cfs' drs (MkRegion nhub ct p mp path root) t)))
 
@@ -279,7 +279,7 @@
     (else (let ((many skel) (many cuts)) (walk-skel a)) (push-regs a skel (Nil _) xs cuts))))
   (tail $ all-regs n1 (Succ a) xs1))
 
-(def-fns _ $ (many cfs-tree : -> (many (Qzt) qt) (many (ErasedMaybe (QInv cfs (Nil (Nat)) qt)) qc))
+(def-fns _ $ (many cfs-tree : -> (many (Qzt) qt) (many (ErasedMaybe (QzInv cfs (Nil (Nat)) qt)) qc))
   (let ((many c) (many ce)) (cfs-run))
   (let-match many ce (ESome _ e) ((ENone _) (values (QztNil) (ENone _))))
   (let-match erased e (Refl _ _))
@@ -300,7 +300,7 @@
   (let ((many cok) (erased cw)) (cuts-in-c ct t))
   (let-match many cok (BTrue) ((BFalse) (ENone _)))
   (let ((many qt) (many qc))
-    (match many out (((Qzt) qt) ((ErasedMaybe (QInv cfs (Nil (Nat)) qt)) qc)) ((Nil _) (values (QztNil) (ESome _ (QINil cfs (Nil _))))) (else (cfs-tree))))
+    (match many out (((Qzt) qt) ((ErasedMaybe (QzInv cfs (Nil (Nat)) qt)) qc)) ((Nil _) (values (QztNil) (ESome _ (QINil cfs (Nil _))))) (else (cfs-tree))))
   (let-match many qc (ESome _ qi) ((ENone _) (ENone _)))
   (let ((many rok) (erased rw)) (allred-c qt out))
   (let-match many rok (BTrue) ((BFalse) (ENone _)))

@@ -302,10 +302,10 @@
 (def-adts $ (HFit : ((Nat) nhub) ((List (Sub)) p) ((List (List (Sub))) rt rs) ((List (Hc)) hc) ((List (List (Sub))) acc out) -> Type)
   enum
   (many HFNil : (erased (Nat) nhub) (erased (List (Sub)) p) (erased (List (List (Sub))) rt rs acc) -> (HFit nhub p rt rs (Nil (Hc)) acc acc))
-  (many HFOne : (erased (Nat) nhub j k) (erased (Z) b) (erased (List (Sub)) p pj) (erased (List (List (Sub))) rt rs acc acc1 out) (erased (List (Hc)) hc)
+  (many HFOne : (erased (Nat) nhub j k) (erased (ZInt) b) (erased (List (Sub)) p pj) (erased (List (List (Sub))) rt rs acc acc1 out) (erased (List (Hc)) hc)
       (erased (HubShift nhub j k) sh) (erased (RotCut (Sub) k p pj) ro) (erased (Db2Top pj rt rs b acc acc1) d) (erased (HFit nhub p rt rs hc acc1 out) rest)
       -> (HFit nhub p rt rs (Cons (Hc) (HC1 j b) hc) acc out))
-  (many HFTwo : (erased (Nat) nhub j1 j2 k i) (erased (Z) b) (erased (List (Sub)) p pj) (erased (List (List (Sub))) rt rs acc acc1 out)
+  (many HFTwo : (erased (Nat) nhub j1 j2 k i) (erased (ZInt) b) (erased (List (Sub)) p pj) (erased (List (List (Sub))) rt rs acc acc1 out)
       (erased (List (Hc)) hc) (erased (HubShift nhub j1 k) sh) (erased (RotCut (Sub) k p pj) ro) (erased (HubSubn nhub j2 j1 i) hs)
       (erased (E2Top nhub pj rt rs i b acc acc1) d) (erased (HFit nhub p rt rs hc acc1 out) rest) -> (HFit nhub p rt rs (Cons (Hc) (HC2 j1 j2 b) hc) acc out)))
 
@@ -368,10 +368,10 @@
 (def-adts $ (Fam : ((List (Sec)) os) ((Nat) nhub) ((List (List (Sec))) oss) ((List (Hc)) hc) -> Type)
   enum
   (many FamNil : (erased (List (Sec)) os) (erased (Nat) nhub) (erased (List (List (Sec))) oss) -> (Fam os nhub oss (Nil (Hc))))
-  (many FamOne : (erased (List (Sec)) os oj) (erased (Nat) nhub j k) (erased (Z) b) (erased (List (List (Sec))) oss) (erased (List (Hc)) hc)
+  (many FamOne : (erased (List (Sec)) os oj) (erased (Nat) nhub j k) (erased (ZInt) b) (erased (List (List (Sec))) oss) (erased (List (Hc)) hc)
       (erased (HubShift nhub j k) sh) (erased (RotCut (Sec) k os oj) ro) (erased (Nth (List (Sec)) oss j oj) no) (erased (Fam os nhub oss hc) rest)
       -> (Fam os nhub oss (Cons (Hc) (HC1 j b) hc)))
-  (many FamTwo : (erased (List (Sec)) os o1 o2) (erased (Nat) nhub j1 j2 k i i2) (erased (Z) b) (erased (List (List (Sec))) oss) (erased (List (Hc)) hc)
+  (many FamTwo : (erased (List (Sec)) os o1 o2) (erased (Nat) nhub j1 j2 k i i2) (erased (ZInt) b) (erased (List (List (Sec))) oss) (erased (List (Hc)) hc)
       (erased (HubShift nhub j1 k) sh) (erased (RotCut (Sec) k os o1) ro) (erased (Nth (List (Sec)) oss j1 o1) n1) (erased (Nth (List (Sec)) oss j2 o2) n2)
       (erased (HubSubn nhub j2 j1 i) hs) (erased (RotCut (Sec) i o1 o2) r12) (erased (RotCut (Sec) i2 o2 o1) r21) (erased (Add i i2 nhub) _)
       (erased (Fam os nhub oss hc) rest) -> (Fam os nhub oss (Cons (Hc) (HC2 j1 j2 b) hc))))

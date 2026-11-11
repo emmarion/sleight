@@ -5,8 +5,8 @@
 
 (def-adts $ (Hc : -> Type)
   enum
-  (many HC1 : (many (Nat) i) (many (Z) b) -> (Hc))
-  (many HC2 : (many (Nat) i j) (many (Z) b) -> (Hc)))
+  (many HC1 : (many (Nat) i) (many (ZInt) b) -> (Hc))
+  (many HC2 : (many (Nat) i j) (many (ZInt) b) -> (Hc)))
 
 (def-fns _ $ (many iter-rot : (subterm many (Nat) k) (many (Nat) n) (many (List (Sub)) p) -> (many (List (Sub)) q))
   (let-match many k (Succ k1) ((Zero) p))

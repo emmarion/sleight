@@ -372,14 +372,14 @@
   (let-match erased (add-fn ds z3 r2 r q5 q4) (Refl _ _))
   le2)
 
-(def-adts $ (Db2Top : ((List (Sub)) p) ((List (List (Sub))) rt rs) ((Z) b) ((List (List (Sub))) acc out) -> Type)
+(def-adts $ (Db2Top : ((List (Sub)) p) ((List (List (Sub))) rt rs) ((ZInt) b) ((List (List (Sub))) acc out) -> Type)
   enum
   (many MkDb2Top : (erased (List (Sub)) p) (erased (List (List (Sub))) rt rs rt1 rs1 acc out) (erased (Nat) dnt dns bp bn x y nt)
       (erased (Sr p (Zero) (Nil (List (Sub))) rt dnt rt1) wt) (erased (Sr p (Zero) (Nil (List (Sub))) rs dns rs1) ws)
       (erased (Add dns bp x) ax) (erased (Add dnt bn y) ay) (erased (Add y nt x) an)
       (erased (Db2 p rt1 rs1 (Nil (List (Sub))) nt acc out) d) -> (Db2Top p rt rs (MkZ bp bn) acc out)))
 
-(def-fns _ $ (many check-dbound2-c : (many (List (Sub)) p) (many (List (List (Sub))) rt rs) (many (Z) b) (many (List (List (Sub))) acc)
+(def-fns _ $ (many check-dbound2-c : (many (List (Sub)) p) (many (List (List (Sub))) rt rs) (many (ZInt) b) (many (List (List (Sub))) acc)
     -> (many (Bool) ok) (many (List (List (Sub))) out) (erased (IfT ok (Db2Top p rt rs b acc out)) w))
   (let-match many b (MkZ bp bn))
   (let ((many dnt) (many rt1) (erased wt)) (sort-drules-c p rt))
@@ -676,7 +676,7 @@
             ((OrL _ _ h1) (OrL _ _ (hit-ext os1 acc1 out h1 et)))
             ((OrR _ _ h2) (OrR _ _ (hit-ext os2 acc1 out h2 et))))))))))
 
-(def-adts $ (E2Top : ((Nat) nhub) ((List (Sub)) p1) ((List (List (Sub))) rt rs) ((Nat) i) ((Z) b) ((List (List (Sub))) acc out) -> Type)
+(def-adts $ (E2Top : ((Nat) nhub) ((List (Sub)) p1) ((List (List (Sub))) rt rs) ((Nat) i) ((ZInt) b) ((List (List (Sub))) acc out) -> Type)
   enum
   (many MkE2Top : (erased (Nat) nhub i dnt1 dns1 dnt2 dns2 ds dn bp bn x y nt) (erased (List (Sub)) p1 p2)
       (erased (List (List (Sub))) rt rs rt1 rs1 rt2 rs2 acc out) (erased (RotCut (Sub) i p1 p2) wr)
@@ -685,7 +685,7 @@
       (erased (Add dns1 dns2 ds) a1) (erased (Add dnt1 dnt2 dn) a2) (erased (Add ds bp x) ax) (erased (Add dn bn y) ay) (erased (Add y nt x) an)
       (erased (Db22 nhub p1 p2 rt1 rs1 (Nil (List (Sub))) rt2 rs2 (Nil (List (Sub))) i nt acc out) d) -> (E2Top nhub p1 rt rs i (MkZ bp bn) acc out)))
 
-(def-fns _ $ (many check-2dbound2-c : (many (Nat) nhub) (many (List (Sub)) p1) (many (List (List (Sub))) rt rs) (many (Nat) i) (many (Z) b)
+(def-fns _ $ (many check-2dbound2-c : (many (Nat) nhub) (many (List (Sub)) p1) (many (List (List (Sub))) rt rs) (many (Nat) i) (many (ZInt) b)
     (many (List (List (Sub))) acc) -> (many (Bool) ok) (many (List (List (Sub))) out) (erased (IfT ok (E2Top nhub p1 rt rs i b acc out)) w))
   (let-match many b (MkZ bp bn))
   (let ((many p2) (erased wr)) (rot-cut-c _ i p1))

@@ -328,15 +328,15 @@
   (let ((many zs) (erased q)) (insert _ l x ws))
   (values zs (IACons _ x xs1 ys ws zs p q)))
 
-(def-fns _ $ (many scale : (many Mono m) (subterm many Poly q) -> (many Poly s) (erased (Scale m q s) r))
+(def-fns _ $ (many poly-scale : (many Mono m) (subterm many Poly q) -> (many Poly s) (erased (Scale m q s) r))
   (let-match many q (Cons _ n q1) ((Nil _) (values (Nil Mono) (ScNil m))))
   (let ((many mn) (erased p)) (insall _ (Factors) m n))
-  (let ((many s) (erased r)) (notail $ scale m q1))
+  (let ((many s) (erased r)) (notail $ poly-scale m q1))
   (values (Cons _ mn s) (ScCons m n mn q1 s p r)))
 
 (def-fns _ $ (many pmul : (subterm many Poly p) (many Poly q) -> (many Poly t) (erased (PMul p q t) r))
   (let-match many p (Cons _ m p1) ((Nil _) (values (Nil Mono) (PMulNil q))))
-  (let ((many s) (erased a)) (scale m q))
+  (let ((many s) (erased a)) (poly-scale m q))
   (let ((many r) (erased b)) (notail $ pmul p1 q))
   (let ((many t) (erased c)) (insall _ (Terms) s r))
   (values t (PMulCons m p1 q s r t a b c)))

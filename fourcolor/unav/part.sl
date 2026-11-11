@@ -18,9 +18,9 @@
   (many LHat : -> (Loc))
   (many LFan : (many (Nat) k) -> (Loc)))
 
-(def-adts $ (Z : -> Type)
+(def-adts $ (ZInt : -> Type)
   enum
-  (many MkZ : (many (Nat) pos neg) -> (Z)))
+  (many MkZ : (many (Nat) pos neg) -> (ZInt)))
 
 (let ((many r59)) (MkRg 5 9))
 

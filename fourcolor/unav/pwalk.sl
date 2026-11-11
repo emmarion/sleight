@@ -7,9 +7,9 @@
 (def-adts $ (HcIdx : ((Nat) nhub) ((List (Hc)) hc) -> Type)
   enum
   (many HINil : (erased (Nat) nhub) -> (HcIdx nhub (Nil (Hc))))
-  (many HIOne : (erased (Nat) nhub j) (erased (Z) b) (erased (List (Hc)) hc) (erased (Lt j nhub) l) (erased (HcIdx nhub hc) rest)
+  (many HIOne : (erased (Nat) nhub j) (erased (ZInt) b) (erased (List (Hc)) hc) (erased (Lt j nhub) l) (erased (HcIdx nhub hc) rest)
       -> (HcIdx nhub (Cons (Hc) (HC1 j b) hc)))
-  (many HITwo : (erased (Nat) nhub j1 j2) (erased (Z) b) (erased (List (Hc)) hc) (erased (Lt j1 nhub) l1) (erased (Lt j2 nhub) l2)
+  (many HITwo : (erased (Nat) nhub j1 j2) (erased (ZInt) b) (erased (List (Hc)) hc) (erased (Lt j1 nhub) l1) (erased (Lt j2 nhub) l2)
       (erased (HcIdx nhub hc) rest) -> (HcIdx nhub (Cons (Hc) (HC2 j1 j2 b) hc))))
 
 ; h: a part of ct containing p, both of length m.
