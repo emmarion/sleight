@@ -37,12 +37,21 @@ last() {
   echo "$label: $(cd "$dir" && "$@" 2>&1 | tail -1)"
 }
 
+whole() {
+  label=$1
+  dir=$2
+  shift 2
+  echo "$label: $(cd "$dir" && "$@" 2>&1 | sed 's/^.*runtime error: //' | tr '\n' '|')"
+}
+
 echo "== goals, each under the reference and under slc"
 goal verdict spec.sl proof.sl qed.sl
 goal verdict-machine spec.sl machine.sl qed.sl
 goal three-iterations spec.sl machine.sl iterate.sl halting.sl goal.sl qed.sl
 goal derivation-and-doubling $MINI "$R/mini/eval.sl" evalby_goal.sl evalby.sl evalby_qed.sl
 goal derivation-and-doubling $MINI eval2.sl evaluniq.sl neg.sl eval3.sl fuelthm.sl sized.sl fuelgoal.sl fuelqed.sl
+goal reader syntax.sl spec.sl read.sl proof.sl qed.sl
+goal reader syntax.sl read.sl adequacy-spec.sl adequacy-proof.sl
 
 echo "== heap machine: lemma files the reference accepts"
 accepted heap-machine $HEAP det.sl
@@ -63,8 +72,14 @@ for f in values-measure-first values-build-first cell-write-operand; do
   last "$f (slc --interpret)" order "$SLC" --interpret $f.sl
 done
 
+echo "== order: what is printed before a failure, with a small --eval-fuel"
+for f in values-say-then-crash values-crash-then-say values-nested-argument cell-write-operand-crash; do
+  whole "$f (reference)" order "$REF" --eval-fuel 50000 $f.sl
+  whole "$f (slc --interpret)" order "$SLC" --interpret --eval-fuel 50000 $f.sl
+done
+
 echo "== gaps: acceptance that depends on more than the source"
-for f in slot-eq-asserts-some slot-eq-asserts-none special-let-at-slot-0 special-match-at-slot-0 special-match-at-slot-26; do
+for f in slot-eq-asserts-some slot-eq-asserts-none special-let-at-slot-0 special-match-at-slot-0 special-match-at-slot-26 gensym-expansion-order; do
   last "$f (reference)" gaps "$REF" $f.sl
   last "$f (reference --no-extern)" gaps "$REF" --no-extern $f.sl
   last "$f (slc --interpret)" gaps "$SLC" --interpret $f.sl

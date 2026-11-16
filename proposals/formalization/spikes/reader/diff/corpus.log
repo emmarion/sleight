@@ -1,0 +1,24 @@
+rejected by all three: tests/indent_surplus_bad.sl error: unexpected `)`
+rejected by all three: tests/indent_unclosed_bad.sl error: missing `)`
+DIFFER tests/reserved_name_bad.sl
+   prototype b'(show-args (let ((many __x)) (Zero)) (Zero))'
+   main.exe  b'error: `__x` begins with `__`, which is reserved for the compilers\' messages; write it `#"__x"`'
+   slc       b'error: `__x` begins with `__`, which is reserved for the compilers\' messages; write it `#"__x"`'
+DIFFER tests/reserved_name_def_bad.sl
+   prototype b'(show-args (def-adts ((__T : -> Type) enum)) (Zero))'
+   main.exe  b'error: `__T` begins with `__`, which is reserved for the compilers\' messages; write it `#"__T"`'
+   slc       b'error: `__T` begins with `__`, which is reserved for the compilers\' messages; write it `#"__T"`'
+DIFFER tests/reserved_name_field_bad.sl
+   prototype b'(show-args (match many <literal> (((Nat) r)) ((Zero) <literal>) ((Succ __p) <literal>)))'
+   main.exe  b'error: `__p` begins with `__`, which is reserved for the compilers\' messages; write it `#"__p"`'
+   slc       b'error: `__p` begins with `__`, which is reserved for the compilers\' messages; write it `#"__p"`'
+DIFFER tests/reserved_name_lvl_bad.sl
+   prototype b'(show-args (def-lvl __L) (Zero))'
+   main.exe  b'error: `__L` begins with `__`, which is reserved for the compilers\' messages; write it `#"__L"`'
+   slc       b'error: `__L` begins with `__`, which is reserved for the compilers\' messages; write it `#"__L"`'
+DIFFER tests/reserved_name_param_bad.sl
+   prototype b'(show-args (def-fns _ ((many f : (many (Nat) __n) -> (many (Nat) m)) (Zero))) (Zero))'
+   main.exe  b'error: `__n` begins with `__`, which is reserved for the compilers\' messages; write it `#"__n"`'
+   slc       b'error: `__n` begins with `__`, which is reserved for the compilers\' messages; write it `#"__n"`'
+files: 1369 {'accepted': 1130, 'skipped': 232, 'rejected': 2, 'DIFFER': 5}
+exit 0

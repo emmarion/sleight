@@ -1,0 +1,47 @@
+(def-adts $ (Case : -> Type)
+  enum
+  (many MkCase : (many (String) text) (many (String) expected) -> (Case)))
+
+(let ((many cases))
+  (Cons _ (MkCase "" "")
+    $ Cons _ (MkCase "a" "a")
+    $ Cons _ (MkCase "(a b) c" "(a b) c")
+    $ Cons _ (MkCase "(a $ b $ c)" "(a (b (c)))")
+    $ Cons _ (MkCase "(f (g $ h i) j)" "(f (g (h i)) j)")
+    $ Cons _ (MkCase "(a $)" "(a ())")
+    $ Cons _ (MkCase "($ $ a)" "(((a)))")
+    $ Cons _ (MkCase "(foo$bar $$ a$ $b)" "(foo$bar $$ a$ $b)")
+    $ Cons _ (MkCase "(a ; one ) (\n b) ; two" "(a b)")
+    $ Cons _ (MkCase "a;b\nc" "a c")
+    $ Cons _ (MkCase "; only a comment" "")
+    $ Cons _ (MkCase "(a\t(b)\x0d\n)" "(a (b))")
+    $ Cons _ (MkCase "(a $ b ; $ c\n $ d)" "(a (b (d)))")
+    $ Cons _ (MkCase "(a b" "error: missing `)`")
+    $ Cons _ (MkCase "((a) (b" "error: missing `)`")
+    $ Cons _ (MkCase "(a $ (b" "error: missing `)`")
+    $ Cons _ (MkCase "a) b" "error: unexpected `)`")
+    $ Cons _ (MkCase "(a)) (b" "error: unexpected `)`")
+    $ Cons _ (MkCase "$ a) b" "error: unexpected `)`")
+    $ Cons _ (MkCase "$ a" "error: missing `)` after `$`")
+    $ Cons _ (MkCase "(a $ b" "error: missing `)` after `$`")
+    $ Cons _ (MkCase "(a) $ b ; )" "error: missing `)` after `$`")
+    $ Nil _))
+
+(def-fns _ $ (many run-cases : (subterm many (List (Case)) cs) -> (many (Bool) ok) (many (Rope) report))
+  (let-match many cs (Cons _ c rest) ((Nil _) (values (BTrue) (REmpty))))
+  (let-match many c (MkCase text expected))
+  (let ((many got)) (show-read text))
+  (let ((many ok) (many report)) (notail $ run-cases rest))
+  (let ((many line)) (RCat (RStr text) $ RCat (RStr "  =>  ") $ RCat (RStr got) $ RCat (RStr "\n") report))
+  (match many (str-eq got expected) _
+    ((Equal _ _ _) (values ok (RCat (RStr "ok     ") line)))
+    ((Unequal _ _ _ _ _) (values (BFalse) (RCat (RStr "WRONG  ") line)))))
+
+(let ((many ok) (many report)) (run-cases cases))
+(comptime-match many ok (BTrue))
+(let ((many transcript) (erased _)) (flatten report))
+
+(def-fns _ $ (many main : (many (String) _in) -> (many (String) out))
+  transcript)
+
+main

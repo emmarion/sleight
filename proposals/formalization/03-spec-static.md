@@ -50,9 +50,22 @@ Each is a short rule. None is approved.
 **S1. The specification starts at source text.** The handoff's item 3
 speaks of "every program's source code". Reading is a relation from
 text to forms, with a positive relation for text that does not read.
-`spikes/reader/` is a prototype for parentheses, `$`, atoms, and
-comments (08). The alternative is to start at a syntax tree and trust
-the reader; then "source code" in the theorem means the tree.
+`spikes/reader/` does this for a subset: parentheses, the bare `$`,
+atoms, and `;` comments, with no literals, raw names, `_`, pragmas, or
+positions (08; `evidence/S4-reader-spec.md`). Its relations are 112
+lines. Its reader, a total function with two outcomes and no fuel, is
+95 lines. Its lemmas are 180 lines: no text both reads and fails, a
+text reads in at most one way, and a text that fails has one first
+mistake. All of it checks as one goal under both implementations. A
+second goal proves the reading relation equivalent, token for token,
+to a relation that prints forms, which is the easier of the two for a
+person to check against DESIGN.md. The spike's author guesses that the
+full reader is three to five times the subset in each part; that is
+not measured. What the spike found DESIGN.md to leave open about
+reading is in 06, G12.
+
+The alternative is to start at a syntax tree and trust the reader;
+then "source code" in the theorem means the tree.
 
 **S2. No third answer: a malformed shape is a rejection with a
 derivation.** This is what T3 (01) needs. Three ways, from A3's

@@ -244,11 +244,36 @@ source has its literals interned and replaced by such handles just
 before it is elaborated." So the prelude's `Raw` cannot be the
 specification's input as it stands: a literal is in a `Raw` only as a
 handle to an entry that elaboration has already made, and pragmas are
-outside it. Starting at bytes needs lexical details that §1 and §45
-leave out; `evidence/S4-reader-spec.md` lists the ones a prototype
-reader met.
+outside it. Starting at bytes needs lexical details that §1, §4, and
+§45 leave open. `evidence/S4-reader-spec.md`, section 12, lists
+sixteen, each with its quote and with what each implementation does.
+Five of them:
 
-Question: decision D7.
+- **Which characters are whitespace.** §1, lines 41 to 42: "An atom is
+  any run of characters other than whitespace, parentheses and `;`."
+  The set is not given. The two implementations differ: a form feed, a
+  vertical tab, a zero byte, and byte 0x1f are part of an atom for the
+  reference and end an atom for slc. This session re-ran the probe:
+  `spikes/reader/diff/probe.sh '(show-args a\fb)'` shows one atom
+  under the reference and two under slc.
+- **What a token is.** §1 and §45 use the word and do not define it.
+  Both implementations read `"a"b` as two items and `a"b"` as one
+  name.
+- **What tree reading produces.** §63, lines 2779 to 2781, makes `Raw`
+  hold handles where the source had literals, so the tree between
+  reading and interning is not `Raw`, and DESIGN.md gives it no name.
+- **Positions.** §42, lines 1997 to 1998, gives a `Pos` "a line and a
+  column (`Nat`)" and does not say whether they count from 0 or 1, or
+  in what unit. A macro receives a `Pos` and can compute on it (G10).
+- **When a file's text is read.** DESIGN.md does not say. Both
+  implementations read a whole file before elaborating any of its
+  forms, and take the files of one command line one at a time. So a
+  missing `)` at the end of a file rejects it before its first form
+  runs, and the same mistake in a second file comes after the first
+  file's forms have run (re-run by this session).
+
+Question: decision D7; and what the language says on each of the five
+points.
 
 ## G13. Stripped code and post-erasure code [C13]
 

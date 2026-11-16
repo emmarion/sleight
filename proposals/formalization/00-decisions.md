@@ -260,8 +260,12 @@ judgment; the statement of T4.
 says "source code". `mini/` has no reader, and its top-level function
 has a third, evidence-free outcome, "stuck", on 28 groups of malformed
 shapes, the empty program among them. `spikes/reader/` specifies
-reading for a subset (08). The prelude uses two declaration forms
-DESIGN.md does not mention, `def-prim` and `def-opaque`.
+reading for a subset, with a total two-outcome reader and "never
+both" proved, in 112 lines of relations, 95 of function, and 180 of
+lemmas (08). It also found that the two implementations disagree on
+which characters are whitespace, which DESIGN.md does not say (06,
+G12). The prelude uses two declaration forms DESIGN.md does not
+mention, `def-prim` and `def-opaque`.
 
 **Options.**
 
