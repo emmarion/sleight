@@ -7,12 +7,12 @@ spikes are described in 08.
 
 ## 4.1 Why something has to give
 
-01, section 1.2, argues that no Sleight function can take only a
-source and return its verdict, when the verdict includes the values of
-compile-time runs. So the evaluator that the compiler uses at compile
-time needs one of three things from outside itself: a counter, a
-derivation that the run halts, or a loop that is not a Sleight
-function. DESIGN.md has such a loop: the driver's, over a `Program`
+01, section 1.2, argues that no Sleight function that takes only a
+source can return the right verdict on every source, because the
+verdict depends on the values of compile-time runs. So the evaluator
+that the compiler uses at compile time needs one of three things from
+outside itself: a counter, a derivation that the run halts, or a loop
+that is not a Sleight function. DESIGN.md has such a loop: the driver's, over a `Program`
 (§42, lines 1993 to 1994: "It never recurses, so an unbounded
 interaction is the driver's loop over total functions"). The handoff's
 item 2 reports the owner's observation that this makes a fuel-free
@@ -51,8 +51,9 @@ that checks under both implementations:
    no counter and is total. This is statement (c) of 01, and it is
    the handoff's result (ii) as the type of a function. Where the
    derivation can be built, as it can for the toy, the function runs.
-   For the compiler it cannot be built in general, by 01, so there it
-   is a theorem about the step function and nothing more.
+   For the compiler no Sleight function can build it for every source,
+   by 01, so there it is a theorem about the step function and nothing
+   more.
 
 The three share the step function and its certificate, so choosing
 among them, or keeping all three, costs a few lines each.
@@ -73,22 +74,59 @@ continuations to capture and no exceptions. Three designs:
   form and a log of the answers already obtained. Where it needs an
   answer the log lacks, it returns the request. The driver runs the
   machine, appends the answer, and calls the elaborator again from the
-  start of the form. Each log entry carries an erased derivation that
-  its answer is the run's. Its cost is re-elaboration: a form with `k`
-  requests is elaborated `k + 1` times.
+  start of the unit being replayed. Each log entry carries an erased
+  derivation that its answer is the run's. Its cost is
+  re-elaboration: a unit with `k` requests is elaborated `k + 1`
+  times.
 - **W-continuation.** The elaborator returns either its result or a
   request together with a function that takes the answer and goes on.
   The driver loop runs the machine and calls that function. Nothing
   is elaborated twice. Every elaborator function on a path to a
   request is written in this style.
 - **W-machine.** The elaborator itself becomes an explicit-stack
-  machine. Not explored: it would turn the largest part of the
-  compiler inside out.
+  machine whose frames hold what a continuation would capture.
 
-`spikes/suspendable-elaborator/` builds W-replay and W-continuation on
-a toy (08). The inline quantum of F2 matters for W-replay: if the
-elaborator first tries up to some number of machine steps on the spot,
-only long runs ever cause a replay.
+`spikes/suspendable-elaborator/` builds all three on a toy in which
+which sub-tree is elaborated next depends on the answer to an earlier
+request (08; `evidence/S3-suspendable-elaborator.md`). All three are
+accepted by both implementations, run as a `Program` with no fuel, and
+return the same result with its erased derivation. What the toy
+showed:
+
+- **W-replay keeps every pass a checked total function; the other two
+  take the elaborator's own recursion out of the termination check.**
+  Under W-continuation a walk whose continuation re-enters the walk on
+  the same tree is accepted and loops under the driver; the same
+  recursion written directly is refused. So under W-continuation and
+  W-machine, "the elaborator stops whenever its runs do" is a claim
+  about the driver loop that the checker does not make. This bears on
+  the question in the handoff's item 4, whether anything would catch a
+  naive infinite loop in the compiler's core.
+- **W-replay's cost is quadratic in the requests per replayed unit.**
+  Compiled, 8000 requests in one unit took 0.70 s, 16000 took 5.5 s,
+  and 32000 took 39.5 s, where the other two designs took under
+  0.01 s for 8000.
+- **Two measures remove most of that cost.** A checkpoint per unit,
+  kept by the driver as a stack of typed frames, which is W-machine
+  applied to the spine of the program only: 200000 units in 0.08 s.
+  And the inline quantum of F2: the elaborator first tries up to some
+  number of machine steps on the spot, and only a longer run causes a
+  replay.
+- **Under W-replay the theorem with hypothesis H is five lines.** With
+  the log hidden behind a function that answers requests, the same
+  elaborator, given an answerer that can never fail, returns its
+  result with its derivation and has no "need an answer" case. That
+  covers one pass. That the replay loop reaches such a pass is a
+  separate argument, which needs the elaborator to be deterministic
+  and was not proved.
+- **W-replay needs a budget where it elaborates syntax that came from
+  an answer**, as a macro's output does, because that syntax is not a
+  subterm of the form. §62's limit on expansions bounds it.
+- **For slc** (the spike's estimate from counts, not built):
+  W-replay changes the 7 call sites that start a run, an expansion,
+  or a native batch, and adds a driver; W-continuation and W-machine
+  rewrite the 95 functions and about 358 internal call sites of the
+  elaborator's main block.
 
 A design that avoids the wait keeps today's shape: the evaluator
 takes a counter, and elaboration calls it directly.
@@ -104,14 +142,15 @@ takes a counter, and elaboration calls it directly.
 
 | | Is `compile` a function? | A counter anywhere? | What can loop forever | Change to slc |
 |---|---|---|---|---|
-| Today | Yes | Fuel: running out is an error the user sees | Nothing | None |
+| slc today | Yes | Fuel: running out is an error the user sees | Nothing, if the termination check is sound | None |
 | W-none, doubling | Each attempt is | A quantum | The retry loop, if no counter ever suffices | Small |
-| F1 with W-replay | No: a driver loop | Optional quantum | The machine loop; the replay loop | The evaluator, and the top of the elaborator |
-| F1 with W-continuation | No: a driver loop | None needed | The one driver loop | The evaluator, and every elaborator function on a path to a run |
-| A budget in the language | Yes | Fuel, as a rule of the language | Nothing | None to the code; a rule in DESIGN.md |
+| F1 with W-replay | No: a driver loop over passes that are each a checked total function | A quantum, to keep replays rare; a budget on expansion depth | The machine loop; the replay loop | The evaluator, and the few call sites that start a run |
+| F1 with W-continuation or W-machine | No: a driver loop | None | The one driver loop, the elaborator's own recursion included | The evaluator, and every elaborator function on a path to a run |
+| A budget in the language | Yes, if every other loop in the compiler terminates without a counter of its own, which is not established (4.5) | Fuel, as a rule of the language | Nothing, on the same condition | A rule in DESIGN.md; the counter's unit and limit would have to be the rule's |
 
-In every row but the first and the last, a verdict that is reached is
-certified, and what is missing is a proof that one is reached. That
+The first row is slc as it stands, which returns no derivations. In
+the three middle rows a verdict that is reached carries its
+derivation, and what is missing is a proof that one is reached. That
 proof is T7 of 01. For the machine alone it is an induction on the run
 relation's derivation, which `spikes/step-machine/` attempts. For the
 whole compiler under the driver it needs more, and iteration 3 above

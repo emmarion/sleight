@@ -1,0 +1,5 @@
+(let ((erased env)) (Cons (Word) (WAddr 5) (Cons (Word) (WAddr 6) (Nil (Word)))))
+(let ((erased first)) (AVVar env (Zero) (WAddr 5) (NthHere _ (WAddr 5) (Cons _ (WAddr 6) (Nil _)))))
+(let ((erased second)) (AVVar env (Succ (Zero)) (WAddr 6) (NthThere _ (WAddr 5) (Cons _ (WAddr 6) (Nil _)) (Zero) (WAddr 6) (NthHere _ (WAddr 6) (Nil _)))))
+(let ((erased distinct-words-answer-yes))
+  (PSameYes (HNil) env (AVar (Zero)) (AVar (Succ (Zero))) (WAddr 5) first second))

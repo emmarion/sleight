@@ -82,19 +82,29 @@ assume uniqueness, so "a `unique` binder is the only reference" is a
 property one could go on to prove of the relation, and no theorem of
 01 depends on it. (D3)
 
-**R3. The relation is big-step: one derivation for the terminating run
-of one form.** Every function terminates, on the owner's assertion, so
-a run of a function body has a finite derivation. The one unbounded
-thing, the driver's loop over a `Program` (§42), is a sequence of such
-runs with requests between them. A machine that takes one step at a
-time (04) is then an implementation, proved to agree with the relation
-in both directions. The alternative is to make a small-step machine
-with an explicit stack the specification itself. Then the agreement
-of the step machine is immediate, and claims about frames can be
-stated: `lean/TAIL.md`, lines 23 to 26, notes that a big-step run "has
-no stack, so [...] 'this call reuses its caller's frame' cannot be
-stated". DESIGN.md's `tail` claim is judged on the code (§19), not on
-a run, so the big-step relation loses nothing DESIGN.md states. (D3)
+**R3. The relation is written twice over the same heap rules,
+big-step and small-step, and the two are proved to agree. Which one is
+called the definition is the owner's choice.** A big-step relation has
+one derivation for the finished run of one form. DESIGN.md calls
+Sleight's functions "total functions" (§42, line 1994) and says
+"Termination rests on levels" (§17, line 696). Taking termination as
+DESIGN.md states it, a function body's run is finite, and the one
+unbounded thing, the driver's loop over a `Program` (§42), is a
+sequence of such runs with requests between them. A small-step
+relation is a machine with an explicit stack that takes one step at a
+time. With it as the definition, the step machine of 04 is the
+specification's own step, a run that has not finished can be
+described, and claims about frames can be stated: `lean/TAIL.md`,
+lines 23 to 26, notes that a big-step run "has no stack, so [...]
+'this call reuses its caller's frame' cannot be stated". DESIGN.md's
+`tail` claim is judged on the code (§19), not on a run, so the
+big-step relation loses nothing DESIGN.md states. `spikes/heap-machine/`
+wrote both for a small language of its own (08): one relation says
+what an instruction does to a heap, both run relations use it, and
+"every big-step run is a small-step run" is proved there. The converse
+is stated and not proved. The spike's author recommends the small-step
+relation as the definition (`evidence/S2-heap-machine.md`, section
+9.1). (D3)
 
 **R4. In post-erasure code every operand is a variable or a constant,
 and statements run in the order written.** §15 already says an
@@ -119,9 +129,14 @@ the outside gave, each constrained by what DESIGN.md says of it (for
 that record fixed, the relation is closed and has no choices left.
 This is reading (b) of "parameterized" in 01. (D6)
 
-**R7. An impossible path has no rule.** Post-erasure code has no code
-for a refuted constructor or an absurd branch. The relation derives
-nothing for a run that would take one (01, 1.5). (D3)
+**R7. The run relation derives no result for an impossible path.**
+Post-erasure code has no code for a refuted constructor or an absurd
+branch (01, 1.5). The proposal is that no rule of the run relation
+gives such a path a result, and that a second, positive relation says
+that a run reached a branch with no code. A compile-time run that
+reaches one is then a rejection with a derivation, so the compiler
+still has an exit there (T3 of 01). For the output's run, T6 of 01
+speaks only of runs the relation derives. 06, G8, asks the owner. (D3)
 
 **R8. Values as trees appear only at the boundary.** A request to the
 outside is read off the heap as a tree, and an answer is allocated
@@ -205,6 +220,19 @@ d. whether §15's binding covers a head and a scrutinee, as §29 says in
    passing;
 e. which of the two readings of §15 holds.
 
+ASSUMPTIONS.md, item 168 (lines 1589 to 1593), records a different
+position, in a session's words that the item attributes to the owner:
+"The source language is pure and specifies no observable evaluation
+order. Destructive updates implement that pure semantics; their
+execution order must not be observable in well-typed programs. The
+interpreter's traversal order is an implementation choice." These
+proposals do not rely on it. The handoff says the previous session
+"wrongly relied on item 168", and that the owner voiced concern about
+"a pure and order-free run"; CLAUDE.md rule 14 says an entry of
+ASSUMPTIONS.md is not the owner's decision; and the word "pure" does
+not occur in DESIGN.md. It is quoted here because 2.7 bears on it:
+accepted programs do observe the order.
+
 Options for decision D4:
 
 - **O-α, complete §15.** The temporaries of a statement or final form
@@ -264,8 +292,16 @@ each allocation takes is one more answer in the record of the outside,
 constrained to be fresh. The relation is then a function of that
 record, and any allocator satisfies it by supplying its own choices.
 
-`spikes/heap-machine/` writes the relation both ways for a small
-language (08).
+`spikes/heap-machine/` writes the relation with the A-fresh rule for a
+small language of its own, and keeps a counter in the function that
+derives it (08). The function needed one invariant for that, "every
+address in use is below the counter", of about 30 lines. For that
+language the spike proves that runs are deterministic once the
+addresses chosen are fixed, that a block keeps its address and no
+address is taken twice, and that a run with one choice of addresses
+gives a run with any other one-to-one choice. The last took 413 lines
+against 160 of relations, and is proved for two heaps of one shape
+only (`evidence/S2-heap-machine.md`, sections 0 and 6).
 
 ## 2.5 Extern types and functions
 

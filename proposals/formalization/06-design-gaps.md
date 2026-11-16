@@ -172,9 +172,12 @@ that is merely long.
 894: a phantom branch "can never run"; §25, lines 1063 to 1064: an
 absurd function "compiles to no code"; §59, line 2632: "the pointer is
 never followed") and does not say what a run does there. The proposal
-R7 of 02 is that the run relation has no rule.
+R7 of 02 is that the run relation derives no result for such a path,
+and that a compile-time run that reaches one is a rejection, with a
+positive relation saying that it did.
 
-Question: confirm, or name an outcome.
+Question: confirm, or name an outcome. For a compile-time run that
+reaches such a path, is the source rejected, or is there no verdict?
 
 ## G9. The order of elaboration [C11]
 

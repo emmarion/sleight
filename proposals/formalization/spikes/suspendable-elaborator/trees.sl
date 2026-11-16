@@ -1,0 +1,32 @@
+(let ((many demo-tree))
+  (TNode (TIf (TRun 1) (TNode (TRun 6) (TGen)) (TLeaf 100))
+    (TNode (TIf (TRun 6) (TLeaf 100) (TNode (TRun 7) (TGen)))
+      (TNode (TGen) (TRun 27)))))
+
+(def-fns _ $ (many nat-arg : (many (List (String)) args) (many (Nat) default) -> (many (Nat) n) (many (List (String)) rest))
+  (let-match many args (Cons _ a rest) ((Nil _) (values default args)))
+  (let-match many (str-nat a) (Some _ n) ((None _) (values default rest)))
+  (values n rest))
+
+(def-fns _ $ (many tree-of-args : (many (List (String)) args) -> (many (Tree) t))
+  (let-match many args (Cons _ shape rest) ((Nil _) demo-tree))
+  (let ((many size) (many rest2)) (nat-arg rest 10))
+  (let ((many start) (many _)) (nat-arg rest2 6))
+  (let-match many (str-eq shape "chain") (Unequal _ _ _ _ _) ((Equal _ _ _) (chain size start)))
+  (let-match many (str-eq shape "balanced") (Unequal _ _ _ _ _) ((Equal _ _ _) (balanced size start)))
+  (let-match many (str-eq shape "stuck") (Unequal _ _ _ _ _) ((Equal _ _ _) (TNode (TRun (Zero)) (TGen))))
+  demo-tree)
+
+(let ((many d0)) (lt-dec 0 u8-modulus))
+(comptime-match many d0 (Yes _ _ _ _ p0))
+(let ((many code0)) (MkU8 0 p0))
+(let ((many d2)) (lt-dec 2 u8-modulus))
+(comptime-match many d2 (Yes _ _ _ _ p2))
+(let ((many code2)) (MkU8 2 p2))
+
+(def-fns _ $ (many report0 : (many (Nat) v g2) (many (String) what) (many (Nat) count steps) -> (many (String) s))
+  (str-append "value " $ str-append (nat-str v) $ str-append " counter " $ str-append (nat-str g2)
+    $ str-append " " $ str-append what $ str-append " " $ str-append (nat-str count) $ str-append " driver-steps " $ str-append (nat-str steps) "\n"))
+
+(def-fns _ $ (many report : (erased (Tree) t) (many (Nat) v g2) (many (String) what) (many (Nat) count steps) (erased (Elab t (Zero) v g2) _certificate) -> (many (String) s))
+  (report0 v g2 what count steps))

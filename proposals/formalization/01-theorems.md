@@ -3,7 +3,7 @@
 A Claude session's analysis and proposals, written overnight at the
 owner's request. Nothing here is approved, and DESIGN.md is unchanged.
 Claims about DESIGN.md quote it with section and line numbers. An
-argument marked "session's argument" was checked by reviewer agents,
+argument marked "session's argument" was checked by a reviewer agent,
 not by a machine.
 
 ## 1.1 The starting point
@@ -27,43 +27,60 @@ owner's. The handoff is second-hand, and its own words are quoted.
   agreement", which the handoff says "is not agreement to exact
   statements".
 
-So the theorems wanted are agreement theorems. The specification is
-given: relations, written in Sleight, that say what it means for a
-source to elaborate and for code to run. The theorems say that the
-compiler's answers are in those relations. No theorem says the
-relations are sound.
+On this session's reading, the theorems wanted are agreement theorems.
+The specification is taken as given, and the theorems say that the
+compiler's answers agree with it. No theorem says the specification is
+sound. These proposals write the specification as relations in
+Sleight: the handoff's goal 1 is "Formalize Sleight in Sleight", and
+MINIMAL.md records "Evaluation and typing are relations, not
+functions" as decided for the minimal language.
 
 "Parameterized", in the sentence attributed to the owner, can be read
 two ways, and this session cannot tell which is meant: (a) the
 semantics and the syntax are written down as the fixed objects the
 theorems refer to; (b) the theorems are generic in parts of the
-semantics, taking them as parameters. The proposals work under either.
-02 describes a use for reading (b). Decision D12 asks.
+semantics, taking them as parameters. The proposals are meant to work
+under either. 02 describes a use for reading (b). Decision D12 asks.
 
 ## 1.2 A limit that shapes the rest: no total, fuel-free `compile`
 
-Session's argument. It is the usual diagonal argument, which the
-handoff's item 1 alludes to. Suppose there were a Sleight function
-`compile` from source text to a verdict that takes no fuel and no
-hypothesis, and is correct: for an accepted source it returns the
-values of the source's run-position forms. Every Sleight function is
-total, on the owner's assertion that the termination check is sound.
-DESIGN.md §27 runs every run-position form at compile time (lines 1179
-to 1180: "Such a form runs as soon as it has been elaborated, before
-the code after it is checked"), so any closed call `(p n)` can be put
-in run position and its value read out of the verdict. `compile` would
-then give a total evaluator for every accepted program. Let `d n` be
-one more than the value `compile` finds for "the program whose source
-is text number `n`, applied to `n`", and 0 where that text is not an
-accepted program of the right type. If the compiler handles the whole
-language, its own source included, `d` is itself an accepted program,
-with a source of some number `k`, and `d k` is one more than `d k`. So
-no such `compile` exists.
+Session's argument. It is a diagonal argument of the kind the
+handoff's item 1 mentions for `no_false`; the handoff does not apply
+it to `compile`.
+
+Suppose there were a Sleight function `compile` from source text to a
+verdict, `Accepted` or `Rejected`, that takes no fuel and no
+hypothesis, returns on every source, and is right in both directions:
+it accepts exactly the sources the specification accepts. DESIGN.md
+makes the verdict depend on a compile-time value: a run-position form
+"runs as soon as it has been elaborated, before the code after it is
+checked" (§27, lines 1179 to 1180), and "`(comptime-match m x (C f1
+... fn))` asserts, at elaboration time, that `x` is a `Settled`,
+non-erased value headed by `C`. It is an error otherwise" (§28, lines
+1208 to 1210). Let `d n` be `(BFalse)` when `compile` accepts "text
+number `n`, followed by `(comptime-match many (diag n) (BTrue))`", and
+`(BTrue)` when it rejects it. If the compiler handles the whole
+language, its own source included, then some text, of number `k`,
+defines `compile`, then `d`, and then `diag` as `d`. Take that text
+followed by `(comptime-match many (diag k) (BTrue))`. If `compile`
+accepts it, the specification's run of `(diag k)` gave `(BTrue)`; but
+`d k` is `(BFalse)`. If `compile` rejects it, `d k` is `(BTrue)`, so
+the `comptime-match` holds and the specification accepts it. So no
+such `compile` exists.
+
+The argument uses three things of `compile`: that the language it
+compiles accepts its own source; that its verdict on that one source
+is right in both directions; and that it returns on that source. For
+the last: DESIGN.md calls Sleight's functions "total functions" (§42,
+line 1994) and says "Termination rests on levels" (§17, line 696), and
+README.md, a session's file, records that "The author asserts that
+each Sleight function terminates". Without that, the conclusion is
+that such a `compile` cannot return on every source.
 
 This rules out one reading of "every program's source code is either
-accepted or rejected": the type of a function that takes only the
-source. Three statements remain possible, and they can be held
-together:
+accepted or rejected": a function that takes only the source and
+always returns the right verdict. Three statements remain possible,
+and they can be held together:
 
 - **(a) Certified on exit.** The compiler is a loop that the driver
   runs (DESIGN.md §42, lines 1993 to 1994: "It never recurses, so an
@@ -72,24 +89,28 @@ together:
   "accepted, with an erased derivation" or "rejected, with an erased
   derivation", and there is no third exit. Nothing is claimed about a
   loop that never exits.
-- **(b) A budget that is part of the language.** If DESIGN.md said that
-  a compile-time run of more than some number of steps is an error, as
-  §62 says of macro expansions (lines 2752 to 2753: "At most 10000
-  expansions run in one run"), then running out would be a rejection
-  with a derivation like any other, `compile` would be a total
-  function, and the theorem would have no hypothesis. The cost is a
-  rule that refuses a program because its compile-time run is long.
+- **(b) A budget that is part of the language.** If DESIGN.md bounded
+  the steps of a compile-time run, as §62 bounds macro expansions
+  (lines 2752 to 2753: "At most 10000 expansions run in one run"), and
+  made exceeding the bound an error, then running out would be a
+  rejection with a derivation like any other. `compile` would be a
+  total function, and the theorem would have no hypothesis, provided
+  every other loop in the compiler terminates without a counter of its
+  own. That is not established: slc has other counters today (04,
+  section 4.5). The cost of (b) is a rule that refuses a program
+  because its compile-time run is long.
 - **(c) Under a hypothesis.** A function that also takes, erased, a
-  derivation that the specification's relation holds of the source can
-  recurse on that derivation, so it needs no fuel and is total.
-  Nothing can supply the derivation for an arbitrary source, so this
-  is a theorem about the algorithm and not a way to run it. It is the
-  handoff's result (ii).
+  derivation of a verdict for the source can recurse on that
+  derivation, so it needs no fuel and is total. No Sleight function
+  can supply that derivation for every source, by the argument above,
+  so this is a theorem about the algorithm and not a way to run it. It
+  is the handoff's result (ii), restated per source (T7 below).
 
 Decision D1 is which of these the project states. The handoff's item 2
 ("A fuel-free self-interpreter is possible because the top level is
-not a function") points at (a), and its item 4 at (c). 04 shows that
-one step function can serve all three.
+not a function") points at (a), and its item 4 at (c). 04 shows, on a
+toy language, one step function iterated in all three ways
+(`spikes/three-iterations/`).
 
 ## 1.3 The statement idiom: a goal
 
@@ -100,11 +121,12 @@ way. The same idiom can state the compiler's theorem: the
 specification's files define the relations and set the goal, and the
 compiler's own function is the `qed`.
 
-Two toys under `spikes/` check under both implementations with
+Three toys under `spikes/` check under both implementations with
 `--goal proved`. Their language is lists of `Open` and `Close` tokens,
 accepted when balanced.
 
-`spikes/verdict/` is statement (b) or (c) in shape: a total decider.
+`spikes/verdict/` has the result type that (b) and (c) share: a total
+decider. Its `decide` takes no derivation and recurses on the source.
 
 ```scheme
 (def-adts $ (Verdict : ((Nat) depth) ((List (Tok)) src) -> Type)
@@ -146,12 +168,16 @@ whose step is a total function and whose only exit is a verdict.
      -> (CertifiedOnExit)))
 ```
 
-The state's type is a parameter of the statement, so the goal does not
-fix how the machine is built. `drive.sl` loops `step` under the driver
-as a `Program`; that loop is about ten lines and is not covered by the
-goal. This statement does not say the machine makes progress: a step
-that returned its own state forever would satisfy it. T7 below is the
-statement that excludes that.
+The state's type is a field of the statement that the proof chooses,
+so the goal does not fix how the machine is built. `drive.sl` loops
+`step` under the driver as a `Program`; that loop is about ten lines
+and is not covered by the goal. This statement does not say the
+machine makes progress: the reviewer checked that a machine whose step
+returns its own state forever satisfies it. T7 below is the statement
+that excludes that.
+
+`spikes/three-iterations/` adds statement (c) in shape: its `run-by`
+recurses on an erased derivation that the machine halts.
 
 ## 1.4 The theorems on offer
 
@@ -171,31 +197,48 @@ that types it."
 its exits are `Accepted` and `Rejected` and nothing else. This is the
 part of the handoff's item 3 that needs no hypothesis. It has content.
 `mini/`'s top-level function has a third answer, `ProgramStuck`, with
-no evidence, reached on malformed shapes
+no evidence, reached on shapes its relations have no rule for
 (`evidence/A3-mini-and-precedents.md`, section 2.2, lists 28 groups of
 them, the empty program among them). slc has internal-error paths and
 an out-of-fuel answer (04). Under T3 each of these becomes a `Fails`
-rule, is refuted in the types, or goes away.
+rule, is refuted in the types, or goes away. T3 is about the
+specification's machine, "with unlimited stack and heap" (§31, lines
+1319 to 1320). A real run of the compiler may still crash (lines 1320
+to 1321), as both implementations do today on a deep compile-time
+recursion; see 06, G7.
 
 **T4, never both.** No source has both derivations. This is a property
 of the specification alone; the compiler does not appear in it. It
 matters because without it the `Fails` relation is trusted: a `Fails`
 rule that is too generous would let a compiler reject a good program
 and still satisfy T3. With T4 proved, `Fails` can hold only where
-`Accepts` does not, and with T3 it holds exactly there, so only
-`Accepts` has to be read with care. T4 needs the elaboration relation
-to be deterministic, a proof of its own (mini/README.md lists
-"determinism of elaboration" among the metatheory "stated nowhere
-yet"). For the full language T4 is false as stated: 06, G1, shows a
+`Accepts` does not, so a `Rejected` exit is never given to a source
+that `Accepts` covers; for that purpose only `Accepts` has to be read
+with care. T3 and T4 do not say that `Fails` holds everywhere
+`Accepts` does not: T3 gives one of the two derivations only for a
+source on which the compiler exits. That is every source under (b).
+Under (a) and (c) no theorem here says every source has a verdict
+derivation, and 1.2 is the reason. A `Fails` relation that lacks a
+rule leaves sources with no verdict, and on those the compiler has no
+exit.
+
+Proving T4 is expected to need determinism lemmas for the elaboration
+relation (A3's inference; mini/README.md lists "determinism of
+elaboration" among the metatheory "stated nowhere yet"). The toy's
+`exclusive` needed none. If the relation leaves open what DESIGN.md
+leaves to the outside, T4 is false as stated: 06, G1, shows a
 compile-time `slot-eq` deciding acceptance, and DESIGN.md §67 lets its
-answer "differ between runs". T4 can hold relative to a fixed record
-of such answers (02).
+answer "differ between runs" (lines 3045 to 3046). 02, R6, proposes a
+fixed record of such answers, and T4 would then be stated relative to
+it.
 
 **T5, compile-time values are the specification's.** Every value
 stored for a run-position form is the result of the specification's
 run of that form's code. If the elaboration relation's rule for a
 run-position form has the run relation as a premise, T5 is part of T1
-and needs no statement of its own.
+and needs no statement of its own. OPEN.md item 4 asks a neighbouring
+question, whether a reference evaluator should arbitrate runs that
+produce facts.
 
 **T6, the output runs as the specification says.** The emitted
 program's run agrees with the specification's run of the elaborated
@@ -207,34 +250,51 @@ handoff's (i) and (ii), in the form this session proposes: the
 specification's relation and the compiler's behaviour coincide in both
 directions. T1 and T2 are one direction: what the compiler answers,
 the relation derives. T7 is the other: if the relation derives a
-verdict for a source, the compiler reaches that verdict in finitely
-many steps. The handoff's hypothesis H becomes "the relation derives
-some verdict for this source", which includes that each compile-time
-run it mentions halts, since a derivation is finite. T7 also answers
-the question in the handoff's item 4, whether anything would catch a
-naive infinite loop in the compiler's core: with T7 proved, such a
-loop contradicts a derivation.
+verdict for a source, relative to the answers the outside gave (02,
+R6), the compiler given those answers reaches that verdict in finitely
+many steps. T7 implies T4, since a compiler cannot reach two verdicts,
+so for the full language it too holds only relative to that record.
+The handoff's hypothesis H becomes "the relation derives some verdict
+for this source", which includes that each compile-time run it
+mentions halts, since a derivation is finite. T7 bears on the question
+in the handoff's item 4, whether anything would catch a naive infinite
+loop in the compiler's core: with T7 proved, such a loop on a source
+that has a derivable verdict contradicts the derivation. A loop on a
+source with no derivable verdict is not excluded, and no theorem here
+says every source has one.
 
 ## 1.5 What is not on offer, and why
 
-- **Consistency, `no_false`.** Not expected (handoff item 1).
-- **Every accepted program's run halts.** If Sleight proved this of
-  its own specification, the function of 1.2 (c) would have its
-  derivation supplied and would be the total evaluator that 1.2 rules
-  out. Session's argument.
+- **Consistency, `no_false`.** Not expected (handoff item 1). OPEN.md
+  item 1 is the question.
+- **Every accepted form's run halts** (the handoff's H). If Sleight
+  proved this of its own specification, the derivation that the
+  function of 1.2 (c) needs could be built form by form, each
+  run-position form being accepted before it runs (§27, lines 1180 to
+  1182), provided the rest of elaboration needs no counter, which is
+  the handoff's result (ii) and is not proved. `compile` would then be
+  the total function that 1.2 rules out. Session's argument. Of a
+  whole program the statement is false by design: a `Program` may
+  never exit (§42, lines 1993 to 1994).
 - **An accepted program's run never reaches an impossible path.** The
   stripped code of an accepted program can lack code for a branch:
   DESIGN.md §21 allows a constructor with no branch when it is refuted
   (lines 925 to 926: "A constructor with no branch must either be
   refuted or be covered by the `else`"), and an absurd-by-proof
   branch's body is an erased position (§14, lines 558 to 559). That a
-  run never takes such a path rests on the erased proof that refuted
-  it being real. Session's argument: from a closed erased term of type
-  `(False)` one can write an accepted program whose run takes an
-  absurd-by-proof branch, so a proof that no accepted run reaches such
-  a branch would give `no_false`. The run relation therefore has no
-  rule for such a path, and T6 speaks only of runs the relation
-  derives.
+  run never takes such a path rests on the erased values behind the
+  facts that refuted it being real. Session's argument: from a closed
+  erased term of type `(False)` one can write an accepted program
+  whose run takes an absurd-by-proof branch (the reviewer checked that
+  both implementations accept such a program), so a proof that no
+  accepted run reaches such a branch would give `no_false`. The
+  proposal (02, R7) is that the run relation derives no result for
+  such a path; 06, G8, asks the owner. T6 then speaks only of runs the
+  relation derives. A compile-time run can reach such a path too,
+  since that program can stand in run position. There the compiler
+  still needs an exit under T3: either `Fails` has a rule for it, with
+  a positive relation saying that the run reached a branch with no
+  code, or the compiler does not exit. 02, R7, proposes the first.
 - **`unique` means sole reference.** The handoff records, as the
   previous session's claim, that the project would not itself prove
   this. A run relation that is a mutating heap machine does not assume
@@ -244,7 +304,12 @@ loop contradicts a derivation.
   removed (§27, lines 1180 to 1182: "it is elaborated, its erased
   positions are stripped, the evaluator runs the code"; §29, lines
   1299 to 1300: "The elaborator checks the form and produces code with
-  the erased positions removed. The evaluator runs that code.").
+  the erased positions removed. The evaluator runs that code."). The
+  handoff's item 6 records that the owner's concern about such a run
+  "goes away if the heap is mutable", and that the owner has not
+  confirmed the previous session's reading. OPEN.md item 2 asks a
+  neighbouring question and records it as unverified; these proposals
+  do not take it up.
 
 ## 1.6 What stays trusted
 
@@ -254,10 +319,13 @@ loop contradicts a derivation.
   the same proofs is the mitigation available today.
 - The logic's consistency.
 - That the specification's relations say what DESIGN.md means. The
-  owner reading them is the check. MINIMAL.md's decision that in the
-  relations "readability and simplicity outrank everything else"
-  serves this.
+  owner reading them is the check. MINIMAL.md records as decided, for
+  the minimal language's relations and in a session's wording, that
+  "readability and simplicity outrank everything else". The same
+  priority for the full specification would serve this.
 - `Fails`, unless T4 is proved.
+- That the machine the compiler runs on has the stack and heap the run
+  needs: a real run may crash (§31).
 - Whatever lies beyond the point where the proof stops (05): the
   printer to OCaml, the OCaml compiler, the FFI implementations of the
   extern types and functions, whose agreement with their models

@@ -111,11 +111,36 @@ first".
 **S7. Where DESIGN.md is silent, the relation follows the reference
 implementation, and the choice is recorded.** CLAUDE.md rule 14 gives
 ASSUMPTIONS.md this purpose. `evidence/A8-assumptions-backlog.md`
-classifies the existing entries by whether a formal specification
-would have to take a position on them (06 summarizes). Each such entry
-is a place where formalizing forces either an owner decision or a
-recorded choice. This bears on planning: the owner's review time, not
-agent time, is likely the scarce resource.
+classifies the 133 items that file has today by what each records.
+The classes are that agent's judgment from reading each item; it
+probed the implementations three times.
+
+- 56 items record a choice that can change whether a program is
+  accepted, what it does when it runs, or both. The other 77 are about
+  messages only (9), internal to an implementation (63), or stated by
+  DESIGN.md today (5).
+- 30 of the 56 fall under four shared questions: whether the prelude's
+  text and the FFI's table are part of the specification (12 items;
+  06, G11); whether the answers to requests are specified or left to
+  the outside (8; decision D6); what exactly the post-erasure code is
+  on which `tail`, `delegate`, and §39's check are judged (6; 06,
+  G13); and the order of evaluation, with the order in which the
+  driver takes several files' final values (4; decision D4 and 06,
+  G19). The other 26 stand alone. So the backlog comes to about 30
+  questions.
+- 21 items present their main choice as the owner's, which rule 14
+  calls "a contradiction in terms". In 7 of them (88, 136, 144, 145,
+  156, 168, and 172) the agent found content that can change
+  acceptance or runs and that DESIGN.md does not state.
+- The agent lists 11 places where an item and DESIGN.md read
+  differently (its section 5). One is item 168, whose "no at fact is
+  inferred just because nullary values share an immediate
+  representation" stands against §35 and §36; in the agent's probe
+  both implementations infer such a fact.
+
+Each of the 56 is a place where formalizing forces either an owner
+decision or a recorded choice. This bears on planning: the owner's
+review time, not agent time, is likely the scarce resource.
 
 ## 3.3 How far the full language is from the fragment
 

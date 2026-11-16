@@ -79,29 +79,66 @@ options; the first below is a third.
 **P1. Stop at post-erasure code and the store.** The theorem covers
 elaboration and every compile-time run, and it says what the program
 is: its post-erasure code and the heap its compile-time runs left
-(02). Everything in the emitter is trusted. One mode of the compiler
-is then certified to the end: `slc --interpret` runs the program on
-the compiler's own evaluator, which under 04 is the certified step
-machine. The emitted OCaml is tested against that mode, test by test,
-as `self/bootstrap.sh` already compares the two.
+(02). Everything in the emitter is trusted. `slc --interpret` then
+runs a user's program on the compiler's own evaluator, which under 04
+is the certified step machine, and never passes the user's program
+through the emitter. slc is itself a Sleight program that reaches a
+machine only by being emitted or by running under the reference
+interpreter, so this does not remove emission from what is trusted:
+it reduces the emitted programs that have to be right from every
+user program to one, slc.
 
 **P2. Stop at a lower language, printed by a printer that decides
-nothing.** A certified pass makes the emitter's decisions
-(representation, control, order, static data) and produces a small
-language close to OCaml; the printer only prints. Trusted: the
-printer, and that OCaml gives the printed text the lower language's
-meaning.
+nothing.** A certified pass makes the emitter's decisions and produces
+a small language of words and blocks; the printer writes one fixed
+OCaml phrase per node. Trusted: the printer, and that OCaml gives each
+phrase the lower language's meaning.
 
 **P3. Stop at a modelled subset of OCaml.** As P2, with the lower
-language being OCaml's own syntax and a semantics for the subset
-written in Sleight. 07 notes that OCaml has no formal specification
-and that the one verified extraction to OCaml stops at Malfunction for
-that reason.
+language given OCaml's syntax and a semantics for the subset written
+in Sleight.
 
-P1 is the least work and leaves the most trusted. The closer the
-specification's run is to the machine (02: words, blocks, tags, the
-representation of §33), the less the emitter has left to decide, and
-so the smaller the step from P1 to P2.
+What A7 found about the output path as it is:
+
+- **The last internal form is not low level.** `Code` is a scoped
+  functional form: a constructor application names a constructor, a
+  match names a type and binds fields by position, closures are
+  implicit, and only the four cell forms mention a store. `emit.sl`
+  (1516 lines) is where a value gets its OCaml form; A7 lists 48
+  decisions it makes about representation, control, order, static
+  data, the driver, and FFI glue.
+- **The emitted OCaml means something only at the level of OCaml's
+  run-time representation.** Every value is `Obj.t` behind identity
+  casts, and one word serves as a constant constructor, as `()`, and
+  as a small integer. So a faithful model of the "OCaml subset" is an
+  untyped machine of words and blocks, which is what P2's lower
+  language is. A7's judgment: P3 differs from P2 "more in name than in
+  assurance", and adds an obligation the project cannot discharge,
+  that the OCaml compiler respects the model on programs that cast
+  freely. The git history records one failure of that kind under
+  flambda2 (commit 0bbc5e4).
+- **A fixed part stays trusted under every option:** an 834-line OCaml
+  header, which every emitted program starts with, and 82 templates
+  that the emitter splices into program code.
+- **`slot-eq` already answers differently across builds of one emitted
+  file.** For two equal strings built separately at compile time, both
+  interpreters and a bytecode build answer `ENone`; a native build
+  answers `ESome`, because `ocamlopt` merges equal immutable
+  constants. So a theorem that the output's run matches the
+  specification's run has to leave that answer free or pin it (02, R6;
+  06, G1 and G5).
+- **What the existing tests compare.** `self/bootstrap.sh` builds each
+  test to bytecode with slc and compares its printed output and exit
+  code with the reference interpreter's, and does the same for
+  `slc --interpret`. Native code is exercised only by slc's own
+  build, and a wrong value is seen only if it is printed.
+
+P1 is the least work and leaves the most trusted. Under P2 a printer
+of about 250 to 350 lines would remain trusted, with a lowering pass
+about the size of today's `emit.sl` to certify (A7's estimate, not
+built). The closer the specification's run is to the machine (02:
+words, blocks, tags, the representation of §33), the less such a pass
+has left to decide.
 
 ## 5.3 `native-compute`
 

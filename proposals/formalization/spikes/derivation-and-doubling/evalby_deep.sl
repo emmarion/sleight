@@ -1,0 +1,13 @@
+(def-unique P $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) p))
+  (let ((unique w1) (many args)) (world-do _ w (GetArgs)))
+  (let ((many c)) (deep-program (arg-nat args 0 3000)))
+  (let ((unique w2)) (stamp w1 "program built"))
+  (let-match many (eval (arg-nat args 1 8192) (ENil) c) (MkEvaled _ _ vs d)
+    ((EvalFail _ _ _) (values w2 (Exit P code1))))
+  (let ((unique w3)) (stamp w2 "fuelled eval done"))
+  (let ((many vs2)) (eval-by (ENil) c vs d))
+  (let ((unique w4)) (stamp w3 "eval-by done"))
+  (let ((unique w5) (many _)) (world-do _ w4 (WriteOut (str-append "fuelled:" $ str-append (show-vals vs) $ str-append "\neval-by:" $ str-append (show-vals vs2) "\n"))))
+  (values w5 (Exit P code0)))
+
+(Continue P start)
