@@ -69,8 +69,9 @@ the `comptime-match` holds and the specification accepts it. So no
 such `compile` exists.
 
 The argument uses three things of `compile`: that the language it
-compiles accepts its own source; that its verdict on that one source
-is right in both directions; and that it returns on that source. For
+compiles accepts text `k`, its own source with `d` and `diag`; that
+its verdict on the one source built from that text is right in both
+directions; and that it returns on that source. For
 the last: DESIGN.md calls Sleight's functions "total functions" (§42,
 line 1994) and says "Termination rests on levels" (§17, line 696), and
 README.md, a session's file, records that "The author asserts that
@@ -102,20 +103,36 @@ and they can be held together:
 - **(c) Under a hypothesis.** A function that also takes, erased, a
   derivation of a verdict for the source can recurse on that
   derivation, so it needs no fuel and is total. No Sleight function
-  can supply that derivation for every source, by the argument above,
-  so this is a theorem about the algorithm and not a way to run it. It
-  is the handoff's result (ii), restated per source (T7 below).
+  can supply that derivation for every source: given T4 below, the
+  function so completed would be the `compile` that the argument above
+  rules out. So this is a theorem about the algorithm and not a way to
+  run it. It is the handoff's result (ii), restated per source. As a
+  type it says only that some total function returns verdicts from
+  derivations; what ties it to the compiler's own loop is that the two
+  share their step function, or T7 below.
 
-The argument needs the compiler to handle its own source. So it does
-not rule out a total `compile`, with no fuel and no hypothesis, for a
-part of the language in which that compiler cannot be written. One
-such part is MINIMAL.md's fragment, where elaboration runs nothing
-(09, stage 1). Another might be the sources whose compile-time code
-lies below some level, compiled by a function above that level. For
-that, Sleight would have to prove that the runs of all code below a
-level halt, and this session does not know whether it can. The survey
-of prior art raises the same possibility and leaves it open
-(`evidence/A6-prior-art.md`, section 2.5).
+A fourth course keeps a third answer with no derivation, as slc's "out
+of fuel" is today. T3 below is the statement that excludes it.
+
+The argument needs one particular source: text `k`, which holds the
+compiler, followed by a form whose acceptance depends on a
+compile-time run of that compiler. So it does not rule out a total
+`compile`, with no fuel and no hypothesis, for a part of the language
+that has no such source. One such part is MINIMAL.md's fragment, where
+no verdict depends on a run (MINIMAL.md, item 4: "Elaboration is a
+pure function from raw syntax to core terms; evaluation is a separate
+phase after it"; 09, stage 1). Another might be a part whose
+compile-time code cannot express its own compiler, compiled by a
+function outside that part. A total `compile` for such a part would
+amount to a proof, in Sleight, that all compile-time code of the part
+halts, and this session does not know whether Sleight can prove that
+for any part worth having. The survey of prior art raises the
+possibility in terms of levels ("an evaluator, at some level, for
+programs of strictly lower levels") and marks it unknown
+(`evidence/A6-prior-art.md`, section 2.5). A level is created by a
+`def-lvl` of the program it stands in (§18, lines 728 to 730), so that
+wording would first need a measure that compares a source's code with
+the compiler's.
 
 Decision D1 is which of these the project states. The handoff's item 2
 ("A fuel-free self-interpreter is possible because the top level is
@@ -183,8 +200,9 @@ The state's type is a field of the statement that the proof chooses,
 so the goal does not fix how the machine is built. `drive.sl` loops
 `step` under the driver as a `Program`; that loop is about ten lines
 and is not covered by the goal. This statement does not say the
-machine makes progress: the reviewer checked that a machine whose step
-returns its own state forever satisfies it. T7 below is the statement
+machine makes progress: a machine whose step returns its own state
+forever satisfies it (`spikes/verdict-machine/idle-machine.sl` with
+`idle-qed.sl`, written by the reviewer). T7 below is the statement
 that excludes that.
 
 `spikes/three-iterations/` adds statement (c) in shape: its `run-by`
@@ -216,7 +234,9 @@ rule, is refuted in the types, or goes away. T3 is about the
 specification's machine, "with unlimited stack and heap" (§31, lines
 1319 to 1320). A real run of the compiler may still crash (lines 1320
 to 1321), as both implementations do today on a deep compile-time
-recursion; see 06, G7.
+recursion: a top-level `let` whose right-hand side recurses three
+million deep ends both with a stack overflow (run by this session).
+See 06, G7.
 
 **T4, never both.** No source has both derivations. This is a property
 of the specification alone; the compiler does not appear in it. It
@@ -229,9 +249,10 @@ with care. T3 and T4 do not say that `Fails` holds everywhere
 `Accepts` does not: T3 gives one of the two derivations only for a
 source on which the compiler exits. That is every source under (b).
 Under (a) and (c) no theorem here says every source has a verdict
-derivation, and 1.2 is the reason. A `Fails` relation that lacks a
-rule leaves sources with no verdict, and on those the compiler has no
-exit.
+derivation. With T4 and the function of (c), a Sleight proof of that
+would give the `compile` that 1.2 rules out. A `Fails` relation that
+lacks a rule leaves sources with no verdict, and on those the compiler
+has no exit.
 
 Proving T4 is expected to need determinism lemmas for the elaboration
 relation (A3's inference; mini/README.md lists "determinism of
@@ -272,7 +293,9 @@ in the handoff's item 4, whether anything would catch a naive infinite
 loop in the compiler's core: with T7 proved, such a loop on a source
 that has a derivable verdict contradicts the derivation. A loop on a
 source with no derivable verdict is not excluded, and no theorem here
-says every source has one.
+says every source has one. For `mini/`'s evaluator, the machine's
+share of T7 is proved in `spikes/step-machine/` in two forms, and not
+yet for the plain loop under the driver (04, 4.2).
 
 ## 1.5 What is not on offer, and why
 
@@ -282,11 +305,12 @@ says every source has one.
   proved this of its own specification, the derivation that the
   function of 1.2 (c) needs could be built form by form, each
   run-position form being accepted before it runs (§27, lines 1180 to
-  1182), provided the rest of elaboration needs no counter, which is
-  the handoff's result (ii) and is not proved. `compile` would then be
-  the total function that 1.2 rules out. Session's argument. Of a
-  whole program the statement is false by design: a `Program` may
-  never exit (§42, lines 1993 to 1994).
+  1182), provided the rest of elaboration needs no counter (the
+  handoff's result (i), which is not proved). `compile` would then be
+  total, which is the handoff's result (ii), and, given T4, it would
+  be the function that 1.2 rules out. Session's argument. Of a whole
+  program the statement is false by design: a `Program` may never exit
+  (§42, lines 1993 to 1994).
 - **An accepted program's run never reaches an impossible path.** The
   stripped code of an accepted program can lack code for a branch:
   DESIGN.md §21 allows a constructor with no branch when it is refuted
@@ -296,9 +320,12 @@ says every source has one.
   run never takes such a path rests on the erased values behind the
   facts that refuted it being real. Session's argument: from a closed
   erased term of type `(False)` one can write an accepted program
-  whose run takes an absurd-by-proof branch (the reviewer checked that
-  both implementations accept such a program), so a proof that no
-  accepted run reaches such a branch would give `no_false`. The
+  whose run takes an absurd-by-proof branch, so a proof that no
+  accepted run reaches such a branch would give `no_false`. (Both
+  implementations accept that program with the closed term replaced by
+  an erased parameter of an empty type: `spikes/gaps/absurd-branch.sl`.
+  With no closed term of such a type at hand, no run that takes the
+  branch can be shown.) The
   proposal (02, R7) is that the run relation derives no result for
   such a path; 06, G8, asks the owner. T6 then speaks only of runs the
   relation derives. A compile-time run can reach such a path too,

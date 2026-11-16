@@ -96,9 +96,9 @@ and `run-from-spec`.
    no counter and is total. This is statement (c) of 01, and it is
    the handoff's result (ii) as the type of a function. Where the
    derivation can be built, as it can for the toy, the function runs.
-   For the compiler no Sleight function can build it for every source,
-   by 01, so there it is a theorem about the step function and nothing
-   more.
+   For the compiler no Sleight function can build it for every source
+   (01, 1.2, given "never both"), so there it is a theorem about the
+   step function and nothing more.
 
 The three share the step function and its certificate, so choosing
 among them, or keeping all three, costs a few lines each.

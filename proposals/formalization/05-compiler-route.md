@@ -74,7 +74,7 @@ purpose is to check that reading.
 ## 5.2 Where the proof stops on the output side
 
 slc's output is OCaml source. The handoff's section C gives two
-options; the first below is a third.
+options, which are P1 and P3 below; P2 is a third.
 
 **P1. Stop at post-erasure code and the store.** The theorem covers
 elaboration and every compile-time run, and it says what the program

@@ -57,10 +57,10 @@ positions removed". The quotes above are consistent with that reading.
 over environments and value trees, with no heap and no addresses
 (`mini/core.sl`, `mini/eval.sl`). The Lean model's first semantics is
 also pure, with a machine proved to agree afterwards. Its documents
-record that slots are not locations anywhere in it, and that
-supporting `cell-same` (§68) "would mean the proofs tracking slots as
-locations [...], not a case beside the existing ones"
-(`lean/HANDOFF.md`, lines 403 to 406). Its machine-agreement proofs
+record that slots are not locations anywhere in it, and give, as a
+session's reading, that supporting `cell-same` (§68) "would mean the
+proofs tracking slots as locations [...], not a case beside the
+existing ones" (`lean/HANDOFF.md`, lines 403 to 406). Its machine-agreement proofs
 are 39% of its lines, against 20.5% for all of its soundness proofs
 (`evidence/A4-lean-lessons.md`, section 5).
 
@@ -235,12 +235,14 @@ accepted programs do observe the order.
 
 Options for decision D4:
 
-- **O-α, complete §15.** The temporaries of a statement or final form
-  (its arguments, and its head and scrutinee where they are forms) are
-  bound before it, in the order written, inner ones first; then the
-  entries of a `values` and the items of a cell form run in the order
-  written. Function bodies and run position run alike. This adds to
-  DESIGN.md only what a to d leave open.
+- **O-α, complete §15 on its first reading.** The temporaries of a
+  statement or final form (its arguments, and its head and scrutinee
+  where they are forms) are bound before it, in the order written,
+  inner ones first; then the rest runs in place, in the order written.
+  This adds to DESIGN.md only what a to d leave open. Two choices come
+  with it: where the items of a cell form run, on which the two
+  implementations differ (2.7), and whether run position changes to
+  run as a body does or keeps the order of elaboration.
 - **O-β, strict left to right.** Each sub-expression of a form runs
   completely before the next, the head first. This is the handoff's
   proposal A. It contradicts §15's placement in the `values` example
