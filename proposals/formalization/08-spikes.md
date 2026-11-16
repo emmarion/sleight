@@ -203,7 +203,7 @@ These report what the two implementations do. They say nothing of
 what the language is.
 
 - `order/` (from a sub-agent's probes, `evidence/A2-reference-run.md`;
-  02, section 2.7): seven accepted programs.
+  02, section 2.7): nine accepted programs.
   `values-measure-first.sl` and `values-build-first.sl` differ only in
   the order of the two entries of one `values`, and print "measured
   BEFORE the build" and "measured AFTER the build".
@@ -216,6 +216,15 @@ what the language is.
   reference and "measured AFTER the build" under slc, and
   `cell-write-operand-crash.sl`, with the flag, prints `A` before it
   fails under the reference and nothing under slc.
+  `top-level-values.sl` and `body-values.sl` hold one form,
+  `(values (deep 100000) (id-nat (boom 7)))`, the first at the top
+  level and the second in a function body; `deep` runs out of a small
+  fuel and `boom` asks for an array the host cannot make. With
+  `--eval-fuel 2000` the reference reports "out of fuel" for the
+  first, so `deep` ran first, and an overflow for the second, so
+  `boom` ran first. slc reports "out of fuel" for the first; its
+  answer for the second does not tell the order, because its
+  interpreter goes on after a fuel error (04, 4.5).
 - `gaps/` (written by this session; 06, G1, G6, and G9): two files
   that differ only in which answer of a compile-time `slot-eq` they
   assert, one accepted and one rejected by both implementations;

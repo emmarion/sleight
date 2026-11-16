@@ -92,6 +92,12 @@ for f in values-say-then-crash values-crash-then-say values-nested-argument cell
   whole "$f (slc --interpret)" order "$SLC" --interpret --eval-fuel 50000 $f.sl
 done
 
+echo "== order: one form at the top level and in a body, with --eval-fuel 2000"
+for f in top-level-values body-values; do
+  whole "$f (reference)" order "$REF" --eval-fuel 2000 $f.sl
+  whole "$f (slc --interpret)" order "$SLC" --interpret --eval-fuel 2000 $f.sl
+done
+
 echo "== gaps: acceptance that depends on more than the source"
 for f in slot-eq-asserts-some slot-eq-asserts-none special-let-at-slot-0 special-match-at-slot-0 special-match-at-slot-26 gensym-expansion-order; do
   last "$f (reference)" gaps "$REF" $f.sl

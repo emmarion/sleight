@@ -413,7 +413,9 @@ the elaborator reaches it, left to right and inner first, and nothing
 is moved out: an entry of a top-level `values` finishes before the
 next begins (A1, section 4.3; A2, section 3.3). So one form runs in
 one order inside a function body and in another at the top level, in
-both implementations.
+both implementations. `top-level-values.sl` and `body-values.sl` show
+it for the reference: the form `(values (deep 100000) (id-nat (boom
+7)))` fails in `deep` at the top level and in `boom` inside a body.
 
 **The two implementations disagree on the operands of cell forms.** In
 a body, slc moves the input of a `cell-write`, and the items of a
