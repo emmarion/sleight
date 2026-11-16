@@ -162,32 +162,48 @@ What the text says:
   claim would fail." This relies on statements running in the order
   written.
 
-What follows, on this session's reading:
+What follows, on this session's reading and the audit's
+(`evidence/A5-design-audit.md`, sections A2.3 to A2.5):
 
 1. A form's sub-forms run before the form does.
-2. An argument that is not a variable is bound before the statement
-   or final form that contains its call. So in a final form
+2. §15's "the statement or final form that contains the call" can be
+   read two ways. On the first, the binding joins the statements of
+   the enclosing expression, which fits §15's own "as the entries of a
+   `let`'s right-hand-side statements do". Then in a final form
    `(values (f x) (g (h y)))`, `(h y)` is bound before the whole
-   `values`, and so before `(f x)`. A rule of strict left-to-right
-   nesting would run `(f x)` first. The handoff's proposal A is that
-   strict rule, and it notes that "§15's wording might need to
+   `values`, and so before `(f x)`. On the second, an entry of a
+   `values` counts as an expression of its own (§27, lines 1106 to
+   1107, calls each entry "a size-one expression"), and the binding
+   sits with its entry. A rule of strict left-to-right nesting agrees
+   with the second reading and not the first. The handoff's proposal A
+   is that strict rule, and it notes that "§15's wording might need to
    follow".
-3. In run position the order among siblings is the order of
+3. §15 presents its rule as one about scope: the consequence it draws
+   is that the "entry stays in scope". §39 relies on it for
+   evaluation.
+4. In run position the order among siblings is the order of
    elaboration, since each form runs when it has been elaborated and
-   before the code after it is checked; the text gives that order as
+   before the code after it is checked. The text gives that order as
    head first (§6) and arguments in telescope order (§50). This is an
    inference from three sentences. No sentence says "left to right".
+   Under the first reading of §15, run position and §15 can disagree:
+   an elaborator that takes the entries of a top-level
+   `(values (h b) (f (g a)))` in the order written runs `(h b)` before
+   `(g a)`, while §15 places the binding of `(g a)` before the whole
+   `values`.
 
-What the text does not fix, as far as this session and
-`evidence/A5-design-audit.md` found:
+What the text does not fix:
 
 a. inside a function body, the order of two argument temporaries of
    one statement or final form, as in `(f (g a) (h b))`;
 b. inside a function body, the order of the entries of one `values`,
    and of the items of one `cell-write` or `cell-alloc`;
-c. whether a function body runs in the order that run position has;
+c. whether the statements of a body run in the order written (§61
+   presupposes it), and whether a body runs in the order that run
+   position has;
 d. whether §15's binding covers a head and a scrutinee, as §29 says in
-   passing.
+   passing;
+e. which of the two readings of §15 holds.
 
 Options for decision D4:
 
@@ -307,5 +323,98 @@ Each is a question for the owner in 06.
 
 ## 2.7 What the implementations do, and whether order can be observed
 
-To be filled from `evidence/A1-slc-anatomy.md` and
-`evidence/A2-reference-run.md`.
+This section reports implementations. It says nothing of what the
+language is. The programs are in `spikes/order/`; this session re-ran
+each one named here. The full tables, 27 further attempts, and the
+code read are in `evidence/A2-reference-run.md`, sections 3 and 4, and
+`evidence/A1-slc-anatomy.md`, section 4.
+
+**An accepted program can observe the order of siblings.** Two ways
+were found, and neither goes through a value the program computes.
+
+- What is written before a failure. In a function body,
+  `(values (say w "A\n") (deep 100000))` prints `A` and then fails
+  when the run is given a small `--eval-fuel`; with the two entries
+  swapped it prints nothing (`values-say-then-crash.sl`,
+  `values-crash-then-say.sl`; the reference and `slc --interpret`
+  agree).
+- The answer to a request. `Measure` answers with the words allocated
+  so far. `(values (measure w) (build 200000 (Nil _)))` prints
+  "measured BEFORE the build", and the swapped form "measured AFTER
+  the build", with no failure anywhere (`values-measure-first.sl`,
+  `values-build-first.sl`; the reference interpreted and compiled, and
+  slc interpreted and compiled, all agree).
+
+At compile time the number `gensym` returns shows the order in which
+sibling macro calls are expanded (06, G9).
+
+**Through the language's own effects no observation was found.** A2
+wrote 27 programs that try to make one sibling see another's in-place
+write, through cells, extern arrays, `slot-of`, `share`, `at`,
+`coerce`, erased mentions, and `def-unique` closures. Both checkers
+refused 22 of them, 13 with "conflicting non-erased uses" of a
+`unique` binder. The 3 accepted probes that could have shown an order
+printed the same for both orders. This is evidence, and no proof, that
+without a failure, and with the answers to requests taken as given,
+the order cannot change what a program computes. That property would
+rest on `unique` meaning sole reference.
+
+**The order both implementations use in a function body is §15's, on
+its first reading.** Within one statement or final form, every head
+that is a form and every argument that is not a variable (of a call, a
+constructor application, a cell invocation, a `world-do`, or a
+primitive) runs first, left to right, inner ones first, the head
+before its arguments. Then what remains runs where it stands: the
+entries of a `values` left to right, a match's scrutinee, the operand
+of `share`, the input of `cell-match`. So in
+`(values (say w "A\n") (id-nat (deep 100000)))` the `deep` runs before
+the `say`: nothing is printed before the failure
+(`values-nested-argument.sl`, both implementations). Neither
+implementation follows the handoff's proposal A in a body.
+
+**In run position the order is different.** Each sub-form runs when
+the elaborator reaches it, left to right and inner first, and nothing
+is moved out: an entry of a top-level `values` finishes before the
+next begins (A1, section 4.3; A2, section 3.3). So one form runs in
+one order inside a function body and in another at the top level, in
+both implementations.
+
+**The two implementations disagree on the operands of cell forms.** In
+a body, slc moves the input of a `cell-write`, and the items of a
+`cell-write` or `cell-alloc`, out before the enclosing statement; the
+reference runs them in place. `cell-write-operand.sl`, whose `start`
+holds
+`(values (measure w) (cell-write unique (build-cell 200000) (MkS1 _)))`,
+prints "measured BEFORE the build" under the reference, interpreted
+and compiled, and "measured AFTER the build" under slc, interpreted
+and compiled. No failure is involved. DESIGN.md does not say which is
+right.
+
+**slc's emitted OCaml does not lean on OCaml's own order** in the
+cases tried: the elaborator has already bound every argument that is a
+call with a `let`, so no emitted application has a call as an argument
+(A1, section 4.2).
+
+**Words.** In the reference a constructed value is an OCaml block with
+a mutable array of fields; a `cell-write` or an invocation at `unique`
+assigns in place, the `many` forms copy, and `slot-eq` is OCaml's
+physical equality (A2, section 4.3). The answers of `slot-eq` on equal
+numbers computed separately differ between the interpreters, which
+answer `ENone`, and the compiled programs, which answer `ESome`
+(`evidence/S2-heap-machine.md`, section 8), as §67 allows.
+
+## 2.8 What this means for decision D4
+
+The options of 2.3, restated against these facts:
+
+- **O-α** is what both implementations do in function bodies today,
+  apart from their disagreement on cell forms. Choosing it leaves two
+  further choices: which of the two is right for cell forms, and
+  whether run position is to follow the same rule, which it does not
+  today.
+- **O-β** is what both implementations do in run position today, and
+  what neither does in a body. Choosing it gives one rule for both
+  positions, and changes §15's sentence and both implementations'
+  bodies.
+- **O-γ** would make the specification allow outputs that differ, as
+  the `Measure` programs show.

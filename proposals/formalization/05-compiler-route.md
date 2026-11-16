@@ -17,9 +17,26 @@ its result, an erased derivation of the specification's relation.
 Where slc's data structures differ from the relation's (a trie where
 the relation has a list, a cache of opened objects, a store with its
 own addresses), an erased invariant says which abstract value the
-structure stands for. slc keeps its speed. The work is on about 18,650
-lines that were written to be fast and to match the reference
-implementation's messages, not to follow the relations.
+structure stands for. slc keeps its speed: it compiles its own 18,652
+lines in about 5 s here; the reference took 97 s to check the same
+files, in one run on a machine other agents were using (A1, section
+7).
+
+What A1 found slc to prove today (its section 5): termination of
+canonicalization and unification; invariants of representation (the
+fact table's trie agrees with its rule list, a store reference never
+dangles, code is well scoped, and the interpreter returns as many
+values as its code's index says); and, for the map and list library
+only, results stated against separately defined relations (`MapsTo`
+and `Absent`, `Nth`, `Length`, `Concat`). No typing relation, run
+relation, or canonical-form relation appears in `self/`. The type of
+`canon` does not say its result is the canonical form of its
+argument; the type of `unify` does not say which facts were added.
+The elaborator's functions record an error in the environment and go
+on with placeholders, and the environment hides the fact table's
+indices. So under C1 the result type of nearly every function of the
+elaborator's main block (95 functions, 3077 lines) changes, and what
+a derivation is after the first recorded error has to be decided.
 
 **C2. A certified kernel behind slc's front end.** slc elaborates as
 it does today and hands a fully explicit core program to a small

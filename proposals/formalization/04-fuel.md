@@ -120,4 +120,79 @@ runs, the same step functions give a total function.
 
 ## 4.5 The counters slc has today
 
-To be filled from `evidence/A1-slc-anatomy.md`.
+From `evidence/A1-slc-anatomy.md`, section 2, which gives the line of
+each declaration and the searches behind "all". DESIGN.md does not
+contain the word "fuel"; its one such limit is §62's.
+
+A whole compile is one driver step: `self/main.sl` ends in
+`(Continue _ start)`, and `start` returns `Exit`. A1 confirmed it by
+counting continuations in a scratch copy of slc's emitted OCaml: 1 for
+slc compiling itself.
+
+| Counter | Starts at | When it runs out | Kind |
+|---|---|---|---|
+| The interpreter's `fuel`: one unit per application and one more per call of an interpreted body, so it bounds depth | 1000000000, or `--eval-fuel n` | The program is refused: "compile-time evaluation failed: out of fuel" | Fuel |
+| The expansion budget and the global expansion count | 10000 | "more than 10000 macro expansions" | §62's limit, where the charge follows an expansion. slc also charges it for rewrites that are not macro expansions, which §62 does not cover (below). |
+| `callbacks`, `hop-0` to `hop-9`, `Steps` | | Cannot: erased, or the zero case is refuted in the type | No effect at run time |
+| `sugar` | The size of the form | "internal: the sugar budget is spent" | An error for a case believed unreachable |
+| `list-refs`, `rope-walk` | The number of allocations so far | An error block; at one site a macro's output is taken as the empty list, silently | An error, or a silent default, for a case believed unreachable |
+| `heap-strs-fuel` | 1000000 | A list is cut, silently; only under `--interpret` | Fuel |
+| The compile-time printer's depth | 100000 | Prints `_` for the rest | Fuel |
+| The generated printer's fuel | 100000 | Prints `?` | Fuel |
+| `merge-opens` | One more than the number of opened objects | Answers "merged" without finishing | A silent default for a case believed unreachable |
+| `frame-chain`, `str-split-fuel`, `parse-pieces` | A size of the input | Returns what it has | A silent default; the first affects messages only |
+
+Measured by A1 on slc as it stands:
+
+- **The host stack runs out before the fuel.** slc dies with an
+  uncaught stack overflow at between 50000 and 75000 nested
+  interpreted calls on the default 8 MB stack. A tail loop of
+  500000100 iterations is refused with "out of fuel" after 118 s. The
+  reference has no fuel unless `--eval-fuel` is given.
+- **How often elaboration enters the interpreter.** In one self-compile
+  the interpreter was entered 2270 times for run-position forms and
+  470 times for macro expansions, and called back into the elaborator
+  8 times. Inside a single top-level form there were up to 689 runs (a
+  table-building `let` in `core.sl`) and up to 125 expansions (the
+  main block of `elab-main.sl`, 3077 lines). So under W-replay with no
+  quantum that block would be elaborated at least 126 times.
+- **The elaborator's state is one persistent value.** A checkpoint
+  before a top-level form costs nothing. The only effects on the
+  outside world in the middle of a form are a macro's `read-file` and
+  `native-compute`; a replay would repeat them unless their answers
+  were logged.
+
+Three behaviours A1 found that differ from the reference or from
+DESIGN.md, each with its reproduction in the report:
+
+- A file of 10001 top-level forms with computed heads and no macro
+  call is refused by slc with "more than 10000 macro expansions" and
+  accepted by the reference.
+- `slc --interpret` prints a 60000-element list cut short at the
+  printer's depth, with exit code 0; the reference prints all of it.
+- After an out-of-fuel error inside a function body slc's interpreter
+  goes on evaluating with error values, where the reference stops.
+
+## 4.6 What the spikes measured
+
+`evidence/S1-step-machine.md`, `evidence/S1b-derivation-and-doubling.md`,
+and `evidence/S3-suspendable-elaborator.md`; 08 has the commands.
+
+- **A function that recurses on an erased derivation of `mini/`'s
+  `Eval`** has exactly the type "given a derivation that the run has
+  these values, return them": no fuel, no failure outcome, 73 lines,
+  no lemma, accepted by both implementations and stated as a goal. It
+  ran faster than the fuelled evaluator on the program measured,
+  mostly because it can call a body in tail position.
+- **Doubling** needed one failure constructor carrying "stuck" or "out
+  of fuel", and a 16-line driver step. Because `mini/`'s fuel bounds
+  depth, a failed attempt can repeat nearly all the work: retries cost
+  between 1.0 and 1.5 times a single run on a program whose work grows
+  with its depth, and 8 to 9 times on one that does a large shallow
+  computation before a deep one. A fuel that counted steps would bound
+  the total at under four times a single run; that was not built.
+- **"The answer never depends on the fuel"** is provable, and was
+  proved for a copy of the evaluator that returns evidence when it
+  fails as well as when it succeeds: about 600 lines against the 73
+  above. It cannot be stated about `mini/`'s evaluator as it is,
+  because a type cannot mention a call (§9).
