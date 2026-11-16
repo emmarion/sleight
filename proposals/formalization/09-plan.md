@@ -128,7 +128,7 @@ runs.
   restated reading as printing and proved the two equivalent; the
   heap-machine spike wrote the run twice. Agreement of two
   formulations is evidence that a relation says what was meant, which
-  a "never both" lemma is not (08, 8.6).
+  a "never both" lemma is not (08, 8.7).
 - **P6. Disagreements between the three are findings.** Where the
   certified compiler, the reference, and slc differ on a test, one of
   them is wrong or DESIGN.md is silent. Tonight's examples are in 02,

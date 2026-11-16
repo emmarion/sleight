@@ -26,15 +26,60 @@ called a quantum.
 
 **F1. The evaluator is a machine whose single step is a total
 function, certified once against the run relation.** `spikes/step-machine/`
-does this for `mini/`'s evaluator (08): the machine's stack holds, in
-each frame, the erased partial derivation collected so far, so when
-the stack empties the machine holds the values and an erased
-derivation of `mini/`'s own `Eval`. There is no counter in it.
+does this for `mini/`'s evaluator (08; `evidence/S1-step-machine.md`).
+Each frame of the machine's stack holds, erased, the derivations of
+the premises already evaluated, so when the stack empties the machine
+holds the values and an erased derivation of `mini/`'s own `Eval`.
+There is no counter in it. The machine is 136 lines and needed no
+lemma: its only proof terms are the relation's own constructors,
+applied where a frame is popped. Its other outcome is "stuck", for a
+program the relation has no derivation for; as in `mini/`, that
+outcome carries no evidence.
+
+What the spike measured and proved beyond that:
+
+- **Depth.** A recursion 1,000,000 deep ran, in 38,000,028 steps,
+  under a host stack of 64 KB. `mini/`'s fuelled evaluator overflows
+  the default 8 MB stack at depth 30,000. This session re-ran both.
+- **Speed.** Compiled, about 23 to 31 million steps a second. Under
+  the reference interpreter, about 165,000; under `slc --interpret`,
+  about half a million. On an input that both can run, depth 10,000,
+  the machine with a quantum of 1000 and the fuelled evaluator took
+  14.2 ms and 13.5 ms.
+- **A flaw in the design as first proposed, and a fix.** A frame that
+  exists only to carry erased derivations still occupies the stack, so
+  a tail call in the program being run grows the machine's stack.
+  `machine_tail.sl` moves those frames into an erased context, at no
+  cost at run time.
+- **The other direction, T7 of 01, in two forms.** First, as a
+  relation: from a derivation of `Eval`, for every stack, the
+  machine's step relation has a path from "evaluate this code" to
+  "return these values" (`eval-reaches`, 78 lines, over a step
+  relation of 121 lines). Second, as a function: `run-from-spec` takes
+  a program and an erased derivation of its run, and returns the
+  values by running the machine along that path, with no fuel and no
+  driver.
+- **What is not proved.** That the plain `step`, looped by the driver,
+  reaches that result whenever a derivation exists. The spike's author
+  names what is missing: that the step relation is deterministic,
+  which needs derivations to be unique because the machine's states
+  carry them; and that `step` does not answer "stuck" where a step
+  exists, which needs `mini/`'s lookups to return evidence when they
+  miss. A machine whose states carry no proofs, with one erased
+  invariant beside it, might make these easier and the first direction
+  harder; that was not tried.
+- **A mutable store.** A second prototype of 174 lines has a relation
+  that threads a store, and a machine whose store is a `unique` array,
+  updated in place and carried through the driver's continuations. It
+  ran 150,000,011 steps in constant memory. Allocation and addresses
+  as values are not in it.
 
 **F2. How the step is iterated is a separate and small choice, and
 the three ways can coexist.** `spikes/three-iterations/` shows all
 three over one step function, on the toy language of 01, in one goal
-that checks under both implementations:
+that checks under both implementations. `spikes/step-machine/` has the
+same three for `mini/`'s evaluator: its driver, its batched driver,
+and `run-from-spec`.
 
 1. **Under the driver.** Each driver step takes machine steps and
    returns a `Continue`. Nothing bounds the loop. This is statement
@@ -152,10 +197,11 @@ The first row is slc as it stands, which returns no derivations. In
 the three middle rows a verdict that is reached carries its
 derivation, and what is missing is a proof that one is reached. That
 proof is T7 of 01. For the machine alone it is an induction on the run
-relation's derivation, which `spikes/step-machine/` attempts. For the
-whole compiler under the driver it needs more, and iteration 3 above
-is the cheaper statement: under a halting derivation for the form's
-runs, the same step functions give a total function.
+relation's derivation; `spikes/step-machine/` has it in the two forms
+of 4.2, and not for the plain loop. For the whole compiler under the
+driver it needs more, and iteration 3 above is the cheaper statement:
+under a halting derivation for the form's runs, the same step
+functions give a total function.
 
 ## 4.5 The counters slc has today
 

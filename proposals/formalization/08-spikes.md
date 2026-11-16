@@ -23,6 +23,7 @@ they describe is the directory named here.
 | `verdict/` | D1, D2 | Can "accepted or rejected, never both" be a goal? | Passes |
 | `verdict-machine/` | D1 | Can "certified on exit" be a goal over a step machine? | Passes; runs as a `Program` |
 | `three-iterations/` | D1, D8 | Can one certified step be iterated by the driver, by a counter, and by a halting derivation? | Passes |
+| `step-machine/` | D8, D2 | For `mini/`'s evaluator: a machine with no fuel that returns `mini/`'s own derivation | Checks and runs; the converse direction proved in two forms |
 | `derivation-and-doubling/` | D8 | For `mini/`'s evaluator: recursion on an erased derivation; fuel that doubles | Both pass |
 | `heap-machine/` | D3, D5, D6 | A mutating heap machine as relations, big-step and small-step | Checks; four properties proved |
 | `suspendable-elaborator/` | D8 | Three ways for an elaborator to wait for a run the driver iterates | All three run with no fuel |
@@ -53,9 +54,45 @@ tokens, accepted when balanced. 01, section 1.3, shows the goals.
   177 lines.
 
 What they do not show: anything about a language whose runs may not
-halt (the capstone spike of 8.9 is for that), or about size at scale.
+halt, or about size at scale.
 
-## 8.3 `derivation-and-doubling/`
+## 8.3 `step-machine/`
+
+Written by a sub-agent (`evidence/S1-step-machine.md`). It uses
+`mini/`'s own files unchanged and adds a machine for `mini/`'s `Core`.
+
+- `machine.sl`: the stack, the state, and `step`, a total function
+  with no fuel argument. A state that returns to an empty stack holds
+  the values and an erased derivation of `mini/`'s `Eval`.
+  `machine_tail.sl` is the same machine with the frames that carry
+  only erased data moved into an erased context.
+- `drive.sl`: the `Program` drivers, one step at a time or a quantum
+  of steps at a time. `test_a_program.sl` gives the value that
+  `tests/mini_eval.sl` gives, in 40 steps; `test_stuck.sl` shows five
+  programs that end in "stuck" after a few steps and one that does
+  not.
+- `graph.sl`, `reach.sl`, `traced.sl`: the machine's step as a
+  relation, `StepTo`; the proof that a derivation of `Eval` gives a
+  path of such steps from "evaluate this code" to "return these
+  values", for every stack; and a copy of `step` that returns the
+  relation's evidence for each step it takes.
+- `guided.sl`, `evalby.sl`, `runguided.sl`: lookups guided by an
+  erased proof; `eval-by`, the direct evaluator with the fuel replaced
+  by the erased derivation; and `run-from-spec`, which runs the
+  machine along the path of `reach.sl` as one total function.
+- `heap/`: a second, smaller language with a store. The relation
+  threads the store; the machine keeps it in a `unique` array that it
+  updates in place.
+- `mutants/`: fourteen wrong variants, each refused by the checker
+  with a type error (re-run by this session).
+
+What it does not show: that the plain loop of `step` under the driver
+reaches a result whenever a derivation exists (04, 4.2); allocation
+or addresses in the store prototype; and the report's timings were
+taken with binaries that are not in the repository (its `RUN.md`
+commands rebuild them).
+
+## 8.4 `derivation-and-doubling/`
 
 Written by a sub-agent (`evidence/S1b-derivation-and-doubling.md`).
 Both parts are about `mini/`'s own `Eval` relation.
@@ -72,7 +109,7 @@ Both parts are about `mini/`'s own `Eval` relation.
   that its answer does not depend on the fuel (the goal
   `FuelUnobservable`), in about 600 lines.
 
-## 8.4 `heap-machine/`
+## 8.5 `heap-machine/`
 
 Written by a sub-agent (`evidence/S2-heap-machine.md`). The language
 is a small one of its own, with allocation, an in-place write, a
@@ -99,7 +136,7 @@ section 10 lists what it leaves out of DESIGN.md's language.
 What it does not show: closures, cells, slots, `at`, or erasure; and
 its renaming proof covers two heaps of one shape only.
 
-## 8.5 `suspendable-elaborator/`
+## 8.6 `suspendable-elaborator/`
 
 Written by a sub-agent (`evidence/S3-suspendable-elaborator.md`). The
 toy, in `common.sl`: a tree is elaborated to a number; a `TRun` leaf
@@ -131,7 +168,7 @@ All eight designs print the same value for the same tree
 What it does not show: rejection, a verdict type, or a goal; and its
 figures for slc are estimates from counts.
 
-## 8.6 `reader/`
+## 8.7 `reader/`
 
 Written by a sub-agent (`evidence/S4-reader-spec.md`). The subset:
 `(`, `)`, the bare `$`, atoms, and `;` comments over the prelude's
@@ -160,7 +197,7 @@ Written by a sub-agent (`evidence/S4-reader-spec.md`). The subset:
   adding characters to the whitespace table. The lemmas hold for any
   table, so they do not show that the table is the right one.
 
-## 8.7 `order/` and `gaps/`: probes of the implementations
+## 8.8 `order/` and `gaps/`: probes of the implementations
 
 These report what the two implementations do. They say nothing of
 what the language is.
@@ -186,7 +223,7 @@ what the language is.
   sits; and one that shows the order of macro expansion through
   `gensym`.
 
-## 8.8 What the checker taught
+## 8.9 What the checker taught
 
 Points that cost time in more than one spike. Each is this session's
 or a sub-agent's experience with the two implementations, with the

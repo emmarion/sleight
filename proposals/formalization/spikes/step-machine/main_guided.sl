@@ -1,0 +1,16 @@
+(def-fns WORK $ (many rerun : (many (String) runner) (many (Core) program) (erased (List (Val)) vs) (erased (Eval (ENil) program vs) derivation) -> (many (String) line))
+  (let-match many (str-eq runner "none") (Unequal _ _ _ _ _) ((Equal _ _ _) "not rerun\n"))
+  (let-match many (str-eq runner "direct") (Unequal _ _ _ _ _)
+    ((Equal _ _ _) (str-append "guided direct evaluator:" $ str-append (show-result $ eval-by vs (ENil) program derivation) "\n")))
+  (str-append "guided machine:" $ str-append (show-result $ run-from-spec program vs derivation) "\n"))
+
+(def-unique PROG $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program PROG) p))
+  (let ((unique w1) (many args)) (world-do _ w (GetArgs)))
+  (let ((many program)) (build (arg-or args 1 "pred") (parse-nat-or (arg-or args 2 "") 2)))
+  (let ((many stepped) (many steps)) (step-many _ _ (parse-nat-or (arg-or args 3 "") 1000000) (load program) 0))
+  (let-match many stepped (Halted _ _ result) ((Next _ _ _) (finish _ _ (EvalStuck (ENil) program) "steps were not enough:" steps w1)))
+  (let-match many result (MkEvaled _ _ vs derivation) ((EvalStuck _ _) (finish _ _ result "steps" steps w1)))
+  (let ((unique w3) (many _)) (world-do _ w1 (WriteOut (rerun (arg-or args 0 "machine") program vs derivation))))
+  (finish _ _ result "steps" steps w3))
+
+(Continue PROG start)

@@ -138,8 +138,11 @@ compile-time run that crashes.
   relation derives a verdict for a source, relative to the record of
   what the outside answered, the compiler reaches that verdict. It
   implies T4. For the step machine alone it is an induction on the run
-  relation's derivation. For the whole compiler, option (c) of D1 is
-  the cheaper form.
+  relation's derivation: `spikes/step-machine/` proves it for
+  `mini/`'s evaluator as a path in the machine's step relation and as
+  a function that runs the machine along that path, and does not prove
+  it of the plain loop under the driver (04, 4.2). For the whole
+  compiler, option (c) of D1 is the cheaper form.
 
 **Recommendation.** State T4 from the first stage, relative to the
 record of answers of D6, and prove it stage by stage, so that `Fails`
@@ -325,10 +328,11 @@ sees; in practice the host stack overflows first, at 50000 to 75000
 nested calls. A whole compile is one driver step. Elaboration enters
 the interpreter thousands of times per compile, up to 689 times inside
 one top-level form. The spikes: a step machine for `mini/`'s evaluator
-that returns `mini/`'s own derivation and has no counter; the three
-iterations of one step; three ways for the elaborator to wait for the
-driver, all working; and doubling, which makes fuel invisible with a
-small change.
+that returns `mini/`'s own derivation and has no counter, ran a
+recursion a million deep under a 64 KB host stack, and about matches
+the fuelled evaluator's speed; the three iterations of one step; three
+ways for the elaborator to wait for the driver, all working; and
+doubling, which makes fuel invisible with a small change.
 
 **Options.**
 

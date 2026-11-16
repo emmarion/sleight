@@ -1,0 +1,10 @@
+(def-unique PROG $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program PROG) p))
+  (let ((unique w1) (many args)) (world-do _ w (GetArgs)))
+  (let ((many evaluator)) (arg-or args 0 "step"))
+  (let ((many program)) (build (arg-or args 1 "pred") (parse-nat-or (arg-or args 2 "") 2)))
+  (let ((many budget)) (parse-nat-or (arg-or args 3 "") 1000))
+  (let-match many (str-eq evaluator "fuel") (Unequal _ _ _ _ _) ((Equal _ _ _) (finish _ _ (eval budget (ENil) program) "fuel" budget w1)))
+  (let-match many (str-eq evaluator "batch") (Unequal _ _ _ _ _) ((Equal _ _ _) (drive-batched _ _ budget (load program) 0 w1)))
+  (drive _ _ (load program) 0 w1))
+
+(Continue PROG start)

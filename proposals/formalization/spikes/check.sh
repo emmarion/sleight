@@ -53,6 +53,20 @@ goal derivation-and-doubling $MINI eval2.sl evaluniq.sl neg.sl eval3.sl fuelthm.
 goal reader syntax.sl spec.sl read.sl proof.sl qed.sl
 goal reader syntax.sl read.sl adequacy-spec.sl adequacy-proof.sl
 
+echo "== step machine: files the reference accepts, and runs under both"
+STEP="$MINI $R/mini/eval.sl"
+accepted step-machine $STEP machine.sl graph.sl reach.sl traced.sl guided.sl evalby.sl runguided.sl depth.sl programs.sl drive.sl
+accepted step-machine $STEP machine_tail.sl depth_tail.sl programs.sl drive.sl
+accepted step-machine "$R/std/list.sl" heap/heap.sl heap/heapstep.sl
+last "fuelled eval, double 1000, fuel 1000 (reference)" step-machine "$REF" $STEP machine.sl programs.sl drive.sl main.sl -- fuel double 1000 1000
+for name in reference "slc --interpret"; do
+  tool=$REF
+  [ "$name" = reference ] || tool="$SLC --interpret"
+  last "machine, double 1000 ($name)" step-machine $tool $STEP machine.sl programs.sl drive.sl main.sl -- step double 1000
+  last "machine, the program of tests/mini_eval.sl ($name)" step-machine $tool $STEP machine.sl drive.sl test_a_program.sl
+  last "store machine ($name)" step-machine $tool "$R/std/list.sl" heap/heap.sl heap/heapstep.sl heap/heapdrive.sl -- 5 1 1
+done
+
 echo "== heap machine: lemma files the reference accepts"
 accepted heap-machine $HEAP det.sl
 accepted heap-machine $HEAP keep.sl
