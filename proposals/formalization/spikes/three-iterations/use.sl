@@ -1,0 +1,5 @@
+(let ((many good)) (Cons _ (Open) $ Cons _ (Open) $ Cons _ (Close) $ Cons _ (Close) $ Nil _))
+(let ((many bad)) (Cons _ (Open) $ Cons _ (Close) $ Cons _ (Close) $ Nil _))
+(let ((many two)) (Succ $ Succ $ Zero))
+(let ((many nine)) (Succ $ Succ $ Succ $ Succ $ Succ $ Succ $ Succ two))
+(Cons _ (run-counted two good (start good)) $ Cons _ (run-counted nine good (start good)) $ Cons _ (Finished good (decide-by good)) $ Nil _)
