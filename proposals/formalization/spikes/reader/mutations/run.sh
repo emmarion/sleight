@@ -3,7 +3,7 @@ R=$(cd "$(dirname "$0")/../../../../.." && pwd)
 MAIN=${REF:-$R/_build/default/bin/main.exe}
 here=$(cd "$(dirname "$0")" && pwd)
 S4=$(dirname "$here")
-tmp=$(mktemp -d "$here/tmp.XXXXXX")
+tmp=$(mktemp -d)
 python3 - "$S4" "$tmp" <<'PY'
 import sys
 S4,tmp=sys.argv[1],sys.argv[2]

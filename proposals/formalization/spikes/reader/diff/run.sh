@@ -4,7 +4,7 @@ MAIN=${REF:-$R/_build/default/bin/main.exe}
 SLC=${SLC:-$R/_build/release/slc}
 here=$(cd "$(dirname "$0")" && pwd)
 S4=$(dirname "$here")
-tmp=$(mktemp -d "$here/tmp.XXXXXX")
+tmp=$(mktemp -d)
 mine() { printf '%s' "$1" | "$MAIN" "$S4/syntax.sl" "$S4/spec.sl" "$S4/read.sl" "$S4/show.sl" "$S4/cli.sl" 2>&1; }
 accepted() {
   body=$(printf "$1")

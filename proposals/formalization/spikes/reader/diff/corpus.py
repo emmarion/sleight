@@ -6,7 +6,7 @@ MAIN = os.environ.get('REF', os.path.join(ROOT, '_build/default/bin/main.exe'))
 SLC = os.environ.get('SLC', os.path.join(ROOT, '_build/release/slc'))
 S4 = os.path.dirname(here)
 jobs = int(sys.argv[1]) if len(sys.argv) > 1 else 2
-tmp = tempfile.mkdtemp(dir=here, prefix='tmp.')
+tmp = tempfile.mkdtemp(prefix='reader-corpus.')
 proto = os.path.join(tmp, 'reader')
 subprocess.run([SLC] + [os.path.join(S4, f) for f in ['syntax.sl', 'read.sl', 'show.sl', 'cli.sl']] + ['--build', proto], check=True, capture_output=True)
 def unliteral(out):
