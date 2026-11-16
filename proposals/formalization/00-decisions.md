@@ -30,6 +30,39 @@ mutating heap machine from the start (item 6); a missing branch is an
 error by §21 (item 8). The handoff notes that none of this is in
 DECISIONS.md. Recording it there is part of D11.
 
+## Where these proposals depart from the handoff's
+
+The owner said of the handoff that its approach "may not be the best
+approach". Its proposals were taken as a starting point and tested.
+Where tonight's work ended somewhere else:
+
+- **Its results (i) and (ii)** on termination are kept in substance
+  and restated per source, as T7 of 01. New is the argument that no
+  total `compile` without fuel or hypothesis can exist, which gives
+  the three ways of D1.
+- **Its proposal A, strict left-to-right order**, is still the
+  recommendation (D4). The handoff notes that §15's wording "might
+  need to follow". Tonight's probes add that neither implementation
+  runs a function body that way today, that accepted programs can
+  observe the order, and that the two implementations disagree in one
+  case.
+- **Its proposal B, abstract addresses**, held up in a spike (D5).
+- **Its explicit-stack machine looped by the driver** is one of the
+  designs for the evaluator (D8). The handoff does not mention the
+  harder half: the elaborator has to stop in the middle of a form and
+  wait for that machine. D8 has three designs for it, each built on a
+  toy.
+- **Its proposal to end the output proof at a modelled subset of
+  OCaml** is not the recommendation (D10): 05 reports a sub-agent's
+  judgment that it differs from a small lower language "more in name
+  than in assurance", and adds an obligation about the OCaml compiler.
+- **Two things the handoff does not raise**: on DESIGN.md's text,
+  whether a source is accepted is not a function of the source (D6);
+  and "no third answer" has content, since `mini/` and slc both have
+  third answers today (D7). On "never both", which the handoff lists
+  as an open question, 01 says what it buys: without it the relation
+  that says "rejected" is trusted (D2).
+
 ## Four things found tonight that the decisions rest on
 
 1. **No Sleight function that takes only a source, with no fuel and

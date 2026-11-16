@@ -106,6 +106,17 @@ and they can be held together:
   so this is a theorem about the algorithm and not a way to run it. It
   is the handoff's result (ii), restated per source (T7 below).
 
+The argument needs the compiler to handle its own source. So it does
+not rule out a total `compile`, with no fuel and no hypothesis, for a
+part of the language in which that compiler cannot be written. One
+such part is MINIMAL.md's fragment, where elaboration runs nothing
+(09, stage 1). Another might be the sources whose compile-time code
+lies below some level, compiled by a function above that level. For
+that, Sleight would have to prove that the runs of all code below a
+level halt, and this session does not know whether it can. The survey
+of prior art raises the same possibility and leaves it open
+(`evidence/A6-prior-art.md`, section 2.5).
+
 Decision D1 is which of these the project states. The handoff's item 2
 ("A fuel-free self-interpreter is possible because the top level is
 not a function") points at (a), and its item 4 at (c). 04 shows, on a
