@@ -28,7 +28,8 @@ Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
   the rest of the run. Proposal B's abstract addresses are enough, once
   immediates and the representation identities of §33, §35 and §41 are
   added. A prototype (`proto/dyn/machine.sl`) compiles and runs a total
-  step looped by the `Program` driver with no fuel.
+  step looped by the `Program` driver with no fuel counter; as committed,
+  its finite oracle tape bounds the run (2.6).
 - Evaluation order: DESIGN.md fixes eagerness (§31) and run-position
   nesting (§27), and with §6 ("The head is elaborated first") the
   head-before-arguments order in run position (reading). §15's hoisting
@@ -42,10 +43,9 @@ Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
   hoisting (2.2).
 - (reading, unproved conjecture) In the abstract machine, order seems
   observable only through crashes, stuck states, divergence, and cost
-  (which a program can itself read through the `Measure` request): world
-  effects are
-  totally ordered by the unique `World`, and mutation goes only through
-  unique references. Recommendation: fix one order in the spec (no
+  (which a program can itself read through the `Measure` request):
+  world effects are totally ordered by the unique `World`, and mutation
+  goes only through unique references. Recommendation: fix one order in the spec (no
   confluence proof needed), and leave order-independence as an optional
   later theorem.
 - `slot-eq` is nondeterministic by §67, and in practice too: the
@@ -166,8 +166,7 @@ Fixed by DESIGN.md:
 5. (reading) World requests are totally ordered by dataflow: `world-do`
    takes `(unique (World) w ...)` and gives back `w2` (§42), so only one
    world is ever usable. `MacroWorld` is threaded the same way (§65).
-
-5b. §61 presumes an order of body statements in one case: "The write
+6. §61 presumes an order of body statements in one case: "The write
    stores `h` before the call: left to the invocation, that store would
    follow the call and the `tail` claim would fail." No dataflow orders
    that `cell-write` statement before the `let` of the call (`cell2` is
@@ -621,7 +620,7 @@ the `at` reading-back that follows, since both entries are `many`
    emits `(pick)` first (2.2).
 11. **§61 presumes statement order.** §61's "The write stores `h` before
    the call" relies on a body statement running before a later one with
-   no dataflow between them, which no general rule states (2.2, 5b).
+   no dataflow between them, which no general rule states (2.2 item 6).
 12. **Elaboration order of a call's arguments.** §65 threads the macro
    world "sequentially through all of elaboration" and gensym numbers
    are observable, but DESIGN.md states only that the head is elaborated
@@ -672,7 +671,7 @@ change made above, then points left uncertain.
    that O1 as written puts the hoisted argument before the head, the
    opposite of the reference.
 4. §61 was not cited. It presumes a body statement runs before a later
-   one with no dataflow between them. Added as 5b and rough edge 11.
+   one with no dataflow between them. Added as 2.2 item 6 and rough edge 11.
 5. §15's "The order of the uses does not matter" was not mentioned;
    added to show §15 is about use-checking.
 6. "Macro calls are elaborated in a fixed order" had no source. Replaced
