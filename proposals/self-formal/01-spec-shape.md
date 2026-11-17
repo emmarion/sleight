@@ -371,7 +371,8 @@ the items.
   or for all files at once.
 - [C] mini/ makes each judgment total with "an [Ok] with what was
   derived or an [Err] with the first reason found" (`mini/elab.sl:3-4`).
-  `Fails` is the `Err` outcome of `ElabProgram` (`mini/elab.sl:1224-1241`).
+  `Fails` is a one-constructor relation over a derivation of
+  `ElabProgram`'s `Err` outcome, `PErr` (`mini/elab.sl:1224-1241`).
   But "A malformed shape is not a reason: the relations have no
   derivation for one" (`mini/elab.sl:40-42`; `mini/README.md:140`), and
   `elab-program` can answer `ProgramStuck` (`mini/elabfn.sl:2374-2380`).
@@ -410,7 +411,8 @@ literals are interned "just before" each top-level form is elaborated.
 [A] So the reader outputs literal *tokens*, and interning is an
 elaboration step that changes Σ. Positions can be observed: [C]
 `pos_observable.sl` gives a macro its `here`, which prints as
-`(MkPos "pos_observable.sl" 7 13)` and `… 7 21` across a tab. Columns
+`(MkPos "…/pos_observable.sl" 7 13)` and `… 7 21` across a tab, the
+file named as on the command line. Columns
 are 1-based byte counts, and a tab counts 1; that the unit is bytes, not
 characters, is shown by `proto/review2/pos_bytes.sl`, where a
 two-byte `é` before the call gives column 41, the byte count, not 40.
@@ -575,15 +577,25 @@ before one that only adds rules.
 11. Multiple errors: DESIGN.md is silent. The two implementations differ
     after the first error (tested).
 12. Where `Settled` entries come from: §29 says "`Settled` arises at three
-    sites" and "Nothing else creates a `Settled`". [A] Possibly in tension
-    with this: the built-in `Special` entries of §42, which §6 needs to
-    be `Settled` to dispatch, exist "before any file is read"; and
+    sites" and "Nothing else creates a `Settled`", and concludes "So
+    any `Special` or `Macro` that is ever invoked (§6) comes from run
+    position". [A] Possibly in tension with this: the built-in
+    `Special` entries of §42, which §6 needs to be `Settled` to
+    dispatch, exist "before any file is read", not in run position; and
     `mint-settled` and `mint-settled-erased` mint "a fresh anonymous
     `Settled` entry", and `settled-ty-apply` and `settled-val-apply` give
     a handle to one (§65), inside a macro's run, which is not obviously
     one of the three sites. A literal's entries are "as if minted by
     run-position forms" (§45), which ties them to site 1. A question for the owner,
     not a resolved contradiction.
+13. A head that is a name: §6 says "The head is elaborated first", but
+    both implementations expand the macro calls among the arguments
+    before they elaborate a name head, so an error in that head is
+    reported after an error in an argument's expansion
+    (`proto/review4/01_head_name_err.sl`, §3.6). DESIGN.md does not say
+    which error is reported, so this may be no conflict; but read
+    literally, §6 would report the head's error. A question for the
+    owner.
 
 ## 6. Unverified claims
 
@@ -592,9 +604,9 @@ before one that only adds rules.
 - That a proof of theorem 3 without hypotheses would hit the diagonal
   obstacle of statement 1 (decision 2). This is an analogy, not an
   argument.
-- Why slc, after its first error, still runs a constructor application
-  in run position but gives no `Settled` result for a call (observed in
-  four tests, not traced in its source).
+- How slc, after its first error, still gives a nullary constructor
+  application in run position a `Settled` value although its runs are
+  gated off (§3.7; the gates were read, the nullary path was not).
 - That §50's meta solving is independent of order within a boundary.
 - That the Run layer needs only the fact engine, scope lookup, and Σ,
   and never the full elaborator (§3.2). This comes from reading §65,
