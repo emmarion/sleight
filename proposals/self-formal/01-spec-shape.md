@@ -356,15 +356,22 @@ the items.
   earlier error (`self/elab-main.sl:539`, `:545`, `:739`, `:2152`, each
   testing `(env-run-pos …)` together with `(not $ env-failed …)`, and
   `:2152` also a `many` mode), so after an error it
-  seems not to run the evaluator at compile time. Accordingly a call of
-  a function, defined before or after the error, gives no `Settled`
-  result (`proto/review2/after_error_call.sl`, `after_error_call2.sl`),
-  nor does `(Succ (Zero))` (`proto/review4/01_after_error_succ.sl`),
-  and a macro bound after the error is not dispatched
-  (`after_error_macro.sl`). A nullary `(Zero)` bound after an error is
-  still `Settled`: a `comptime-match` reads it ("expected `Succ`, got
-  0", `proto/review2/after_error_run.sl`), by a path in slc's source
-  that was not traced.
+  seems not to run the evaluator at compile time; macro expansion is not
+  gated, so a macro bound before the error still runs (10 §2). A
+  run-position `let` whose right-hand side hoists a temporary leaves its
+  binders `Hypothetical`: a call with argument `(Zero)`
+  (`proto/review2/after_error_call.sl`, `after_error_call2.sl`) and
+  `(Succ (Zero))` (`proto/review4/01_after_error_succ.sl`) give no
+  `Settled` result. A macro bound after the error is not dispatched
+  (`after_error_macro.sl`). Otherwise the binders are `Settled` but
+  hold the erased token, not a computed value (`env-set-tokens`,
+  `self/elab-main.sl:2209-2216`), and slc's discriminant read takes a
+  token as the word 0 (`self/eval.sl:51`). So a nullary `(Zero)` bound
+  after an error reads as `0` ("expected `Succ`, got 0",
+  `proto/review2/after_error_run.sl`) only by coincidence: `(BFalse)`
+  reads as `(BTrue)`, and `3` as `0`, giving false later messages (10
+  §1 to §3; BUGS.md 25). Acceptance seems unaffected, since the first
+  error already makes slc exit 1 (10 §4).
 - [C] Both implementations read a whole file before elaborating it.
   `reader_phase.sl` (a missing `)` on line 3) and `pragma_phase.sl` (an
   unknown pragma) print no earlier `compile-warn`. Reading is per file,
@@ -641,9 +648,6 @@ before one that only adds rules.
 - That a proof of theorem 3 without hypotheses would hit the diagonal
   obstacle of statement 1 (decision 2). This is an analogy, not an
   argument.
-- How slc, after its first error, still gives a nullary constructor
-  application in run position a `Settled` value although its runs are
-  gated off (§3.7; the gates were read, the nullary path was not).
 - That §50's meta solving is independent of order within a boundary.
 - That the Run layer needs only the fact engine, scope lookup, and Σ,
   and never the full elaborator (§3.2). This comes from reading §65,
@@ -954,3 +958,19 @@ Unsure, not changed:
   needs a level made by `def-lvl`, a statement, which cannot stand in an
   argument, so no such program was found.
 - The summary is still far beyond the brief's 15 lines.
+
+## Coordinator notes
+
+1. §3.7 said a nullary `(Zero)` bound after an error is `Settled` with
+   a value read by `comptime-match`, "by a path in slc's source that
+   was not traced", and section 6 listed that path as unverified. 10
+   traces it: the binder is `Settled` but holds the erased token, which
+   slc reads as the word 0, so no value is computed, and the `0` is a
+   coincidence. The second review notes' item 1 ("so the value was
+   computed") and unsure point (slc "still runs a constructor
+   application"), and the fourth review notes' item 1 ("only the
+   nullary `(Zero)` ... does" get a `Settled` value), are superseded in
+   the same way. §3.7 now gives 10's account, including that macro
+   expansion is not gated and that a call with a variable argument gets
+   the token too, and points to BUGS.md 25; the section 6 item is
+   removed. From 10 §1, §2, and §4.

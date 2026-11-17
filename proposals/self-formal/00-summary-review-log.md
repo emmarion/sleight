@@ -2041,3 +2041,55 @@ comma was found in the changed text.
 Unsure, not changed:
 - 00-summary.md is now 655 lines, above the ~640 target; the additions above account for it.
 - Whether 03's and 05's own summaries should drop (C) is for those files; neither was edited here.
+
+## Propagation of 08–10 and BUGS.md
+
+The follow-up notes 08, 09, and 10, each with its review notes, and BUGS.md entries 13, 18, 19, and
+23 to 26 were carried into the track files and the two summary files. Nothing below is a decision.
+
+1. 03 F6: the detour paragraph now says that SOUNDNESS.md does not mention the driver's call of a
+   final `Fn` value, so reading part 5 as covering it is a reading; "The macro's other code can be
+   treated the same way" is replaced by 09 §3.4's account (no P can hold it, since it needs a
+   `MacroWorld`; in `diagonal.sl`, termination by inspection). "I make no claim about Gödel's
+   theorems here" is kept, with a pointer to 09 §2.5. Recorded as 03's Coordinator notes 3 and 4.
+2. 05 §1, §4.3, T7, and §9: Gödel II is now stated in 09 §4's conditional form, as corrected by 09's
+   review notes 2, 6, and 10 (the macro-built diagonal sentence; README.md's IΣ₂ remark read as
+   derived from what Sleight computes; the lemma that `(Prov ⌜False⌝)` yields an accepted program
+   reaching absurd code). 09's two IΣ₂ sentences are merged into one. Recorded as 05's new
+   Coordinator note 1.
+3. 01 §3.7: the after-error account now follows 10: a `let` whose right-hand side hoists no
+   temporary gets the erased token, read as 0, so the nullary `(Zero)` reads as `0` by coincidence;
+   macro expansion is not gated; BUGS.md 25 is cited. Section 6's item on the untraced path is
+   removed. Recorded as 01's new Coordinator note 1, which also marks the second and fourth review
+   notes' contrary claims as superseded.
+4. 04 summary, 2.5, and section 6: the `-imm` and `imm`-store barrier text now points to 08's reading
+   (GC-safe on OCaml 4.14.1, amd64, no flambda, under its conditions) and to BUGS.md 26; OCaml 5,
+   flambda, arm64, and systhreads stay unchecked. Recorded as 04's new Coordinator note 1.
+5. 00-summary header and citations: 08, 09, and 10 added.
+6. Key findings 19 to 22 added: the `imm` stores and BUGS.md 26 (08); Gödel II, possibly and not
+   established, what is missing, the macro-built diagonal sentence, level stratification, and what
+   the `read-file` diagonal already gives (09 §1, §2); SOUNDNESS.md part 5 and the six premises of
+   03's detour (09 §3); slc after its first error and BUGS.md 25 (10).
+7. Key finding 2 says that SOUNDNESS.md never mentions the driver's call; key finding 10 cites
+   BUGS.md 23 and 18; key finding 11's "safety unchecked" now points to key finding 19; key finding
+   15's after-error sentence ("a nullary `(Zero)` does, by an untraced path") is replaced by a
+   pointer to key finding 22, and it cites BUGS.md 19.
+8. Rough edge 20 points to key finding 22 and 10 §1; rough edge 31 names the divergence as BUGS.md
+   19's.
+9. Section 6: the diagonal item points to 09's six premises in place of the unwritten P for the
+   macro's other code; the Gödel item now lists only what remains unattempted or unchecked (09 §5);
+   the slc-internals item drops the traced `(Zero)` path and adds 10's review's open points; the
+   OCaml item keeps only OCaml 5, flambda, arm64, systhreads, and forgeable `Imm` proofs (08 §8).
+10. Section 8, "Implementation defects found", added: a pointer to BUGS.md 13, 18, 19, and 23 to 26.
+11. 00-glance: 08 to 10 added to "What was done", and a "Follow-ups 08 to 10" section added; the
+    diagonal bullet now cites 09's six premises and key finding 21; the printer bullet cites BUGS.md
+    23 and 18. To stay within 110 lines, the diagonal, spikes, `slot-eq`, and printer bullets and the
+    "Linked" note are shortened; the dropped details (the `World` remark, the all-`ENone` copy,
+    06's teeth check and `run-total` reading, the `slot-eq` mode list, and `entry-value`) remain in
+    00-summary. The decisions table is unchanged.
+12. proposals/self-formal/README.md lists 08, 09, and 10.
+
+Unsure, not changed:
+- 05 §5's trust-base row still says "if Gödel II applies (unchecked)", which fits the conditional
+  reading and was left as is.
+- 00-summary.md is 690 lines.

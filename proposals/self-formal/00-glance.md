@@ -10,49 +10,55 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
   04 compiler route, and 05 theorems (00-summary header, §1).
 - Two compiled spikes on toy languages: 06 a certified fuel-free stepper and
   07 the §29 round trip with a suspendable checker (00-summary §7).
+- Three follow-up notes: 08 `imm`-store GC safety, 09 Gödel II and SOUNDNESS.md part 5, and 10 slc after an
+  error (00-summary §2 items 19 to 22).
 - Prototypes are under `proto/` (e.g. `proto/fuel/`, `proto/stepper/`, `proto/roundtrip/`, and
-  `proto/review2/`) (00-summary §2, §7).
+  `proto/godel/`) (00-summary §2, §7).
 
 ## Five things worth knowing first
 
 - **Diagonal.** If Sleight's functions terminate (SOUNDNESS.md's (T) and (E), argued, not proved), no non-erased
   `compile : Src -> Verdict` with no further evidence can be faithful on every source; only the mechanism is tested.
   It does not refute owner statement 4(ii) as mathematics, nor a `compile` taking erased evidence of H for its one
-  source, though, if Sleight is sound, the diagonal source cannot produce that evidence for itself, while code
-  outside it may (03's reasoning). SOUNDNESS.md's claims are stated for accepted programs; 03 carries (T) and (E) to
-  the diagonal source through an accepted detour with the call of `compile` in a final value (compiled with a toy
-  `compile`), reading part 5 as covering the driver's call, so the argument does not use (C), checking ends, which
-  03's and 05's own summaries list. slc does not escape it: its compile is one `Program` step bounded by fuel,
-  and its `World` blocks only the literal construction (03's reading). 05's version needs
-  T1–T4, determinism through T3 (not T5), and soundness of the logic; its `read-file` macro form needs no quine,
-  and with `slot-eq` it applies to the all-`ENone` copy (00-summary §2 item 2).
-- **Spikes.** The intrinsic-derivation plus `Program`-driver pattern compiles and runs at toy scale, fuel-free, on both
-  implementations, but proves partial correctness only: an always-"stuck" `step`, `advance`, or `run-total` (06)
-  or a never-answering `step` (07) passes, and 07's `Rejected` reason text is unconstrained. 06's first teeth check
-  tests `step` only against `Step`, not the spec, and that 06's `run-total` halts or sticks within its count is read
-  from its code, not its type. For one variant with a nondeterministic rule added, both derivations exist (compiled).
-  Neither models Sleight's own machine (00-summary §2 items 16, 17).
+  source, though, if Sleight is sound, the diagonal source cannot produce that evidence for itself (03's reasoning).
+  03 carries (T) and (E) to that source through an accepted detour that calls `compile` in a final value (compiled
+  with a toy), reading part 5, which never mentions that call, as covering it, under six premises 09 lists; (C) is not
+  used. slc does not escape it (03's reading). 05's version also needs soundness of the logic (00-summary §2 items 2,
+  21).
+- **Spikes.** The intrinsic-derivation plus `Program`-driver pattern compiles and runs at toy scale, fuel-free, on
+  both implementations, but proves partial correctness only: an always-"stuck" `step`, `advance`, or `run-total` (06)
+  or a never-answering `step` (07) passes, and 07's `Rejected` reason text is unconstrained. For one variant with a
+  nondeterministic rule added, both derivations exist (compiled). Neither models Sleight's own machine (00-summary §2
+  items 16, 17).
 - **`slot-eq`.** §67 lets answers differ between runs, so acceptance can depend on the implementation; answers already
-  differ between implementations and modes, though not between runs as far as seen (interpreters vs `--build`
-  binaries with externs on `imm_eq.sl`; slc's native build vs `--byte`, `--interpret`, and the reference on
-  `slot_eq_share.sl`). That an `ENone` answer rejects is inferred. The output
-  theorem therefore cannot be "the same values, up to crash"; 04 makes `slot-eq` an oracle beside the host's
-  answers to `world-do` and `read-file` (00-summary §2 items 5, 18).
-- **Evaluation order.** DESIGN.md fixes eagerness and some run-position order, but not body statements, sibling arguments,
-  `values` entries, or several §15 bindings in general. Elaboration order is visible through gensyms; both
-  implementations elaborate a head that is a form, then expand an application's argument macro calls, then elaborate
-  a head that is a name, then the arguments, left to right. At runtime the reference, `slc --interpret`, and, in one
-  test, slc's compiled code run a head form before an argument. Order is observable without divergence: an
-  argument's write precedes another's crash, though §15 allows either order (00-summary §2 item 6).
-- **slc printer defect.** `slc --interpret` on a 100003-element list prints 49,999 `Cons _ 0` then `Cons _ _ _)`:
-  a wrong value, not a §31 crash. It lies in `show-at`, which feeds `--interpret`'s final printer, `comptime-match`
-  mismatch messages, `entry-value`, and `dump-context` reports; compiled slc output and the reference print all
-  elements. `heap-strs-fuel` likewise cuts a request's string list short past 10^6 elements (00-summary §2 item 10).
+  differ between implementations and modes, though not between runs as far as seen (`imm_eq.sl`, `slot_eq_share.sl`).
+  That an `ENone` answer rejects is inferred. The output theorem therefore cannot be "the same values, up to crash";
+  04 makes `slot-eq` an oracle beside the host's answers to `world-do` and `read-file` (00-summary §2 items 5, 18).
+- **Evaluation order.** DESIGN.md fixes eagerness and some run-position order, but not body statements, sibling
+  arguments, `values` entries, or several §15 bindings in general. Elaboration order is visible through gensyms; both
+  implementations elaborate a head that is a form, then expand an application's argument macro calls, then elaborate a
+  head that is a name, then the arguments, left to right. At runtime the reference, `slc --interpret`, and, in one
+  test, slc's compiled code run a head form before an argument. Order is observable without divergence: an argument's
+  write precedes another's crash, though §15 allows either order (00-summary §2 item 6).
+- **slc printer defect.** `slc --interpret` on a 100003-element list prints 49,999 `Cons _ 0` then `Cons _ _ _)`: a
+  wrong value, not a §31 crash, from `show-at`, which also feeds `comptime-match` messages and `dump-context` reports;
+  compiled slc output and the reference print all elements. `heap-strs-fuel` likewise cuts a request's string list
+  short past 10^6 elements (00-summary §2 item 10; BUGS.md 23, 18).
+
+## Follow-ups 08 to 10 (00-summary §2 items 19 to 22, §8)
+
+- **GC.** Compiled `imm` stores look GC-safe on OCaml 4.14.1 when both words are immediates (08's reading); OCaml 5,
+  flambda, and arm64 are untested. The reference interpreter's `-imm` blits corrupt its heap (BUGS.md 26).
+- **Gödel II** may apply; nothing establishes it. Missing: a formalized `Prov` with D1 to D3 and a diagonal sentence
+  (a macro in a goal type can build one). 03's diagonal already rules out a faithful hypothesis-free `compile`; Gödel
+  II, if it applies, would make uniform stripped-run safety unprovable too (09).
+- **slc after its first error** can print false later messages; acceptance seems unchanged (10; BUGS.md 25). Defects
+  found are in BUGS.md 13, 18, 19, and 23 to 26.
 
 ## Decisions, at a glance (00-summary §3)
 
-"Linked" copies each decision's "Deps" entry in §3; that entry names dependents in most entries
-but sometimes the decisions an entry itself rests on (e.g. 6 lists 14 and 14 lists 6), so read it as "linked to".
+"Linked" copies each decision's "Deps" entry in §3, which sometimes names what an entry rests on rather than its
+  dependents (e.g. 6 lists 14 and 14 lists 6), so read it as "linked to".
 Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 
 | # | Question | Recommended | Linked | Wording |

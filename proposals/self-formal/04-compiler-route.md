@@ -41,7 +41,9 @@ proposal.
   more than about 50,000 elements; the OCaml printer slc emits prints the
   same list in full. The `-imm` FFI operations, and the stores of a cell
   invocation or `cell-write` marked `(imm o n)` in emitted code, bypass
-  OCaml's write barrier, and the `Slots` implementation hashes raw heap
+  OCaml's write barrier (08 reads them as GC-safe on OCaml 4.14.1 when
+  both words are immediates; the reference interpreter's `-imm` blits
+  are not, BUGS.md 26), and the `Slots` implementation hashes raw heap
   addresses.
   `slot-eq` compiles to OCaml `==`, and ocamlopt can share two equal immutable
   constants, so a native compiled run can answer `ESome` where
@@ -273,8 +275,14 @@ definition whose header is `(erased name :`.
   when both the old and the new words are immediates, as `(imm o n)` and
   `Imm` require ([D] §37, §44). This is a dependency on OCaml runtime
   internals (GC barriers). The code comment at `ffi_core.ml:315-316`
-  concerns speed, not safety; I found no safety argument and did not
-  check one.
+  concerns speed, not safety. 08 gives the safety argument: from the
+  4.14.1 runtime sources and stress tests, it reads both kinds of store
+  as GC-safe on OCaml 4.14.1, amd64, without flambda, when both words
+  are immediates, every read of such a field is a mutable load, and one
+  domain runs; OCaml 5, flambda, arm64, and systhreads are untested (08
+  §7, §8). The reference interpreter's `-imm` blits break the first
+  condition, since its array elements are boxed, and corrupt its heap
+  (08 §1; BUGS.md 26).
 - [C] `Bytes.unsafe_to_string` without a copy (`lib/ffi_core.ml:148, 173,
   260`). At 148 and 173 the buffer is a fresh local one. At 260
   (`bytes_str`), and in the template that emitted programs use in its
@@ -824,8 +832,10 @@ Not DESIGN.md, but found:
   arguments in general: one test in a function body (2.5).
 - Whether flambda shares more constants than plain ocamlopt does: not
   tried (plain ocamlopt already shares, 2.5).
-- That the `-imm` and `imm`-store barrier bypass is GC-safe on 4.14 or OCaml 5: not
-  checked on either.
+- That the `-imm` and `imm`-store barrier bypass is GC-safe beyond
+  OCaml 4.14.1 on amd64 without flambda, where 08 reads it as safe when
+  both words are immediates: OCaml 5, flambda, arm64, and systhreads are
+  not checked (08 §7, §8).
 - That a `many` `Bytes` is never mutated after `bytes-str` (2.5): argued
   from §13/§16, not tested adversarially.
 - Tail calls with many arguments on non-amd64 targets: not tested.
@@ -1278,3 +1288,15 @@ Points I am unsure of:
   cites other tests for it.
 - The [P] that the `imm` stores are GC-safe when both words are
   immediates is still unchecked against the runtime sources.
+
+## Coordinator notes
+
+1. 2.5's barrier paragraph said no safety argument for skipping
+   `caml_modify` was found or checked, and section 6 listed the bypass
+   as unchecked on 4.14 and OCaml 5; the reviews' unsure points say the
+   same. 08 now supplies that argument for OCaml 4.14.1 on amd64 without
+   flambda, from the runtime sources and stress tests, under its
+   conditions, and finds that the reference interpreter's `-imm` blits
+   fail them (BUGS.md 26). The summary, 2.5, and section 6 now point to
+   08, and section 6 keeps OCaml 5, flambda, arm64, and systhreads as
+   unchecked. From 08 §1, §7, and §8.

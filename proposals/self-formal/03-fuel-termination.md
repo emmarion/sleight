@@ -283,11 +283,18 @@ if Q's text before the macro call is. `proto/review5/03_detour.sl` is
 that P for `toy-compile`: `--extract` accepts it, and run, it prints
 `(BFalse)`. (T) and (E) for P then say that this call of `compile`
 returns, reading part 5 as counting the driver's call as one of the
-activations it covers. Q's text before the macro call elaborates as in
-P, and the macro's call of `compile` is the same call on the same
-text, so it returns too, if its result is determined by its code and
-argument (below). The macro's other code can be treated the same way,
-apart from `read-file`, which is host I/O. The rest of Q is the
+activations it covers. SOUNDNESS.md does not mention the driver's call
+of a final `Fn` value. Part 5's measure argument asks no decrease of a
+root activation, and its last sentence calls each `Program` step "a
+total call", though the same sentence puts the driver's loop "outside
+the claim". So this is a reading, not a quotation. Q's text before the
+macro call elaborates as in P, and the macro's call of `compile` is the
+same call on the same text, so it returns too, if its result is
+determined by its code and argument (below). The macro's other code
+cannot be given a P, since it needs a `MacroWorld` (§65). In
+`diagonal.sl` it is non-recursive apart from that call, and its
+termination is by inspection, given that `read-file` and
+`intern-string` return (09 §3.4). The rest of Q is the
 elaboration of the macro's output, one `compile-error` or nothing, so
 Q's spec run ends without (C) being applied to Q (my reasoning). With
 the call in run position instead, the detour would be circular: that
@@ -306,6 +313,8 @@ So, if Sleight's functions do terminate, no such function is a faithful
 compiler for all sources. It is the halting-problem form of
 diagonalization. The self-reference comes from `read-file`, not from
 Kleene's recursion theorem. I make no claim about Gödel's theorems here.
+The diagonal above needs no Gödel. 09 §2.5 says what a Gödel route
+would add.
 Whether their hypotheses hold for Sleight's logic (§10: `Type : Type`
 with no positivity) is not settled in this file.
 
@@ -804,6 +813,17 @@ Unsure:
 2. F4.1's last sentence still gave 06's superseded "built but not
    applied" finding; restated to match 06 F4.2 after its fourth review.
    Flagged by the fourth-round propagation check of 00-summary.
+3. F6 now says that SOUNDNESS.md does not mention the driver's call of
+   a final `Fn` value, so reading part 5 as covering it is a reading,
+   not a quotation. F6's "The macro's other code can be treated the same
+   way" is replaced: that code needs a `MacroWorld` (§65), so no P can
+   be given for it, and in `diagonal.sl` its termination is by
+   inspection, given that `read-file` and `intern-string` return. This
+   answers the fifth review's unsure point about "the same way". From
+   09 §3.2, §3.4, and §4.
+4. F6's "I make no claim about Gödel's theorems here" is kept, with a
+   pointer to 09 §2.5 for what a Gödel route would add to the diagonal.
+   From 09 §4.
 
 ## Third review notes
 

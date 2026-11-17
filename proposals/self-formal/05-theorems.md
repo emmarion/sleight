@@ -39,10 +39,12 @@ else is my own reading and is hedged as such. `bove_use.sl`, `fuel.sl`,
   run-function for Sleight source written in Sleight. The
   self-reference can come from `read-file` in a macro (03 F6, whose
   mechanism `proto/fuel/diagonal.sl` compiles), so no quine is needed. Gödel's second
-  theorem, if Sleight is consistent and meets its conditions
-  (unchecked), gives a related limit: on my reasoning (§4.3), Sleight cannot prove uniform
-  stripped-run safety, nor uniform (T) together with full-semantics
-  safety. Two fuel-free shapes compile: recursion on an
+  theorem may give a related limit, conditionally (§4.3, 09): if Sleight
+  is consistent, and a formalized provability relation `Prov` meets the
+  derivability conditions together with the matching lemmas, none of
+  which has been attempted, then on my reasoning Sleight cannot prove
+  uniform stripped-run safety, nor uniform (T) together with
+  full-semantics safety. Two fuel-free shapes compile: recursion on an
   erased `Halts` derivation, and a typed step machine driven by
   `Program` [proto]. A third shape, "honest fuel", whose out-of-fuel
   result carries a proof, also compiles [proto], but it uses fuel. The
@@ -341,8 +343,9 @@ answers would have to be expressible as an oracle the spec can choose.
   in the full semantics. That is SOUNDNESS.md (E), whose argument there
   uses (T) ("Without (T) this step fails"). On my reading of §4.3,
   uniform (T) and full-semantics safety cannot both be proved inside
-  Sleight if it is consistent and meets Gödel II's conditions
-  (unchecked), and on my reasoning there uniform stripped-run safety
+  Sleight if it is consistent, conditions (b) and (c) of §4.3 hold for
+  a formalized `Prov`, and the matching lemmas of §4.3 hold (all
+  unattempted), and on my reasoning there uniform stripped-run safety
   alone would already give internal consistency. So, consistent with
   [owner 1]'s "no `no_false`", I expect T7 for the stripped run to stay
   a meta-theorem. T6 then either assumes
@@ -423,13 +426,25 @@ My reading of the limits, hedged:
   understanding not subject to it because its input is a typed
   representation, not text. The argument is mine and has not been
   checked by anyone else.
-- **Gödel.** In the form for effectively axiomatized theories that
-  satisfy the Hilbert–Bernays–Löb derivability conditions (cited by
-  name), a consistent theory cannot prove its own consistency. Intuitionistic
-  theories such as HA are covered, so anticlassicality (F8) does not
-  obviously exempt Sleight. The claimed IΣ₂ strength (F9) appears to be
-  more than such results usually need. I have not checked that Sleight
-  meets the conditions.
+- **Gödel.** On my reading, Gödel's second theorem would apply in this
+  conditional form. Let `Prov` be a Sleight inductive relation on codes
+  of units, formalizing acceptance under `--goal proved` (§71). Suppose
+  (a) no unit proves `(goal erased (False))`; (b) whenever a unit proves
+  T, one proves `(Prov ⌜T⌝)`; and (c) Sleight proves D2 and D3 for
+  `Prov`, and a diagonal sentence G with G ↔ ¬`(Prov ⌜G⌝)`, built from a
+  relational substitution or by a macro that reads the unit's text (09
+  §2.4). Then, by the usual derivation from these conditions (cited from
+  memory), no unit proves ¬`(Prov ⌜False⌝)`. If moreover Sleight proves
+  that `(Prov ⌜False⌝)` yields an accepted program whose stripped run
+  reaches absurd code, it cannot prove uniform stripped-run safety. The
+  same goes for uniform (T) with full-semantics safety, given the
+  matching lemma. None of (b), (c), or those lemmas has been attempted
+  (09 §2.4). As far as I recall, that derivation is intuitionistic, so
+  anticlassicality (F8) does not obviously exempt Sleight. The claimed
+  IΣ₂ strength (F9) would supply a base for G2 only if it means that
+  Sleight interprets IΣ₂ with closure under deduction; README.md derives
+  it from the functions Sleight computes, which does not give that, and
+  it says nothing about (b) or (c) (09 §2.4).
 
   H, read uniformly over all programs, together with internal
   stripped-run type safety would imply internal consistency. Take a
@@ -439,7 +454,7 @@ My reading of the limits, hedged:
   `(False)`, and canonical forms say no such value exists.
   "Normalization implies consistency" is the general form of this. The
   same holds of uniform (T) and full-semantics safety. So, if Sleight is
-  consistent and meets the theorem's conditions, it cannot prove both
+  consistent and meets the conditions above, it cannot prove both
   halves of either pair. For the stripped run, H is not even needed (my
   reasoning): an erased proof `p` of `(False)` gives an accepted program
   whose final value is a `(Fn L -> (many (Nat) r))` with body
@@ -641,9 +656,14 @@ value is the only reference to it." My reading of its role:
   compile-time code is total halts. Its quine form assumes that
   quines are writable in Sleight; I did not write one. Its macro form
   needs no quine (03 F6).
-- That Sleight meets the conditions of Gödel's second theorem (r.e.
-  checker, enough arithmetic, derivability conditions), and README.md's
-  IΣ₂ claim.
+- r.e. appears to hold under the readings of 09 §2.2. Σ₁ statements and
+  consistency of a coded system are expressible as goals (09 §2.3,
+  compiled). D1 to D3 for a formalized `Prov`, the diagonal sentence,
+  and any interpretation of HA, IΣ₁, or PRA are unattempted. The
+  obvious translation of nested implications meets level
+  stratification (09 §2.3, compiled); a PRA-style translation with
+  first-order implications does not obviously meet it (09 §2.4).
+  README.md's IΣ₂ claim is unchecked.
 - That determinism lemmas, full-semantics progress and preservation,
   and the sole-reference invariant are provable inside Sleight at
   scale. Only the toy determinism and exclusivity (F2, F5) were
@@ -1007,3 +1027,22 @@ Unsure:
   passes.
 - 00-summary's Gödel bullet repeats item 1's flaw ("so the program is
   refused") and needs propagating; not edited here.
+
+## Coordinator notes
+
+1. §1, §4.3's Gödel paragraph, T7, and §9 now state Gödel's second
+   theorem in the conditional form of 09 §4, as corrected by 09's
+   review: consistency, D1 for a formalized `Prov` ((b)), D2, D3, and a
+   diagonal sentence ((c)), which may be built by a macro that reads the
+   unit's text, and, for the safety limits, the lemma that
+   `(Prov ⌜False⌝)` yields an accepted program whose stripped run
+   reaches absurd code; none attempted. §4.3's IΣ₂ sentence now says
+   that README.md derives that strength from the functions Sleight
+   computes, which supplies no interpretation of arithmetic closed under
+   deduction; 09's two suggested IΣ₂ sentences are merged into one.
+   §4.3's "meets the theorem's conditions" is now "meets the conditions
+   above". §9's Gödel item now lists what appears to hold, what is
+   compiled, and what is unattempted (09 §2.2 to §2.4). The fifth
+   review's unsure point "Whether Gödel II's conditions hold for
+   Sleight" is answered only in part: they remain unattempted. From 09
+   §2 and §4.

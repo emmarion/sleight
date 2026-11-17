@@ -2,16 +2,17 @@
 
 Written by Claude agents overnight, while the owner was asleep. Everything here is a proposal or an
 agent's reading; nothing is approved or decided (CLAUDE.md rules 1 and 11). It condenses the five
-track and two spike files; evidence and full hedges are in the file and section cited, which is
-right where the two differ; DESIGN.md is right over both.
+track files, two spike files, and three follow-up notes; evidence and full hedges are in the file and
+section cited, which is right where the two differ; DESIGN.md is right over both.
 
 Citations: `01 §3.6` is section 3.6 of `01-spec-shape.md`; `02` dynamic semantics, `03` fuel and
 termination, `04` compiler route, `05` theorems, `06` spike: certified stepper, `07` spike: round
-trip. After a file number, `rN` is its review note N, `r2.N` its second, `r3.N` its third, `r4.N`
-its fourth, and `r5.N` its fifth. `§n` alone is DESIGN.md. "Owner statement n" is item n of the
-brief's "Owner decisions", an earlier session's paraphrases, not the owner's words; they and the
-goals the brief lists beside them (such as "minimize fuel use") are the only owner positions
-reported. "Tested" means run on the reference and, where stated, on slc.
+trip, `08` GC safety of `imm` stores, `09` Gödel and SOUNDNESS.md part 5, `10` slc after an error.
+After a file number, `rN` is its review note N, `r2.N` its second, `r3.N` its third, `r4.N` its
+fourth, and `r5.N` its fifth. `§n` alone is DESIGN.md. "Owner statement n" is item n of the brief's
+"Owner decisions", an earlier session's paraphrases, not the owner's words; they and the goals the
+brief lists beside them (such as "minimize fuel use") are the only owner positions reported.
+"Tested" means run on the reference and, where stated, on slc.
 
 ## 1. The picture in one page
 
@@ -60,7 +61,8 @@ Each item is the tracks' recommendation, not a decision.
    r3.1). SOUNDNESS.md states these "about any program the checker accepts", and Q may be rejected;
    03 carries them over through an accepted P, Q's text before the macro call with the call of
    `compile` in a final value, which the driver applies after elaboration
-   (`proto/review5/03_detour.sl`, toy, both), reading part 5 as covering that call (03 F6, r5.1).
+   (`proto/review5/03_detour.sl`, toy, both), reading part 5 as covering that call, which
+   SOUNDNESS.md never mentions (03 F6, r5.1; key finding 21).
    F6 thus does not use (C), checking ends; 03's and 05's own summaries list it as a premise,
    only weakening their stated result (03 r5 unsure points). The answer of the spec's run of
    `compile` on Q is taken to be determined by Q; Q fixes its flags (r3.3); with `slot-eq`, apply it
@@ -135,15 +137,16 @@ Each item is the tracks' recommendation, not a decision.
     messages, and `entry-value` (04 §2.3, r2, r2.2 to r2.4, r3.12), and `dump-context` reports (this
     summary's own check, `proto/review2/00_dump_deep.sl`). Compiled slc output and the reference
     print every element. `heap-strs-fuel` also cuts a request's string list short silently past 10^6
-    elements; 04 reads both as plain bugs (04 §2.3, r3.4).
+    elements; 04 reads both as plain bugs (04 §2.3, r3.4; BUGS.md 23, 18).
 11. **Output-end risks in slc.** The emitter needs call and constructor arguments that are variables
     or literals, which nothing types (04 r5.1); the FFI's `-imm` operations, and the `(imm o n)`
     stores slc emits as `Array.unsafe_set` (`emit.sl:863-868`; five for `tests/cell_imm.sl`), bypass
-    OCaml's write barrier (no `caml_modify` under ocamlopt 4.14.1, `proto/review5/04_barrier.ml`;
-    safety unchecked; 04 r3.1, r5.7); the `Slots` implementation hashes raw addresses rather than
-    searching with `slot-eq` as §69's models do, and its detection of GC moves is checked only by
-    tests; `Bytes.unsafe_to_string` in `bytes-str` relies on uniqueness; 20-argument tail calls were
-    checked only on amd64, OCaml 4.14.1, no flambda (04 §2.5, r2.5, r2.11, r2.12, r2.22).
+    OCaml's write barrier (no `caml_modify` under ocamlopt 4.14.1, `proto/review5/04_barrier.ml`; 04
+    r3.1, r5.7), safe on 4.14.1 when both words are immediates on 08's reading (key finding 19); the
+    `Slots` implementation hashes raw addresses rather than searching with `slot-eq` as §69's models
+    do, and its detection of GC moves is checked only by tests; `Bytes.unsafe_to_string` in
+    `bytes-str` relies on uniqueness; 20-argument tail calls were checked only on amd64, OCaml
+    4.14.1, no flambda (04 §2.5, r2.5, r2.11, r2.12, r2.22).
 12. **`mini/` gaps.** Malformed shapes have no derivation and `elab-program` can answer
     `ProgramStuck`; keywords are reserved though §19 lets special forms be shadowed; `Sexp` has no
     `Pos`; by MINIMAL.md, `mini/`'s language lacks multiplicities, `Matchable`, slots, macros, run
@@ -158,14 +161,12 @@ Each item is the tracks' recommendation, not a decision.
     heap spec; it links that machine to the tree reading the fact table relies on (05 §6, a
     reading).
 15. **Source details are observable.** Columns are 1-based bytes in both (01 §3.9, r2.5). In two
-    tests the reference reported only the first error and slc later ones too (01 §3.7); when
-    compile-time fuel runs out (`fuel.sl`, `--eval-fuel 5`) the first message's position differs (01
-    r3.3). slc gates each run-position run on no earlier error (`self/elab-main.sl:539`, `:545`,
-    `:739`, `:2152`), so after one it seems to run none: a call and `(Succ (Zero))` get no `Settled`
-    value, though a nullary `(Zero)` does, by an untraced path (01 §3.7, r4.1). The reference prints
-    a first file's value before a second file's syntax error, then exits 1 (01 r2.11); with a
-    `Program` value, the reference runs it and exits 0 while slc reports the later error
-    (`proto/review5/01_prog_first.sl`; 01 r5.1; rough edge 31).
+    tests the reference reported only the first error and slc later ones too (01 §3.7), which can be
+    false (key finding 22); when compile-time fuel runs out (`fuel.sl`, `--eval-fuel 5`) the first
+    message's position differs (01 r3.3). The reference prints a first file's value before a second
+    file's syntax error, then exits 1 (01 r2.11); with a `Program` value, the reference runs it and
+    exits 0 while slc reports the later error (`proto/review5/01_prog_first.sl`; 01 r5.1; rough edge
+    31; BUGS.md 19).
 16. **The pattern works at toy scale.** 06's `advance` type is its soundness theorem, for whatever
     erased trace of fitting type the caller supplies (06 F2, r2.2); 07's `Verdict p` carries an
     erased `Elab [] p` or `Fails [] p`, and a spec-only `goal` passes `--goal proved` on both (07
@@ -187,6 +188,38 @@ Each item is the tracks' recommendation, not a decision.
     it vary, §69 extends this to `Slots`. 04 takes `slot-eq` answers as an oracle beside the host's
     answers to `world-do` and `read-file`, the theorem at most "values some spec run gives, for the
     same `slot-eq` and world answers, up to crash", itself a proposal (04 §2.6, r2.6, r3.5).
+19. **The `imm` stores look GC-safe in compiled code; the reference interpreter's do not.** On OCaml
+    4.14.1 (amd64, no flambda), 08 reads the FFI's `-imm` operations and slc's `(imm o n)` stores,
+    which skip `caml_modify`, as GC-safe when both the overwritten and the stored word are
+    immediates, every read of such a field is a mutable load, and one domain runs, from runtime
+    sources and stress tests (08 §1, §3, §6, §7). The reference interpreter's `-imm` blits copy
+    boxed `VWord`s raw: `array-blit-imm` segfaults it, under `--build` too, while `slc --interpret`
+    maps them to the ordinary blit (`proto/bugs/blit_imm_interp.sl`; 08 r1; BUGS.md 26).
+20. **Gödel II: possibly, not established** (09's reading). Goal types passing `--goal proved` (§71)
+    appear r.e., and Σ₁ facts and a coded system's consistency can be goals (09 §2.2;
+    `proto/godel/`, both). Missing, unattempted: a Sleight `Prov` formalizing acceptance, with D1 to
+    D3 and a diagonal sentence, and, for the safety limits, lemmas that `(Prov ⌜False⌝)` yields an
+    accepted program whose stripped run reaches absurd code (09 §2.4 B, C). The diagonal sentence
+    can be a goal type in which a macro splices the unit's own text (`r_self_goal.sl`, both); D2 and
+    D3 for such codes are open (§45). Level stratification blocks the obvious translation of nested
+    implications, not obviously a PRA-style one (09 §2.3, §2.4 A). Without Gödel, 03's `read-file`
+    diagonal rules out a faithful hypothesis-free non-erased `compile` and uniform H in a recursable
+    form, and gives a G1-style unprovable true non-halting statement; Gödel II would add, from
+    consistency alone, that uniform stripped-run safety, and (T) with safety in any form, are
+    unprovable (09 §2.5; 03 F6; 05 §4.3).
+21. **SOUNDNESS.md part 5 and 03's detour.** SOUNDNESS.md never mentions the driver's call of a
+    final `Fn`; part 5's measure argument asks no decrease of a root activation, so 09 reads the
+    call as covered, a reading, as the same sentence puts the driver's loop "outside the claim" (09
+    §3.2). Six premises then carry the argument: (T) and (E) cover that call, (E) giving
+    termination; the spec accepts P as both implementations do; `compile`'s spec run is
+    deterministic, one semantics for evaluator and driver, crashes aside; the macro's other code
+    ends (no P can hold it, as it needs a `MacroWorld`, §65; in `diagonal.sl`, by inspection);
+    `read-file` returns Q's text; the expansion decides Q's verdict (09 §3.4).
+22. **slc after its first error** goes on, but its evaluator no longer runs run-position `let`s,
+    calls, or matches, though macros still expand; a `let` whose right-hand side hoists no temporary
+    gets the erased token, read as the word 0, so later messages can be false (a `(BFalse)` binder
+    "got `(BTrue)`", `3` "got 0"), and some errors are missed (`proto/aftererr/`; 10 §1 to §3).
+    Acceptance seems unchanged, the first error already making slc exit 1 (10 §4; BUGS.md 25).
 
 ## 3. Decisions for the owner
 
@@ -513,7 +546,7 @@ need anyway" (11). *Wording:* none; 02 asks what §13's "the only reference" mea
 19. **Reader details**: `042` (§1 vs §45); `\q` (§45); `Pos` column unit (§42). The reference
     refuses the first two; columns are bytes in both. (01 §5.4 to §5.6.)
 20. **Multiple errors**: nothing explicit, though §4's "Warnings ... do not stop elaboration" may
-    imply errors do; implementations differ. (01 §5.11, r5.4.)
+    imply errors do; implementations differ (key finding 22). (01 §5.11, r5.4; 10 §1.)
 21. **`--warnings-as-errors`** (§4) depends also on warnings WARNINGS.md defines beyond DESIGN.md's
     (§4, §69). (01 §5.8, r5.7.)
 22. **`dump-context`** is defined via MANUAL.md (§27, §54). (01 §5.10.)
@@ -536,7 +569,7 @@ need anyway" (11). *Wording:* none; 02 asks what §13's "the only reference" mea
     error is reported, which DESIGN.md does not fix? (01 §5.13, r4.2.)
 31. **When the driver runs a file's final value** (§27): at its file's end or after every file, and
     does a `Program`'s `Exit` end the unit? The implementations differ on acceptance (key finding
-    15). (01 §5.14, r5.1.)
+    15), a known divergence (BUGS.md 19). (01 §5.14, r5.1.)
 
 ## 5. Cross-file inconsistencies
 
@@ -567,20 +600,15 @@ Open ones; numbers follow the review log, gaps being resolved items.
 ## 6. What is not yet known or unverified
 
 - **The diagonal beyond its mechanism**: no faithful `compile` was put in Q; "H for all sources
-  yields a runnable `compile`" is untested and assumes soundness (03 F6, r5); the detour carrying
-  (T) and (E) to a possibly rejected Q assumes the spec accepts P as the checker does and part 5
-  covers the driver's call of a final value, only P's shape being compiled and no P written for the
-  macro's other code, and the `slot-eq` step is reasoning (03 §6, r2.3, r3.4, r5.1); all rests on
-  (T) and (E), and 05's version also on logic soundness, all unproved; 05's quine form assumes
-  unwritten quines (05 §9, r5.2).
-- **Gödel II** conditions and README.md's IΣ₂ / ω^ω^ω claim are unchecked (05 §9). By 05's
-  reasoning, if the logic is sound the diagonal rules out uniform H in a recursable form, and
-  uniform stripped-run safety alone would give internal consistency, since an erased proof `p` of
-  `False` gives an accepted program whose final `Fn` body `(lift p)` reaches absurd code once
-  stripped (`proto/review5/05_stripped_absurd_final.sl`, `p` a `def-prim` axiom under
-  `--no-prelude`, which SOUNDNESS.md's claims exclude, so it shows only the shape: accepted, then
-  "absurd code reached" on both, built or interpreted; refused with the form in run position);
-  formalizing this inside Sleight is untried (05 §4.3, r2.3, r5.1, r5 unsure points).
+  yields a runnable `compile`" is untested and assumes soundness (03 F6, r5); the detour rests on
+  09's six premises (key finding 21), only P's shape compiled, and the `slot-eq` step is reasoning
+  (03 §6, r2.3, r3.4, r5.1); all rests on (T) and (E), and 05's version also on logic soundness, all
+  unproved; 05's quine form assumes unwritten quines (05 §9, r5.2).
+- **Gödel II** (key finding 20): `Prov`, D1 to D3, the diagonal sentence, route C's lemmas, any
+  interpretation of HA, IΣ₁, or PRA, and the r.e. readings are unattempted or unchecked; the named
+  results are from memory (09 §5); README.md's IΣ₂ / ω^ω^ω claim is unchecked (05 §9).
+  `05_stripped_absurd_final.sl` shows only route C's program shape, its `p` a `def-prim`, which
+  SOUNDNESS.md excludes (05 r5.1).
 - **SOUNDNESS.md's (T), (C), (E)** are argued, not proved; they "do not cover" `--no-prelude`
   programs with own models or `def-prim`; H also needs well-behaved host I/O (03 F7, r2.6; 05 §2.3,
   r2.8).
@@ -606,17 +634,18 @@ Open ones; numbers follow the review log, gaps being resolved items.
 - **Reported histories and figures**: "accepted as first written" claims (06 F4, 07 F4) and 05's
   "first attempt refused" claims (one reproduced, 05 r3); 07's quadratic estimate; single-run
   timings (06 r2.6; 07 §6); all cost and effort figures (01 §6; 03 §6; 04 §6).
-- **slc internals**: the path by which a nullary `(Zero)` is `Settled` after an error (01 §3.7, §6);
-  that the per-form and per-file expansion bounds never bind before the global count, store cycles,
-  macro callbacks never evaluating, checkpoint rollback of counters, failed fuel attempts as
-  prefixes (03 §6, Q1, second review); `merge-opens`'s bound (03 §1).
+- **slc internals**: after an error, why a string binder stays `Hypothetical`, and whether `coerce`,
+  `gensym`, `read-file`, and the `settled-*` forms are gated (10's review); that the per-form and
+  per-file expansion bounds never bind before the global count, store cycles, macro callbacks never
+  evaluating, checkpoint rollback of counters, failed fuel attempts as prefixes (03 §6, Q1, second
+  review); `merge-opens`'s bound (03 §1).
 - **`dump-context` and §45**: whether its reports, defined via MANUAL.md, fall under §45's printing;
   the cut is at least a silent wrong answer.
 - **OCaml**: `let ... and` and argument order in versions other than 4.14, whose manual leaves them
   unspecified (02 §2.2, r4.3); other targets, flambda, many-argument tail calls; constant sharing
-  beyond immutable tuples; GC safety of `-imm` operations and of `Array.unsafe_set` through an `int
-  array` cast on a variant block; `Slots` hashing across GC moves; `bytes-str` input never mutated
-  (02 §6; 04 §2.5, §6, r3.1, fourth review).
+  beyond immutable tuples; GC safety of the `imm` stores on OCaml 5, flambda, arm64, or systhreads,
+  and whether `Imm` proofs can be forged through the logic (08 §8); `Slots` hashing across GC moves;
+  `bytes-str` input never mutated (02 §6; 04 §2.5, §6, r3.1, fourth review).
 - **slc's runtime head-versus-argument order**: compiled, one test only (04 §6); `slc --interpret`
   ran out of memory on it and overflows on `proto/review3/head_arg_order.sl` at any depth, seemingly
   on its oversized `array-new`, a defect or not under §31 (02 §6, r3).
@@ -651,5 +680,11 @@ implementation's machine (07 F4).
 
 As a reading, the shape 03, 05, and the brief's proposal C describe is writable and checkable at toy
 scale; completeness and scale remain open.
+
+## 8. Implementation defects found
+
+BUGS.md holds the defects found, each with its reproducer: 13 (refusal wording), 18
+(`heap-strs-fuel`), 19 (rough edge 31), 23 (`show-at`; key finding 10), 24 (`self/README.md`
+claims), 25 (key finding 22), and 26 (key finding 19).
 
 Review history, corrections, and re-runs: 00-summary-review-log.md.
