@@ -136,7 +136,7 @@ definition whose header is `(erased name :`.
 | site | kind | zero case |
 |---|---|---|
 | interpreter `eval`/`apply` (`elab-main.sl:185-187, 424`) | fuel. MANUAL.md:154-162: "bounds how deeply applications nest, a tail call nesting inside the call it replaces"; slc's default 10^9 | error value "out of fuel", reported as an error. MANUAL calls it a §31 crash |
-| `show-at` depth 100000 (`elab.sl:4680-4682`, used by `show-typed` at `elab.sl:4730`, which the `comptime-match` mismatch message uses at `:4784` and `entry-value` at `:4890`, and by `slc --interpret`'s final printer at `interp.sl:15`) | printer fuel | **prints `_` silently**. The budget is spent twice per nested field (`show-at` at `elab.sl:4682` and `shown-field` at `:4717`). [T] `slc --interpret deep.sl` (a 100003-element list, stack unlimited) prints 49,999 `Cons _ 0` and then `Cons _ _ _)`. [P] That is a wrong output under §45 ("Any other value prints by its type", and `_` is listed only for a union with more than one constructor, erased fields, cells, slots, functions, opaque proofs, and values with no readable `Matchable`), not a §31 crash ("A crash produces no value, never a different one"). `self/README.md:254-258` ("running out returns an error value, never a wrong answer silently") is said of "the interpreter and the generated printer", the emitted one (`README:363-367`); `show-at` is what `README:369-370` calls `elab.sl`'s compile-time printer, which that sentence does not cover, so the README is silent on this defect rather than contradicted by it |
+| `show-at` depth 100000 (`elab.sl:4680-4682`, used by `show-typed` at `elab.sl:4730`, which the `comptime-match` mismatch message uses at `:4784` and `entry-value` at `:4890`, and by `slc --interpret`'s final printer at `interp.sl:15`) | printer fuel | **prints `_` silently**. The budget is spent twice per nested field (`show-at` at `elab.sl:4682` and `shown-field` at `:4717`). [T] `slc --interpret deep.sl` (a 100003-element list, stack unlimited) prints 49,999 `Cons _ 0` and then `Cons _ _ _)`. [P] That is a wrong output under §45 ("Any other value prints by its type", and `_` is listed only for a union with more than one constructor, erased fields, cells, slots, functions, opaque proofs, and values with no readable `Matchable`), not a §31 crash ("A crash produces no value, never a different one"). `self/README.md:254-258` ("running out returns an error value, never a wrong answer silently") is said of "the interpreter and the generated printer", the emitted one ("a generated printer per type for a final function's result", `README:143-146`); `show-at` is what `README:369-370` calls `elab.sl`'s compile-time printer, which that sentence does not cover, so the README is silent on this defect rather than contradicted by it |
 | `show-fuel` 100000 (`emit.sl:4`, `:1473`, `:1478`) | fuel for *generating* the emitted OCaml printers, one per type, memoized (`emit.sl:1379-1386`) | [C] uses `show_any`, which prints `?` (`self/runtime.ml:18`). [P] It bounds the nesting of types met while generating, not of values, so it seems hard to reach. [T] The generated printer recurses on the value with no bound: `deep.sl` compiled by slc (the 22 MB output built with `ocamlc` under an unlimited stack) and `proto/review2/04-deep-fn.sl` (the same list, built at run time) compiled by `slc --build` both print all 100003 elements, byte for byte as the reference does (`deep.sl` under the reference, unlimited stack, about 7 minutes), where `slc --interpret` cuts them as above |
 | `heap-strs-fuel` 10^6 (`eval.sl:1018-1025`; also passed to `heap-pairs` and `heap-jobs`, `eval.sl:1055, 1146, 1159`) | fuel | truncates the list (returns `Nil`) |
 | `str-split-fuel` (`base.sl:100-109`) | fuel equal to the string's length | unreachable but not refuted |
@@ -456,7 +456,9 @@ canonicalization and unification invariants, adapted.
   `mini/elab.sl` (1243 lines) holds the elaboration relations and
   `mini/elabfn.sl` (2388 lines) the deriving functions; the rest is
   contexts, canonicalization, unification, and evaluation. It covers a
-  language without multiplicities, slots, macros, or run position. Scaling that by DESIGN.md's size is
+  language without multiplicities, `Matchable`, slots, macros, run
+  position, literals, externs, or the `_` sugar (MINIMAL.md's
+  "What is removed"). Scaling that by DESIGN.md's size is
   guesswork. Tens of thousands of lines seems likely.
 - *Risk:*
   - the formal spec is wrong, which no proof catches;
@@ -747,19 +749,34 @@ IR's call and constructor arguments syntactically atomic in either case.
    two separately built ones may share one word. That matters for
    whether `==` (2.5) refines the spec's `slot-eq`.
 5. **§27 and §29 name "the evaluator"** as part of the semantics (§27:
-   "the evaluator runs the code"; §29: "The evaluator runs that code"). [P] A formal spec needs its own run in that role, and
-   DESIGN.md does not say whether that run executes the models or the
-   implementations of externs. §42's "running the models instead of the
-   implementations must give a program the same values" suggests the
-   models are the meaning.
+   "the evaluator runs the code"; §29: "The evaluator runs that code"). [P] A formal spec needs its own run in that role. DESIGN.md
+   describes runs of both kinds: by §42 the prototype runs the
+   implementations unless `--no-extern` "runs the models instead", and
+   §29 makes an extern type's `Matchable` "the FFI's wrapper" (§24:
+   "Its value holds the construction and matching of an `extern`
+   type"). It requires the two to agree except through `slot-eq`, and
+   does not say which of them the meaning is. [P] §42's "running the
+   models instead of the implementations must give a program the same
+   values" reads as if the models were the meaning; decision 7's
+   parameterization would leave the choice open.
 
 Not DESIGN.md, but found:
 - `self/README.md:463-465` ("Not modelled: ... macros") is stale
   against `elab-main.sl:509-629` and the reference (2.1).
 - slc's `show-at` depth fuel prints a wrong value (2.3), reproduced in
-  all three reviews. `self/README.md` does not mention it: its "never a
+  all four reviews. `self/README.md` does not mention it: its "never a
   wrong answer silently" (`:254-258`) is said of the interpreter and the
   emitted printer. The emitted OCaml printer does not have the defect.
+  That README sentence also says running out "returns an error value";
+  the emitted printers' generation fuel (`show-fuel`, 2.3) instead
+  emits `show_any`, which prints `?` (`self/runtime.ml:18`), and its
+  "1000000" matches no interpreter or printer fuel in `self/` (the
+  interpreter's default is 10^9, `core.sl:3614`; the only 1000000 is
+  `heap-strs-fuel`, `eval.sl:1018`).
+- `self/README.md:385-386` puts the sugar budget "as its first `subterm`
+  parameter". In `elab-expr-demand` (`elab-main.sl:752`) it is `sugar`,
+  the fourth, after `fuel` (the expansion bound of 2.3), `callbacks`,
+  and a `hop-` index.
 
 ## 6. Unverified claims
 
