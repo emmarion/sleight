@@ -149,7 +149,7 @@ refused in `step-back` at `ExSeq` [ran, third review].
   the helpers return `NthNo`, `SetNo`, `OpNo`, and `PickNo` with no
   evidence, so nothing connects a failure to the derivation. I did not
   do this (§3 Q2). So as built, the types of `complete.sl` add only
-  `runs-star`, `step-det`, and that an `AgreeHalted` result is `mf`.
+  `star-trans`, `runs-star`, `step-det`, and that an `AgreeHalted` result is `mf`.
   "If this machine halts, it halts with `mf`" already follows from
   `advance`'s type and `runs-fn`. That `run-total` runs this machine,
   and halts or sticks within the derivation's step count, is read from

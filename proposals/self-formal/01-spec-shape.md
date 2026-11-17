@@ -96,7 +96,8 @@ depends on it.
    "At most 10000 expansions run in one run" (§62), so the spec keeps
    it as written. The question is only whether the spec generalizes it
    to a parameter `N`, which would be a change to DESIGN.md's wording.
-   *Recommended:* no change unless the owner wants `N`. Without some
+   *Recommended:* keep §62's 10000 as written; `N` is an option if the
+   owner wants it. Without some
    limit, theorem 3 fails even under H (§3.5). *Depends on it:*
    theorem 3, and determinism, because the count is global.
 4. **What does a rejection carry?** *Options:* (a) only "rejected";
@@ -157,7 +158,8 @@ depends on it.
    prelude on or off (§42), extern on or off (§33 item 9 and §35 depend
    on it), `--fn-same` (§70), the `--goal` mode (§71), the
    `--comptime-unconfine` names (§65), the FFI table's names and
-   arities (§42, §43), and the expansion limit. Not in the spec are
+   arities (§42, §43), and the expansion limit if decision 3 makes it a
+   parameter. Not in the spec are
    `--eval-fuel`, `--no-native`, `--hints`, and `--warn-unused`.
    *Open:* `--warnings-as-errors`. DESIGN.md mentions it (§4), but its
    effect depends on warnings defined in WARNINGS.md, not in DESIGN.md.
@@ -221,9 +223,10 @@ depends on it.
   entries (§65). [A] Each of these seems to need only the fact engine, a
   scope lookup, or Σ, never the full elaborator. If so, the layers do
   not form a cycle: fact engine, then Run, then Elab. Two points to
-  check: `settled-ty-apply` requires that "`(t t1 ... tn)` must check as
-  a term (§9)", which is term checking, assumed here to be fact-engine
-  work; and §45 leaves to the implementation "whether a literal's
+  check: where `settled-ty-apply` runs, "the application is checked
+  again, against the facts `settled-eq` reads" (§65; where it is
+  written, "`(t t1 ... tn)` must check as a term (§9)"), which is term
+  checking, assumed here to be fact-engine work; and §45 leaves to the implementation "whether a literal's
   entries are produced by elaborating statements or created directly to
   the same effect", so, for the layers to stay acyclic, the spec of
   `intern-*` would take the second.
