@@ -21,12 +21,16 @@ approved or decided, and where it and DESIGN.md disagree, DESIGN.md is right.
   finishes when cut into `Program` steps and fails with `out of fuel` when
   run as one call, in both implementations.
 - The checker refuses suspension by first-class closures of one
-  fixed-level type. A continuation closure at a fixed level cannot call
-  another one at the same level. A function also cannot iterate
-  `Program` steps itself. I compiled these claims (F4). So I propose
+  fixed-level type that has no decreasing argument: such a continuation
+  closure cannot call another one at the same level. With an erased
+  `subterm` counter in the closure type, a closure at a fixed level can
+  call the one before it (F4.1). A function also cannot iterate
+  `Program` steps itself. I compiled these claims (F4). I propose
   defunctionalized suspension: explicit data frames, plus one fresh
-  `UniqueFn` per driver step that calls down to the stepper. I did not
-  try level-indexed continuations.
+  `UniqueFn` per driver step that calls down to the stepper.
+  Counter-indexed closures may be an alternative, but only a chain of
+  closures was compiled, not a CPS `bind`. I did not try level-indexed
+  continuations.
 - A diagonal argument (F6; its mechanism is compiled in
   `proto/fuel/diagonal.sl`, the rest is my reasoning) says that no
   non-erased Sleight function `compile : Src -> Verdict` that takes no
@@ -122,21 +126,37 @@ Note: self/README.md says the interpreter's fuel is "1000000". The code
 
 ### F4. Compiled checks of the suspension patterns (rule 2)
 
-Files are in the session scratchpad and are not committed: `fr/a.sl`
-and `fr/b.sl` for 1, and `fr/c.sl` for 2. A reviewer re-ran these three
-under the reference and got the errors quoted below. The file behind 3
-was not saved. Reproduce each from the text here.
+Files are in `proto/fuel/fr/`: `fr/a.sl`,
+`fr/b.sl`, and `fr/d.sl` for 1, and `fr/c.sl` for 2. A reviewer re-ran
+`fr/a.sl`, `fr/b.sl`, and `fr/c.sl` under the reference and got the
+errors quoted below; `fr/d.sl` was added in a later review (note 14).
+The file behind 3 was not saved. Reproduce each from the text here.
 
 1. **A CPS bind over closures is refused.** Take `Res = RDone n | RAsk q (k
    : Fn L (Nat) -> (Res))`. A `bind` at level L that calls `g` gives
    `error: same-level call to g decreases no subterm argument`. A `bind` at
    a higher level B, building `k2` at L that calls `k`, gives the same
-   error at `(k a)`. A resume closure whose type fixes its level L cannot
-   call another resume closure of that type. So nested suspensions cannot
-   be composed as closures of one fixed-level type. I did not test a
-   level-indexed `Res` whose continuations sit at existentially bound
-   lower levels and carry `Predates` proofs. Whether that could compose
-   closures is open.
+   error at `(k a)`. In that version `k2` at L also calls `bind` at B,
+   which §17 forbids anyway ("A function may call a function of a
+   strictly lower level"). So a resume closure whose type fixes its
+   level L and has no decreasing argument cannot call another resume
+   closure of that type. A decreasing argument changes this.
+   `fr/d.sl` gives the closure type `(Fn L (subterm erased (Nat) j)
+   (erased (Eq (Nat) j n) e) (many (Nat) a) -> (many (Nat) r))`. A
+   function `extend` defines a `many` closure `k2` at L for `(Succ n)`.
+   `k2` takes `e` apart against `Refl` and calls the old closure at L on
+   `n`, a strict subterm of `j`. Three `extend`s over a base closure,
+   applied to 10, print `13`. The reference, `--no-extern`, and `slc
+   --interpret` all agree. This is the shape of 06's
+   `proto/stepper/ho_counter.sl`, with runtime closures in place of
+   erased ones. So a continuation can be extended one frame at a time as
+   a closure of one fixed-level type. Untested: a CPS `bind` whose
+   continuations call back into `bind`. My reading is that it would need
+   one measure covering `bind` and the continuations together. I also
+   did not test a level-indexed `Res` whose continuations sit at
+   existentially bound lower levels and carry `Predates` proofs. 06 F4.2
+   found that a closure whose level is packed in its argument can be
+   built but not applied by the stepper.
 2. **A function cannot iterate `Program` steps.** The function `run-all :
    (subterm unique (Program L) p) (World) -> ...` matches `Continue _ k`,
    calls `(k w)`, and recurses on the result `p2`. It is refused:
@@ -336,9 +356,10 @@ count at `elab-main.sl:559-560`.
   - The theorem shape is the cleanest (Q2).
   - The `xf`/`callbacks`/`hop-k` measures disappear.
 - Cons: a rewrite of the largest and most intricate part of slc. The
-  code becomes frame-oriented and less readable. Closures cannot do the
-  composition (F4.1), so every non-tail call site becomes a frame
-  constructor.
+  code becomes frame-oriented and less readable. As proposed, every
+  non-tail call site becomes a frame constructor. Closures without a
+  decreasing argument cannot do the composition (F4.1). Closures with an
+  erased counter might, but that is untested beyond a chain of closures.
 - Risks:
   - Performance (each `Continue` costs about 10 ns compiled, but the
     frame allocation per elaborator call is untested).
@@ -521,6 +542,8 @@ source whose compile-time run diverges has no derivation.
 - That a generic `burst` over any step function would type-check through
   a level factory (§57). The prototype avoided it by using one machine
   type.
+- That counter-indexed closures can express a CPS `bind`, or replace
+  frames in option (a) (F4.1).
 
 ## Review notes
 
@@ -576,7 +599,7 @@ changes.
     `expand` takes `xf` at `many` (`elab-main.sl:555`). So "erased
     measures" was inexact. "Zero cases are refuted" was not checked and
     is now marked so.
-11. F4. The files for checks 1 and 2 exist in the session scratchpad
+11. F4. The files for checks 1 and 2 are in `proto/fuel/fr/`
     (`fr/a.sl`, `fr/b.sl`, `fr/c.sl`), and their reruns reproduce the
     quoted errors. The file for check 3 was not saved. F4.1's conclusion
     is narrowed to fixed-level continuation types. A level-indexed
@@ -585,6 +608,19 @@ changes.
     rules. It now asks the remaining open point, what reaching the
     expansion cap does.
 13. F1's §65 summary now quotes what `read-file` may read.
+14. F4.1, the summary, Q1(a), and section 6, after 06's review found
+    `proto/stepper/ho_counter.sl`. "A continuation closure at a fixed
+    level cannot call another one" was too broad. The checks in
+    `fr/a.sl` and `fr/b.sl` still give the quoted errors, but their
+    closure types have no decreasing argument. `fr/a.sl` also calls
+    `bind` upward from L, which §17 forbids. `ho_counter.sl` (erased
+    closures) and a new `fr/d.sl` (runtime `many` closures) have an
+    erased `subterm` counter, and both are accepted and run under the
+    reference, `--no-extern`, and `slc --interpret`. F4.1 now limits
+    the refusal to closure types without a decreasing argument and
+    reports `fr/d.sl`. The proposal for defunctionalized frames stands,
+    but F4.1 no longer forces it. A CPS `bind` with counters remains
+    untested.
 
 Confirmed as written:
 - The DESIGN.md quotes in F1. "DESIGN.md does not mention fuel" holds:

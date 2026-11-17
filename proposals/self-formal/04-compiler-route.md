@@ -342,7 +342,7 @@ of the spec's relations, as `mini/` does.
     invariant.
   - Errors-as-values with cascades (`README:298-311`) are not the shape
     of a `Fails` derivation.
-  - The 17 "internal" sites become proof obligations.
+  - The 20 `"internal:` sites (2.2) become proof obligations.
 - *Risk:* high. The shape slc took was chosen for termination and speed
   (the opened-object cache, ropes, templates, `Steps`, `hop-`), not for
   correspondence with a relation. Proofs would fight caches whose
@@ -773,6 +773,10 @@ built from the current sources, and corrected the text above in place.
     elaborator's `fuel` parameter (it is the §62 expansion budget),
     `Lockstep`/`Picked` described as arity invariants, and no flambda on
     this machine.
+27. Q1 R1 still said "The 17 'internal' sites" after item 3 corrected
+    2.2 to 20. A later recount (`grep -rn '"internal:' self/`) again
+    gives 20: 12 in `elab.sl`, 6 in `elab-main.sl`, and 1 each in
+    `eval.sl` and `emit.sl`. R1 now says 20 and points to 2.2.
 
 Re-checked and found right: the line counts and the ≈6% lemma
 heuristic (1,085 lines by the same awk rule), the §15, §42, §62, §67,

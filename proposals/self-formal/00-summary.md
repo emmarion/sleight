@@ -3,14 +3,17 @@
 Written by Claude agents overnight, while the owner was asleep. Everything
 here is a proposal or an agent's reading; nothing is approved, and nothing
 is a design decision (CLAUDE.md rules 1 and 11). This file only combines
-the five track files: each claim's source, evidence, and hedges are in the
-track file and section it cites, and where this file and a track file
-disagree, the track file (as corrected by its review notes) is right.
+the five track files and the two spike files: each claim's source,
+evidence, and hedges are in the file and section it cites, and where this
+file and a cited file disagree, the cited file (as corrected by its review
+notes) is right.
 Where either disagrees with DESIGN.md, DESIGN.md is right.
 
 Citations: `01 §3.6` is section 3.6 of `01-spec-shape.md`; `02`
 is `02-dynamic-semantics.md`, `03` is `03-fuel-termination.md`, `04` is
-`04-compiler-route.md`, and `05` is `05-theorems.md`. `§n` alone is
+`04-compiler-route.md`, `05` is `05-theorems.md`, `06` is
+`06-spike-certified-stepper.md`, and `07` is `07-spike-round-trip.md`.
+`§n` alone is
 DESIGN.md. "Owner statement n" is item n of the brief's "Owner decisions",
 which are an earlier session's paraphrases, not the owner's words; they
 are the only owner positions anywhere in this file.
@@ -19,7 +22,7 @@ are the only owner positions anywhere in this file.
 
 1. The picture in one page
 2. Key findings
-3. Decisions for the owner (23)
+3. Decisions for the owner (23, and 8a, 8b, and 18a to 18c from the spikes)
 4. Rough edges in DESIGN.md
 5. Cross-file inconsistencies
 6. What is not yet known or unverified
@@ -53,7 +56,8 @@ disagree, the decision listed says so.
   prototypes show needs no fuel. The tracks recommend different
   mechanisms (decision 18): a stepped interpreter with bursts and replay
   (03), iterative deepening at the driver (04), or a whole-compiler step
-  machine (05).
+  machine (05). 07 compiled both a derivation-zipper checker and a
+  replaying one for a toy round trip, with no fuel (decision 18a).
 - **Theorem statements.** Intrinsic: `compile` returns its verdict with an
   erased spec derivation, since a type holds no call (§9). T1/T2
   (accepted ⇒ `Elab` derivation; rejected ⇒ `Fails` derivation), T3
@@ -62,6 +66,14 @@ disagree, the decision listed says so.
   values match the spec run), T6 (output refines the spec). Uniform H and
   stripped-run safety are expected to stay meta-theorems. (05 §3, §7; 01
   decision 2; 03 Q2; decisions 13, 14.)
+- **Evidence from the spikes** (findings, not recommendations). The
+  pattern above (a spec relation, a total step that returns erased
+  evidence, the `Program` driver as the only loop, and a verdict typed by
+  the spec's derivation) compiles and
+  runs today in two toys, a heap machine (06) and a §29 round trip (07),
+  on the reference and slc. Both prove partial correctness only: a step
+  that always answers "stuck" (06) or never answers (07) passes. Neither models Sleight's own machine. (Key
+  findings 16, 17; section 7.)
 - **Compiler route.** A new elaborator written spec-first as deriving
   functions beside the relations, in `mini/`'s shape, reusing slc's
   proved libraries and keeping slc for differential testing (04 §3 Q1,
@@ -75,8 +87,8 @@ disagree, the decision listed says so.
 
 ## 2. Key findings
 
-Only findings the track files support after their reviews. "Tested" means
-a prototype was run on the reference (`_build/default/bin/main.exe`) and,
+Only findings the track and spike files support after their reviews.
+"Tested" means a prototype was run on the reference (`_build/default/bin/main.exe`) and,
 where stated, on slc.
 
 1. **Elaboration reads run results, so elaboration and run are one
@@ -125,8 +137,13 @@ where stated, on slc.
    Recursion on an erased `Halts` derivation (Bove–Capretta) is accepted,
    but a caller must supply the `Halts`: a written-out term, a per-input
    proof, or a fuel run that has already done the work (05 F4). Limits,
-   all tested: a continuation closure of one fixed-level type cannot call
-   another (03 F4.1; level-indexed continuations untested); a function
+   all tested: a continuation closure of one fixed-level type with no
+   decreasing argument cannot call another, though with an erased
+   `subterm` counter in its type it can, as runtime closures (03 F4.1,
+   corrected in 03 review note 14) and as erased invariants (06 F4.1); a
+   closure whose level is packed beside it can be built but not applied
+   by the stepper (06 F4.2); a CPS `bind` with counters, and
+   level-indexed continuations, are untested (03 F4.1); a function
    cannot iterate `Program` steps itself (03 F4.2); every function a step
    calls must be minted before the program's level (03 F4.3, 05 F6); and a
    driven run's result never becomes a Sleight value, so it cannot serve a
@@ -209,11 +226,34 @@ where stated, on slc.
     are 1-based byte counts in both implementations (01 §3.9). In the two
     programs tested, the reference reported only the first error and slc
     reported later ones too (01 §3.7).
+16. **The intrinsic-derivation and `Program`-driver pattern works at toy
+    scale in today's Sleight.** In 06, the type of `advance` is the
+    soundness theorem: its `Halted` result carries `(erased (Runs m0 c0
+    mf) d)` (06 F2). In 07, the final `Verdict p` carries an erased `Elab
+    [] p` or `Fails [] p`, and the statement, packaged as a `goal`
+    mentioning only spec types, passes `--goal proved` on both
+    implementations, for both a zipper and a replay checker (07 F2). In
+    both, the only loop is the driver, with no fuel, and wrongly written
+    components are refused at the faulty proof term (06 F2; 07 F5). The
+    effort goes mostly into the spec and its determinism lemmas rather
+    than the suspension machinery (06 F5; 07 F4). Neither spike models
+    Sleight's own machine, `at` and cells, the oracle, or nested round
+    trips (06 §6; 07 §6).
+17. **What the spikes' theorems do not say.** Both are partial
+    correctness. In 06, "stuck" carries no evidence, so a `step` that
+    always answered `SStuck` would pass every type (06 §1, review note
+    2). In 07, a `step` that always returns `More` passes the same goal,
+    and the exclusivity field is a lemma about the spec alone (07 F7,
+    review note 3). A `step` that itself loops is refused (07 review note
+    3). Exclusivity needs a deterministic spec: 07's proof uses
+    determinism of evaluation and of every lookup (07 §1, F4).
 
 ## 3. Decisions for the owner
 
-Merged from all five files, ordered so that a decision comes before those
-that depend on it. Each says whether it needs DESIGN.md wording, which
+Merged from all seven files, ordered so that a decision comes before those
+that depend on it; the spikes' new decisions carry sub-letters next to the
+decision they relate to, and their other decisions are folded into
+existing ones. Each says whether it needs DESIGN.md wording, which
 under rule 12 the owner confirms word for word, or is only a choice for the
 formal spec. Recommendations are the tracks', never decided.
 
@@ -257,10 +297,12 @@ Options: (a) fix it; (b) leave it free, making acceptance a relation.
 Recommended (01): (a), as head first, then items left to right, depth
 first, each statement before the code after it, which is the reference's
 order as tested.
+07 adds, as its reading, that a positive `Fails` mirroring `Elab` and a
+derivation zipper both need this order (07 F3, §5).
 Depends on it: determinism (T3), decision 13's error content, and the
 oracle (decision 5), whose answers are consumed in some order.
 Needs DESIGN.md wording. Context: 01 decision 5, §3.6; 02 rough edge 12;
-05 §2.2, rough edge 5.
+05 §2.2, rough edge 5; 07 §5.
 
 **4. Is the runtime evaluation order fixed?**
 Options (02 Q3): (O1) fix it in the spec: statements in written order,
@@ -327,6 +369,9 @@ a form. The tracks disagree:
   3 is about the spec, and crashes must be kept out of the oracle or
   completeness stated for the crash-free oracle.
 - 04: open, as a sub-question of decision 10.
+- 07: its toy rejects a stuck compile-time run (`FLetStuck`), but 07
+  calls that a stand-in, not a proposal, and a stuck term is a different
+  kind of failure from a §31 crash (07 decision 5).
 Depends on it: the form of theorem 3 (decision 14), the oracle (decision
 5), and whether slc's present rejection is conforming.
 Needs DESIGN.md wording if crashes become rejections or a bound enters
@@ -363,6 +408,29 @@ word (04 rough edge 4; cross-file item 1).
 Depends on it: decision 5's oracle shape, T6.
 Formal-spec choice, unless the sharing question is answered in DESIGN.md.
 Context: 02 decision 2, Q2; 04 §2.5, rough edge 4.
+
+**8a. Is the spec's compile-time run a small-step relation over the same
+machine the compiler steps?**
+Options (07 Q2): (a) yes, so the evaluator side of the proof is a list of
+step proofs (07 F4); (b) big-step, or a different machine, closer to
+DESIGN.md's prose but needing a simulation proof that 07 expects (its
+reading) to dominate the effort.
+Recommended (07): (a), if the evaluator part of the proof is to stay
+small. In 06's toy, big-step `Runs` and small-step `Star` agree for runs
+that end on the empty stack, and 06 calls the choice a presentation one
+there (06 Q1.4).
+Depends on it: decision 8, and the size of T5.
+Formal-spec choice only. Context: 07 decision 2, Q2; 06 Q1.4.
+
+**8b. Should the next spike use the unique `Array` heap and abstract
+addresses?**
+06's heap is `many` lists with functional update, and an address is a
+position (06 Q3). Recommended (06): yes, before scaling, since 02
+recommends abstract addresses (decision 8, A1) and owner statement 6 says
+the owner suspects the spec's run should be a mutating heap machine from
+the start. That `Array`'s API, indexed by `Nth` and `SetNth`, would carry
+06's proofs over is untested (06 §6).
+No DESIGN.md wording. Context: 06 decision 4, Q3.
 
 **9. Externs in the spec.**
 Options: (E1) run every model, with each implementation's agreement a
@@ -402,7 +470,9 @@ CompCert-style (05); (W2) going wrong is a behaviour after which anything
 is allowed (05).
 Recommended: 02 recommends S1; 05 states W1 and W2 without recommending
 one, and expects stripped-run safety to stay a meta-theorem either way.
-See cross-file item 9.
+See cross-file item 9. 06 asks whether "never stuck" is a target for the
+spec's own machine; if so, it recommends a typing invariant (06 Q2.2),
+the route that also serves type soundness (06 decision 3).
 Depends on it: T6, T7.
 Formal-spec choice; DESIGN.md does not say what reaching absurd code at
 runtime does (02 rough edge 6). Context: 02 decision 7, Q7; 05 decision
@@ -431,11 +501,16 @@ macro-call trace; (c) also a structured reason, including the text §4 and
 §28 require; (d) full message text. 01 recommends (b) in the main
 theorem, (c) available in the relation, never (d); 05's sketch carries a
 `(many (Diag) msg)`. Malformed syntax must be a positive error, not "no
-derivation" as in `mini/` (01 §3.7).
+derivation" as in `mini/` (01 §3.7). 07 compiled 05's shape (separate
+`Elab` and `Fails`, exclusivity a lemma) and recommends that `Fails`
+mirror `Elab` premise by premise ("fails at premise k after 1..k−1
+hold"), so that one context serves both and exclusivity is a plain
+induction; that fixes the order of premises (decision 3) (07 decision 3,
+F3). 07's mismatch rule carries the value, which bears on (iii) (07 §5).
 Depends on it: the architecture of every compiler pass; how much of
 decision 3's order the spec must pin down.
 Formal-spec choice only. Context: 05 decisions 1, 2, §3; 01 decision 4,
-§4.3.
+§4.3; 07 decision 3.
 
 **14. The form of theorem 3 (owner statement 3) and the hypothesis H.**
 Options, as the tracks put them:
@@ -455,6 +530,10 @@ Options, as the tracks put them:
   or (c) on the same step, uniform totality left meta; alternative: a
   compile-time resource budget in the language, under which owner
   statement 3 holds literally (05 §4.3 option 4, a language change).
+- 07: the packaged theorem should include completeness, relative to
+  per-source evidence (07 Q3(a), not written), since without it a
+  stepper that never answers satisfies the statement (07 decision 4, F7;
+  key finding 17).
 Sub-questions: which H? Owner statement 4(ii)'s "every accepted
 compile-time form's spec run halts", or the broader "every compile-time
 run in the spec halts" that 01 and 03 F7 use (cross-file item 5). And is
@@ -464,7 +543,7 @@ Depends on it: decision 6; decision 18; whether the deriving function for
 elaboration takes fuel.
 Formal-spec choice, except the resource-budget alternative, which needs
 DESIGN.md wording. Context: 01 decision 2; 03 decisions 2, 4, Q2, F7; 05
-decision 5, §3 T4, §4.3.
+decision 5, §3 T4, §4.3; 07 decision 4.
 
 **15. Which flags are spec parameters, and is the expansion limit one?**
 01 recommends in the spec: prelude on or off, extern on or off,
@@ -529,11 +608,50 @@ Options and recommendations, which differ by track:
   now, F2 only if fuel should go from the code too; F2 must be decided
   before R3 starts.
 - 05: recommends a step machine for the running compiler (decision 14).
-Closures cannot compose suspensions at one fixed level (key finding 4).
+Closures of one fixed-level type can call one another only with a
+decreasing argument in their type, such as an erased counter (key
+finding 4).
 The owner's goal "minimize fuel use" (brief) bears on all of these.
 Depends on it: decision 17, the architecture of every elaboration
 function. No DESIGN.md wording. Context: 03 decision 3, Q1; 04 decision
 3, Q2; 05 decision 5.
+
+**18a. Resumable checker: a derivation zipper, or direct style with
+replay?**
+Options (07 Q1): (a) zipper: the checker state is the elaboration
+context `Ctx` plus, while waiting, the evaluation context `Reach`, both
+erased, advanced by one total step per `Program` step; (b) direct style,
+replaying from the start with a proof-carrying oracle of answers; (c)
+inline bursts with replay only on overflow (03's (e)), untested, which
+07 expects to need (b)'s proof.
+Recommended (07): the zipper for a new certified kernel, and replay only
+if slc itself is retrofitted, which matches 03 decision 3's split. Why:
+both compile; replay adds a proof-producing equality on requests (on
+terms and environments in the toy, probably on heaps in full Sleight, by
+07's reading) and, by 07's estimate from the code, about quadratic work;
+the zipper costs rewriting the elaborator into frames, which 07 expects
+to cover most of elaboration.
+Depends on it: decisions 17 and 18. No DESIGN.md wording. Context: 07
+decision 1, Q1, F3, F6.
+
+**18b. The invariant of a certified stepper: an erased trace, or a
+counter-indexed closure?**
+Options (06 Q1): an erased trace folded at the halt by a per-step lemma
+(built); a closure at one fixed level with an erased step counter (built
+in review); a first-order derivation context (untested; 07's `Ctx` is
+of this kind for elaboration, my reading); small-step as the spec.
+Recommended (06): the trace, as a working hypothesis; 06 calls the
+choice between it and the counter closure one of presentation.
+Depends on it: whatever relies on a certified stepper. No DESIGN.md
+wording. Context: 06 decision 1, Q1, F2, F4.1.
+
+**18c. Should a function be able to apply a closure whose level is
+packed in its argument?**
+As DESIGN.md stands (§17, §18), 06 found such a closure can be built but
+not applied by code whose level was minted earlier (06 F4.2). 06 proposes
+no change, since a fixed-level closure with a decreasing erased argument
+works instead (key finding 4). A change would need DESIGN.md wording.
+Context: 06 decision 2, rough edge 1.
 
 **19. Judgment shape and staging.**
 Recommended (01): the layers and Σ/Γ split of 01 §4.2, with the run
@@ -580,7 +698,10 @@ No DESIGN.md wording. Context: 04 decision 8, Q5; 05 decision 8, §5.
 inside Sleight?**
 05 thinks it plausible and worth it, as invariants of the spec's
 reachable states; it justifies reasoning with `is` facts about a run but
-does not settle the stripped run's (E), which still needs (T).
+does not settle the stripped run's (E), which still needs (T). 06 Q2.2
+calls a well-formedness invariant for its toy "type soundness of the
+object language" and "the shape the full Sleight machine would need
+anyway" (decision 11).
 No DESIGN.md wording, though 02 rough edge 7 asks what "the only
 reference" (§13) means. Context: 05 decision 9, §6.
 
@@ -592,7 +713,8 @@ Merged and phrased as questions. None is resolved here.
    through all of elaboration" and gensym counts "from 1 over the whole
    run", but only "The head is elaborated first" (§6) is stated. Is the
    left-to-right, depth-first order of items part of the language? (01
-   §5.1; 02 §5.12; 05 §8.5.)
+   §5.1; 02 §5.12; 05 §8.5; 07 §5, which notes that a zipper or a
+   mirror-shaped `Fails` needs it.)
 2. **Runtime order of body statements.** §27 orders statements only in run
    position ("This nests ..."). Is written order meant at runtime? §61's
    "The write stores `h` before the call" seems to presume it, or reads
@@ -679,6 +801,23 @@ Merged and phrased as questions. None is resolved here.
     §8.4.)
 26. **Tests fix free behaviour.** `tests/slot_eq.sl` expects `ESome` where
     §67 allows `ENone`. Not a contradiction. (02 §5.9.)
+27. **Packed-level closures.** §24 makes "a function, of `Fn` or `UniqueFn`
+    type" first-class data, but a function stored with its level packed
+    beside it can be built and extended, and, as far as 06 found, not
+    called by code whose level was minted earlier (§17, §18). §57 shows
+    the factory pattern for one direction; is the other meant to be
+    impossible? (06 §5.1.)
+28. **Diverging run-position forms.** DESIGN.md does not mention
+    divergence (07 searched). §17 says "Termination rests on levels" and
+    §62 caps expansions, but no text says whether every compile-time run
+    halts, or what a checker that never returns means for acceptance.
+    Whether §17's levels, with §10's `Type : Type` and no positivity,
+    keep every run-position form from diverging is unsettled. (07 §5,
+    review.)
+29. **The text of a `comptime-match` mismatch.** §28: "On a mismatch, the
+    error prints the expected constructor and the actual value". If a
+    rejection carries its reason (decision 13), the `Fails` rule must
+    carry the value; is the printed text part of the spec? (07 §5.)
 
 ## 5. Cross-file inconsistencies
 
@@ -739,8 +878,25 @@ Listed, not resolved.
     as "more duplication, against rule 5"; 05 §3 and decision 2 recommend
     separate positive `Elab` and `Fails` relations with an exclusivity
     lemma, which is 01's rejected option (iii).
-12. **Within 04.** §2.2 counts 20 `"internal:` sites (corrected in
-    review), but Q1 R1 still says "The 17 'internal' sites".
+12. **Within 04 (resolved).** §2.2 counted 20 `"internal:` sites and Q1
+    R1 said 17. A grep of `self/` gives 20 (12 in `elab.sl`, 6 in
+    `elab-main.sl`, 1 each in `eval.sl` and `emit.sl`), and R1 now says
+    20 (04 review note 27).
+13. **03 F4.1 versus 06's `ho_counter.sl` (resolved).** 03 F4.1 concluded
+    that nested suspensions cannot be composed as closures of one
+    fixed-level type; 06's review found a fixed-level closure invariant
+    with an erased step counter accepted. 03's refusals still reproduce,
+    but their closure types have no decreasing argument, so 03's
+    conclusion was too broad, not its tests. 03 F4.1 now limits it, and
+    reports a counter version with runtime `many` closures (`fr/d.sl`,
+    accepted and run by the reference, `--no-extern`, and `slc
+    --interpret`) (03 review note 14). A CPS `bind` with counters is
+    still untested.
+14. **`--goal proved` and driven runs.** Not a contradiction: 05 §4.3
+    says a step machine's verdict "reaches only the driver, never a
+    Sleight value", so "it cannot serve ... a `--goal proved` run", while
+    07 passes `--goal proved`. 07's goal states the type of the step
+    function (`Certified`), not the result of a run (07 F2).
 
 ## 6. What is not yet known or unverified
 
@@ -774,7 +930,26 @@ From the tracks' own "Unverified" sections and review notes.
   (02 §6).
 - **Whether choosing the interned literal's block** as a tag slot's word
   under the `Nat` model is consistent (02 review).
-- **Level-indexed continuations** as a way to compose closures (03 F4.1).
+- **Closures as suspensions beyond a chain**: a CPS `bind` with erased
+  counters, level-indexed continuations, and whether any other placement
+  of levels lets a stepper apply a packed-level closure (03 F4.1; 06 §6,
+  review).
+- **The spikes at scale** (06 §6; 07 §6): that the technique scales to
+  Sleight's own machine (rule count, frame kinds, `at` and cell
+  reading-back, the oracle); that the zipper extends to nested round
+  trips with one frame per (rule, recursive premise) pair, and that most
+  of elaboration would become frames; that replay in full Sleight needs
+  equality on (code, heap) requests; that a simulation proof would
+  dominate under decision 8a's option (b); that 06's first-order
+  derivation context (Q1.3) works; that the prelude's `Array` carries 06's proofs (8b); and 06's
+  60–80-line estimate for positive failure evidence (06 Q2.1).
+- **Completeness for the spikes**: that 07's Q3(a) is writable for its
+  toy, and that 07's diverging program 6 has neither derivation (07 §6,
+  F7).
+- **Spike history and figures**: "accepted as first written" or "on the
+  first compile" (06 F4, 07 F4, not re-checked); 06's `--build` timings;
+  07's quadratic-replay estimate; all spike timings are single runs on
+  one machine (06 §6; 07 §6).
 - **slc internals**: whether slc stops running compile-time code after an
   error (one test, 01 §6); whether its per-item expansion parameter never
   binds before the global count, whether its store can hold cycles, and
@@ -799,5 +974,84 @@ From the tracks' own "Unverified" sections and review notes.
 
 ## 7. Spikes
 
-Two further spike files, `06` and `07`, are in progress and will be
-summarized here when they land.
+Two proof-technique spikes, each on a toy language, compiled and run on
+the reference and on slc. Neither models Sleight itself.
+
+**06: a certified, fuel-free stepper** (`proto/stepper/`).
+- Built: a tiny language with registers and a heap of mutable blocks
+  (allocate, read, write in place), `if`, and `while`, specified by a
+  big-step `Runs m c m2`. A total, non-recursive `step` over an explicit
+  command stack runs it, one `Program` continuation per step, with no
+  fuel. The reference, `--no-extern`, `--build`, `slc --interpret`, and
+  `slc --build` accept and run it (06 §1, F1, F2).
+- Proved: soundness as the type of `advance`, whose `Halted` result
+  carries `(erased (Runs m0 c0 mf) d)` for the program and memory the
+  erased trace starts from; spec determinism (`runs-fn`); step
+  determinism; `runs-star`; and `run-total`, which, given a `Runs`
+  derivation, halts or sticks within its step count, a halt giving the
+  spec's result (06 F2, F3, review note 2). Swapping `CSeq`'s order, or
+  inverting the loop test in both the machine and its step relation, is
+  refused (06 F2).
+- Not proved: progress. "Stuck" carries no evidence, so a `step` that
+  always answered `SStuck` would pass every type (06 §1, F3).
+- The invariant: an erased trace of the steps, folded back at the halt by
+  `step-back`, a non-recursive per-step lemma of 15 lines (06 F2, F5). In
+  review, a closure invariant at one fixed level also worked once its
+  type took an erased `subterm` step counter pinned by an `Eq`
+  (`ho_counter.sl`). Without the counter it is refused for the missing
+  decrease, and with its level packed in the state it can be built but
+  not applied (06 F4.1, F4.2; decisions 18b, 18c).
+- Effort: about 210 lines of proof against 90 of stepper code and 67 of
+  spec. Checking adds about 0.1 s to the prelude's 0.44 s. 7821 steps
+  take 1.5 s in the reference interpreter, 0.56 s under `slc
+  --interpret`, and under 0.01 s compiled (06 §1, F5, F6; single runs).
+  The main costs are one evidence-carrying result type per partial
+  helper, since a type holds no call (§9) and "There is no currying"
+  (§17), and long positional constructor telescopes (06 F5). Numerals
+  are opaque in erased derivations (§45; 06 F4.3).
+
+**07: the §29 round trip with a suspendable checker**
+(`proto/roundtrip/`).
+- Built: a toy with top-level `Let t` (run at check time, giving a
+  `Settled` value), `Assert i c` (a `comptime-match`: it reads a stored
+  value and exports a fact), and `Need i c` (consults only facts); an
+  inductive `Elab` with evaluation premises, a positive `Fails`, and a
+  small-step `Step`. The checker suspends into a `Waiting` state, each
+  `Program` step runs one machine step, and the final `Verdict p` carries
+  an erased `Elab [] p` or `Fails [] p`, with no fuel anywhere (07 §1,
+  F2).
+- Proved: exclusivity (`Elab ∧ Fails → False`), using determinism of
+  evaluation and of every lookup. The statement, a `goal` mentioning only
+  spec types, passes `--goal proved` on both implementations for both
+  variants below. Four deliberately wrong single components are refused
+  at the faulty proof term (07 §1, F2, F5, review note 2).
+- Not proved: completeness or termination. A `step` that always returns
+  `More` passes the same goal (`spin_vacuous.sl`), and the exclusivity
+  field mentions no part of the implementation. A `step` that itself
+  loops is refused. The driver and its printed text are outside the
+  statement (07 F7, review note 3).
+- Zipper versus replay (decision 18a). The zipper's `Waiting` state holds
+  two erased, defunctionalized contexts: `Ctx p0 es p` ("a derivation for
+  `es ⊢ p` plugs into one for `[] ⊢ p0`") and `Reach`, the run so far.
+  One `Ctx` serves `Elab` and `Fails`, which works, by 07's reading,
+  because each "fails later" rule carries the same earlier premises as
+  its `Elab` rule (07 §1, F3). The replay variant
+  keeps the elaborator direct-style and re-elaborates from the start with
+  a proof-carrying oracle of answers. It needs a proof-producing
+  decidable equality on requests (about 50 of its 127 lines) and, by
+  07's estimate from the code, about quadratic work (07 F6). It is not
+  quite 03's (e): it has no inline bursts and replays the whole program
+  (07 review note 4).
+- Effort: spec 178 lines, determinism and exclusivity 123, the zipper
+  checker with proof-producing lookups 151 (the suspension machinery
+  about 45), replay 127, and driver and tests 61 (07 F2, F4). The
+  evaluator side was trivial only because the spec's `Step` is the
+  implementation's machine (07 F4; decision 8a).
+
+What the two suggest together, as a reading: the shape that 03, 05, and
+the brief's proposal C describe, a total step carrying erased evidence
+and looped by the `Program` driver, is writable and checkable in
+today's Sleight at toy scale, and its cost sits mostly in the spec and
+its determinism lemmas (key finding 16). What remains is completeness,
+which both spikes leave open (key finding 17; decision 14), and scale
+(section 6).
