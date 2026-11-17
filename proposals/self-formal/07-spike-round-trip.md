@@ -6,9 +6,12 @@ and DESIGN.md disagree, DESIGN.md is right.
 
 Tags: **[D]** DESIGN.md, quoted; **[C]** compiled or run. Unless marked
 otherwise, files are under `proto/roundtrip/` and were run with
-`_build/default/bin/main.exe` at commit 669b328, and also with the slc
-built in this session's scratchpad (`slc --interpret`, `slc --goal`).
-**[A]** marks my own reading or proposal. No owner decision is cited.
+`_build/default/bin/main.exe` at commit 669b328 (no change to `bin/`,
+`lib/`, `src/` or `self/` since, up to ad07c35), and also with slc
+(`_build/release/slc`; `slc --interpret`, `slc --goal`).
+**[A]** marks my own reading or proposal. The only owner item mentioned
+is the brief's statement 3, in decision 4, and it is an earlier
+session's paraphrase.
 
 ## 1. Summary
 
@@ -27,10 +30,13 @@ built in this session's scratchpad (`slc --interpret`, `slc --goal`).
   `evals-det`) and of every lookup the rules use.
 - [C] Both the reference and slc accept the whole thing, run it, and
   report `--goal proved: PASS` for the packaged statement. Four
-  deliberately wrong implementations are refused at the faulty proof
-  term. Example: skipping the fact check in `Need` gives "expected
+  deliberately wrong versions of single components (each a standalone
+  function with the correct component's signature, not wired into the
+  checker) are refused at the faulty proof term. Example: skipping the
+  fact check in `Need` gives "expected
   `(Nth (Ent) es i (MkEnt v (KIs ct)))`, got `(Nth (Ent) es i (MkEnt v k))`".
-- The key question. A suspended checker records "I am deriving
+- How the suspended state is represented (the spike's key question). A
+  suspended checker records "I am deriving
   `Elab [] p0`, waiting on `Eval` of `t`" as two nested,
   defunctionalized derivation contexts. They are both erased fields of
   the `Waiting` state.
@@ -44,13 +50,18 @@ built in this session's scratchpad (`slc --interpret`, `slc --goal`).
   same earlier premises.
 - [C] A second implementation compiles too. It keeps the elaborator in
   direct style and replays from the start with a proof-carrying oracle
-  of answers (03's option (e) shape). It meets the same goal. Its price
+  of answers (the replay half of 03's option (e), without its inline
+  bursts, and replaying the whole program rather than one form). It
+  meets the same goal. Its price
   is a proof-producing decidable equality on requests, so that an
   answer can be used as a premise for the request at hand.
 - [C] The packaged statement is only partial correctness plus
-  exclusivity. A stepper that never finishes also passes the goal
-  (`spin_vacuous.sl`). Completeness or termination under H is the main
-  missing piece.
+  exclusivity, and the exclusivity field is a lemma about the spec
+  alone: it mentions no part of the implementation. A stepper that
+  always returns `More` also passes the goal (`spin_vacuous.sl`). A
+  `step` that itself never returns is refused (a same-level self-call
+  "decreases no subterm argument", §17, §48). Completeness, or
+  termination under H, is the main missing piece.
 
 ## 2. Findings
 
@@ -121,9 +132,13 @@ where `how` 0 is the zipper and 1 is replay):
 | 5 | `Assert 1 …` with one entry | rejected: no such entry, 4 | same, 4 |
 | 6 | `Let omega` | runs until killed; 22 MB at 4 s and at 12 s | same |
 
-`slc --interpret` gives the same outputs for programs 0, 1, 2, 3, and 5
-on the variants I ran. Both checkers print `--goal proved: PASS` for
-`spec.sl goal.sl det.sl impl.sl proof.sl` and for the replay set.
+`slc --interpret` gives the same outputs and step counts for programs 0
+to 5 in both variants. Both checkers print `--goal proved: PASS` for
+`spec.sl goal.sl det.sl impl.sl proof.sl`, for the replay set
+`spec.sl goal.sl det.sl impl.sl replay.sl proof_replay.sl` (`replay.sl`
+uses `impl.sl`'s lookups and `mstep`, and fails without it), and for
+`spec.sl goal.sl det.sl spin_vacuous.sl`. The refusals are run as
+`spec.sl impl.sl X_bad.sl`.
 
 ### F3. How the suspended state carries the partial derivation [C]
 
@@ -136,12 +151,12 @@ on the variants I ran. Both checkers print `--goal proved: PASS` for
 
 - Elaboration hole. `c : Ctx p0 es (Let t :: rest)` says that a
   derivation of `Elab es (Let t :: rest)` or `Fails es (Let t :: rest)`
-  can be plugged to one for `[] ⊢ p0`. `Ctx` has one constructor per
-  (rule, recursive premise): `CTop`, `CLet`, `CAssert`, and `CNeed`.
-  Each frame holds that rule's other premises, which are already
-  established. `plug-elab` and `plug-fails` rebuild the root
-  derivation. The root rule is applied only when the checker finishes,
-  and that is the only use of the frames.
+  can be plugged to one for `[] ⊢ p0`. `Ctx` has `CTop` for the root
+  and one constructor per (rule, recursive premise): `CLet`, `CAssert`,
+  and `CNeed`. Each frame holds that rule's other premises, which are
+  already established. `plug-elab` and `plug-fails` rebuild the root
+  derivation. The frames' rules are applied, in erased code, only when
+  the checker finishes, and that is the only use of the frames.
 - Evaluation hole. `Reach init m` is the snoc-list of `Step … (Go …)`
   proofs so far. When the machine halts, `reach-runs r (RunHalt st)`
   gives `Runs init res`. If `res` is a value, the checker pushes
@@ -159,11 +174,11 @@ on the variants I ran. Both checkers print `--goal proved: PASS` for
   elaboration). This is my reading.
 - [A] Nesting. In the toy, a round trip occurs only at the top of the
   statement list, so `Ctx` is one spine. Under §29's "Round trips nest",
-  a run can be requested while elaborating a sub-form at any depth. The
-  same construction then gives `Ctx` one frame per (rule, recursive
-  premise position) of the whole `Elab` rule set, which is its
-  derivative in the zipper sense. A `Waiting` can then sit under any
-  frame. I have not built this.
+  a run can be requested while elaborating a sub-form at any depth. I
+  expect the same construction would then give `Ctx` one frame per
+  (rule, recursive premise position) of the whole `Elab` rule set,
+  which is its derivative in the zipper sense, and a `Waiting` could
+  then sit under any frame. I have not built this.
 
 ### F4. Where the proof effort went [C]
 
@@ -176,10 +191,11 @@ on the variants I ran. Both checkers print `--goal proved: PASS` for
     determinism lemma per premise that two derivations share.
   - Exclusivity of `Let` needs `evals-det`, which needs `vals-det`,
     `runs-det`, and `step-det`, which in turn needs `nth-det` and
-    `nth-nonth`. Without determinism of the evaluation relation,
-    exclusivity fails at `FLetRest`/`ElLet`. Two different values would
-    put the two derivations in different contexts. This matches 05's
-    expectation that T3 needs determinism of every sub-judgment.
+    `nth-nonth`. [A] Without determinism of the evaluation relation,
+    this proof does not go through at `FLetRest`/`ElLet`: two different
+    values would put the two derivations in different contexts, and I
+    expect exclusivity could then be false. This matches 05's
+    expectation that T3 "needs the spec to be deterministic".
 - The proof-carrying checker. Each lookup returns its relation (`Find`
   carries `Nth` or `NoNth`, `head` returns `Head`, and `ctor-dec`
   returns `CSame` or `CNe`). The suspension machinery (`Ctx`, the two
@@ -192,14 +208,18 @@ on the variants I ran. Both checkers print `--goal proved: PASS` for
   proof. I did not attempt it.
 - The reference forced and refuted every cross-constructor case on its
   own. Examples are `let-match` on `Step` derivations whose indices
-  differ, and `(match erased e _)` on `Eq (Out) (Halt …) (Go …)`. Most
-  lemmas were accepted on the first compile.
+  differ, and `(match erased e _)` on `Eq (Out) (Halt …) (Go …)`. The
+  author reports that most lemmas were accepted on the first compile;
+  that history was not re-checked.
 
 ### F5. What the reference refused, and why [C]
 
-- `det.sl`, first version. A bare `ne : (CNe c c)` as a final
-  expression gave "expected `(False)`, got `(CNe c c)`". The fix is
-  `(match erased ne _)`, a refutation by an empty match (§25, §51).
+- `det.sl`, first version. A bare `ne` as a final expression is
+  refused; with today's `det.sl` edited back that way, the message is
+  "expected `(False)`, got `(CNe c2 c2)`". The fix is
+  `(match erased ne _)`, a match whose every constructor is refuted,
+  which "produces its declared result" (§25, §21). `exclusive` is not
+  an `absurd` function, so §51's refutation rule is not what applies.
 - `replay.sl`, first version. "`p0`, declared `erased`, used in a
   non-erased position." Replay re-elaborates the whole source, so its
   state must hold the source at runtime: `(many p0 is src)`. The zipper
