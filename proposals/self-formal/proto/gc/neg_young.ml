@@ -13,6 +13,7 @@ let () =
   Gc.full_major ();
   let bad = ref 0 and trials = 10_000 in
   for k = 1 to trials do
+    Gc.minor ();
     put k;
     Gc.minor ();
     ignore (Sys.opaque_identity (Array.init 4096 (fun i -> { key = -i; check = -i })));

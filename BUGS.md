@@ -16,6 +16,13 @@ is a design decision. Remove an entry when it is fixed.
     reference differ in wording on some refusals; one seen is an absurd-by-proof branch written with no
     body, `(absurd (C ...))`, which the reference refuses with "a body
     needs a final expression" and `slc` with "malformed branch".
+    Another is a refuted branch in a run-position `match`
+    (`proposals/self-formal/proto/aftererr/17_type_error_first.sl`,
+    line 2): the reference says "omit it or write `(absurd Zero)`" at
+    column 45, `slc` "omit it or write `absurd`" at column 44.
+    `self/README.md:304-309` allows the column to differ but says the
+    first message is the reference's on every error test; this file is
+    not one of `tests/`, so that claim may not cover it.
 
 
 18. **`self/eval.sl` answers a failed step with an ordinary value.**
@@ -175,9 +182,10 @@ is a design decision. Remove an entry when it is fixed.
     failed `comptime-match`'s message (`show-typed`), and
     `show_at_dump.sl` in a `dump-context` report (`entry-value`). Each
     prints 49,999 `Cons _ 0` and then `Cons _ _ _)`; the reference
-    prints all 50002 and `Nil _` in each. The binary `slc --build`
-    makes from `show_at_final.sl` prints the whole list as well,
-    since the emitted OCaml printer seems to have no depth bound.
+    prints all 50002 and `Nil _` in each. `show_at_fn.sl` builds the
+    same list in a final function: `slc --interpret` cuts it the same
+    way, and the binary `slc --build` makes from it prints the whole
+    list, since the emitted OCaml printer seems to have no depth bound.
     This seems to conflict with DESIGN.md §45, which prints `_` only
     for "a union with more than one", "an erased field, a cell, a
     slot, a function, an opaque proof, and a value whose type has no
@@ -209,3 +217,32 @@ is a design decision. Remove an entry when it is fixed.
       expands macros (`env-expand`, `:509` onward), the reference
       runs them, and `README:61-62` and `:128` themselves say slc
       takes `std/macro.sl`'s macros and holds macro expansion.
+
+25. **After its first error, `slc` reports false facts about later
+    run-position values.** Once an error is recorded, `slc` stops
+    running run-position code. A run-position `let` whose right-hand
+    side needed no hoisted temporaries then gets the erased token as
+    its binders' value (`env-set-tokens`, `self/elab-main.sl:2209-2216`;
+    also `:672-678`), and the discriminant read takes a token as the
+    word 0 (`self/eval.sl:51`), so the binder seems to read as its
+    type's first fieldless constructor, or as the `Nat` 0, whatever
+    was written. Reproduced on the tree at `5fba336`, compiled and
+    (for the first) under `--interpret`, with files under
+    `proposals/self-formal/proto/aftererr/` that each start with
+    `(compile-error "first")`: in `02_bfalse.sl`, `x` bound to
+    `(BFalse)` is reported as "expected `BFalse`, got `(BTrue)`"; in
+    `04_lit.sl`, `x` bound to `3` as "expected `Succ`, got 0"; and in
+    `05_lit_missing.sl`, `(comptime-match many x (Zero))` on that `3`
+    passes with no message. `17_type_error_first.sl` gives the same
+    false message after a refuted branch as its first error.
+    `proposals/self-formal/10-slc-after-error.md` reports more such
+    cases, including ones where a binder is called `Hypothetical`, and
+    that macro expansion has no such gate; those were not re-run here.
+    The reference stops at the first error and prints only that one.
+    Acceptance seems unaffected, since the first error already makes
+    `slc` exit 1, and `--first-error` hides the later messages.
+    DESIGN.md does not say whether more than one error is reported;
+    the later messages seem to conflict with §27's "its results become
+    `Settled` with the resulting values" and §28's "the error prints
+    the expected constructor and the actual value". Which answer is
+    wanted is not decided here.

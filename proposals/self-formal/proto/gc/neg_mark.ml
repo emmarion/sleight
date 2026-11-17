@@ -1,10 +1,12 @@
 (* Negative control (b): during marking, the only reference to a white old block [x] is moved from a
    block [b] whose scan has not reached it into an already-black block [a], and b's slot is overwritten by an
    immediate. Without barrier the overwrite does not darken [x]. Argument "barrier" does both stores with
-   caml_modify. A weak pointer reports whether the collector freed [x] while [a] still points at it. *)
+   caml_modify. Argument "imm" is the positive case: in the same window it makes only barrier-free
+   immediate-over-immediate stores, across [a] and [b], leaving [x] in place. A weak pointer reports whether the collector freed [x] while [a] still points at it. *)
 (* 4.14 blackens a block when its scan starts and keeps the unscanned rest on the mark stack, so a
    black [b] with a white [x] in its last slot is the window. *)
-let barrier = Array.length Sys.argv > 1 && Sys.argv.(1) = "barrier"
+let mode = if Array.length Sys.argv > 1 then Sys.argv.(1) else "nobarrier"
+let barrier = mode = "barrier"
 
 (* Header colour bits 8-9 (4.14: white 0, gray 1, blue 2, black 3), read through the header word as an int. *)
 let colour (o : Obj.t) = (Array.unsafe_get (Obj.obj o : int array) (-1) lsr 7) land 3
@@ -25,9 +27,13 @@ let[@inline never] setup () =
   Weak.set st.w 0 (Some (Obj.repr x))
 
 let[@inline never] move () =
-  let x = st.b.(blen - 1) in
-  store st.a 1 x;
-  store st.b (blen - 1) (Obj.repr 0)
+  if mode = "imm" then
+    for i = 0 to blen - 2 do store st.b i (Obj.repr (i + 1)); if i < 300 then store st.a i (Obj.repr i) done
+  else begin
+    let x = st.b.(blen - 1) in
+    store st.a 1 x;
+    store st.b (blen - 1) (Obj.repr 0)
+  end
 
 let trial () =
   setup ();
@@ -44,7 +50,7 @@ let trial () =
   Gc.full_major ();
   match r with
   | `Missed -> `Missed
-  | `Moved -> if Weak.check st.w 0 then `Kept else `Freed
+  | `Moved -> if Weak.check st.w 0 && (mode <> "imm" || Bytes.get (Obj.obj st.b.(blen - 1)) 4095 = 'x') then `Kept else `Freed
 
 let () =
   let moved = ref 0 and freed = ref 0 and missed = ref 0 in
@@ -52,4 +58,4 @@ let () =
     match trial () with `Missed -> incr missed | `Kept -> incr moved | `Freed -> incr moved; incr freed
   done;
   Printf.printf "%s: window hit %d, missed %d; x freed while still referenced in %d\n"
-    (if barrier then "barrier" else "no barrier") !moved !missed !freed
+    mode !moved !missed !freed
