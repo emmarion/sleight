@@ -41,8 +41,8 @@ else is my own reading and is hedged as such. `bove_use.sl`, `fuel.sl`,
   mechanism `proto/fuel/diagonal.sl` compiles), so no quine is needed. Gödel's second
   theorem may give a related limit, conditionally (§4.3, 09): if Sleight
   is consistent, and a formalized provability relation `Prov` meets the
-  derivability conditions together with the matching lemmas, none of
-  which has been attempted, then on my reasoning Sleight cannot prove
+  derivability conditions, has a diagonal sentence, and satisfies the
+  matching lemmas, none of which has been attempted, then on my reasoning Sleight cannot prove
   uniform stripped-run safety, nor uniform (T) together with
   full-semantics safety. Two fuel-free shapes compile: recursion on an
   erased `Halts` derivation, and a typed step machine driven by

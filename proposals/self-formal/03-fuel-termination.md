@@ -313,10 +313,9 @@ So, if Sleight's functions do terminate, no such function is a faithful
 compiler for all sources. It is the halting-problem form of
 diagonalization. The self-reference comes from `read-file`, not from
 Kleene's recursion theorem. I make no claim about Gödel's theorems here.
-The diagonal above needs no Gödel. 09 §2.5 says what a Gödel route
-would add.
 Whether their hypotheses hold for Sleight's logic (§10: `Type : Type`
-with no positivity) is not settled in this file.
+with no positivity) is not settled in this file. The diagonal above
+needs no Gödel. 09 §2.5 says what a Gödel route would add.
 
 The same argument applies to a total evaluator that takes source text,
 or any encoding Q can build of itself. I believe it does not carry over

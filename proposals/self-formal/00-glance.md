@@ -47,18 +47,19 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
 
 ## Follow-ups 08 to 10 (00-summary §2 items 19 to 22, §8)
 
-- **GC.** Compiled `imm` stores look GC-safe on OCaml 4.14.1 when both words are immediates (08's reading); OCaml 5,
-  flambda, and arm64 are untested. The reference interpreter's `-imm` blits corrupt its heap (BUGS.md 26).
-- **Gödel II** may apply; nothing establishes it. Missing: a formalized `Prov` with D1 to D3 and a diagonal sentence
-  (a macro in a goal type can build one). 03's diagonal already rules out a faithful hypothesis-free `compile`; Gödel
-  II, if it applies, would make uniform stripped-run safety unprovable too (09).
+- **GC.** Compiled `imm` stores look GC-safe on OCaml 4.14.1 when both words are immediates, among 08's conditions
+  (08's reading); OCaml 5, flambda, arm64, and systhreads are untested. The reference interpreter's `-imm` blits
+  corrupt its heap (BUGS.md 26).
+- **Gödel II** may apply; nothing establishes it. Missing: a formalized `Prov` with D1 to D3, a diagonal sentence (a
+  macro in a goal type can build one), and lemmas tying `Prov` to the stripped run. 03's diagonal already rules out a
+  faithful hypothesis-free `compile`; Gödel II, if those hold, would make uniform stripped-run safety unprovable (09).
 - **slc after its first error** can print false later messages; acceptance seems unchanged (10; BUGS.md 25). Defects
   found are in BUGS.md 13, 18, 19, and 23 to 26.
 
 ## Decisions, at a glance (00-summary §3)
 
 "Linked" copies each decision's "Deps" entry in §3, which sometimes names what an entry rests on rather than its
-  dependents (e.g. 6 lists 14 and 14 lists 6), so read it as "linked to".
+dependents (e.g. 6 lists 14 and 14 lists 6), so read it as "linked to".
 Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 
 | # | Question | Recommended | Linked | Wording |
@@ -92,8 +93,7 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 | 22 | Which checker's PASS is the trust root? | B1 (04); 05 no recommendation | — | no |
 | 23 | Prove sole-reference and full-semantics safety inside Sleight? | plausible and worth it (05) | — | no |
 
-"—" means the entry's "Deps" names no decision number, or there is none.
-17's reads "all of group E" (decisions 17 to 23).
+"—" means the entry's "Deps" names no decision number, or there is none. 17's reads "all of group E" (decisions 17 to 23).
 
 ## Suggested order to decide
 

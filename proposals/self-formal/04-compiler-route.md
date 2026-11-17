@@ -278,11 +278,13 @@ definition whose header is `(erased name :`.
   concerns speed, not safety. 08 gives the safety argument: from the
   4.14.1 runtime sources and stress tests, it reads both kinds of store
   as GC-safe on OCaml 4.14.1, amd64, without flambda, when both words
-  are immediates, every read of such a field is a mutable load, and one
-  domain runs; OCaml 5, flambda, arm64, and systhreads are untested (08
-  §7, §8). The reference interpreter's `-imm` blits break the first
-  condition, since its array elements are boxed, and corrupt its heap
-  (08 §1; BUGS.md 26).
+  are immediates (for a blit, every word of both ranges), every read of
+  such a field is a mutable load, and the target is not a flat float
+  array. It reads OCaml 5 the same way for one domain, without running
+  anything there; OCaml 5, flambda, arm64, and systhreads are untested
+  (08 §7, §8). The reference interpreter's `-imm` blits fail the
+  immediacy conditions, since its array elements are boxed `VWord`s,
+  and corrupt its heap (08 §1, §7; BUGS.md 26).
 - [C] `Bytes.unsafe_to_string` without a copy (`lib/ffi_core.ml:148, 173,
   260`). At 148 and 173 the buffer is a fresh local one. At 260
   (`bytes_str`), and in the template that emitted programs use in its

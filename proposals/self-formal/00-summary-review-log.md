@@ -2093,3 +2093,64 @@ Unsure, not changed:
 - 05 §5's trust-base row still says "if Gödel II applies (unchecked)", which fits the conditional
   reading and was left as is.
 - 00-summary.md is 690 lines.
+
+## Check of the 08–10 propagation
+
+A checker read the brief, CLAUDE.md, DESIGN.md in full, 08, 09, and 10 with their review notes,
+BUGS.md 13, 18, 19, and 23 to 26, and every passage the propagation commit edited. Re-runs:
+`blit_imm_interp.sl` with `std/immediate.sl` on the reference (exit 139 twice; with
+`OCAMLRUNPARAM=s=4k`, "not an extern integer: _", exit 1) and under `slc --interpret` (prints `0`);
+`aftererr/02_bfalse.sl`, `04_lit.sl`, `05_lit_missing.sl`, and `14_string_msg.sl` and
+`review2/after_error_run.sl` under the reference and `slc --interpret` (messages as 10 and BUGS.md
+25 quote them, exit 1); `r_self_goal.sl` with `--goal proved` on the reference and on slc (PASS);
+`03_detour.sl` under `slc --interpret` (`(BFalse)`).
+
+Errors found and changed:
+
+1. 03 F6: inserting "The diagonal above needs no Gödel. 09 §2.5 says what a Gödel route would add."
+   between "I make no claim about Gödel's theorems here" and "Whether their hypotheses hold" left
+   "their" without its antecedent. The two sentences now follow the "Whether" sentence.
+2. 01 §3.7 said slc "seems not to run the evaluator at compile time" and, in the same sentence, that
+   a macro bound before the error still runs, which is compile-time evaluation. Now "not to run
+   run-position code through its evaluator", as 10 §1 says.
+3. 01 §3.7's "Otherwise the binders are `Settled` but hold the erased token" covered cases 10 did not
+   trace and contradicted 10 §2 and its third review unsure point: a string literal, or a `Settled`
+   string variable, leaves the binder `Hypothetical`. Now "in the cases 10 traced", with that
+   exception stated as untraced. Key finding 22 now says "string binders aside, untraced".
+4. 04 2.5 and key finding 19 listed "one domain runs" as a condition of 08's reading on OCaml
+   4.14.1, and omitted 08 §7's flat-float-array condition and the blit condition (every word of
+   both ranges). In 08 §7 one domain is the condition of the OCaml 5 reading, where nothing was run.
+   Both now give 08 §7's conditions, with OCaml 5 read for one domain only and untested. 04 2.5 said
+   the interpreter's blits break "the first condition"; 08 §7 says conditions 1 and 4. Now "the
+   immediacy conditions". Key finding 19's title said "the reference interpreter's do not", which
+   reads as covering its barriered `-swap-imm` and `-place-imm`; now "`-imm` blits".
+5. Key finding 20 said Gödel II would add its limits "from consistency alone". 09 §2.5 says that it
+   needs consistency rather than soundness, but only under route B's D1 to D3 and route C's lemmas.
+   Now "from consistency rather than soundness but only given the missing pieces above". Its
+   citation for Σ₁ goals was 09 §2.2 (r.e.); now §2.2, §2.3.
+6. Key finding 21 said "a reading, as the same sentence puts the driver's loop 'outside the claim'",
+   with no sentence named before it. Now names part 5's last sentence, which also calls each
+   `Program` step "a total call". Its first premise now says that (T) and (E) are argued, not proved,
+   as 09 §3.4 premise 1 does.
+7. Key finding 22 said slc's "evaluator no longer runs" those forms "though macros still expand";
+   macro expansion runs code. Now "no longer runs ..., though macros still expand and run".
+8. 05 §1's Gödel sentence named the derivability conditions and the lemmas but not the diagonal
+   sentence that 05 §4.3's (c) and 09 §2.4 B also require, a weaker hedge than §4.3's. Added.
+9. 00-glance's GC bullet omitted systhreads from the untested list and 08's other conditions; its
+   Gödel bullet omitted the lemmas tying `Prov` to the stripped run, without which 09 §2.4 C gives
+   only the unprovability of consistency. Both added. The "Linked" note's second line had a stray
+   indent. To stay at 110 lines, the two lines under the decisions table are joined.
+
+Checked and unchanged: 05 §4.3, T7, and §9 against 09 §4's suggested wording as corrected by its
+review notes 2, 6, and 10 (the same conditions, hedges, and "unattempted"); 03 F6's inserted
+sentences against 09 §4; 04's summary and section 6 against 08 §7 and §8; BUGS.md 23, 18, 19, 25,
+and 26 as cited; key findings 2, 10, 11, and 15, rough edges 20 and 31, sections 6 and 8, the
+README.md list, and the glance's diagonal bullet against their sources. The glance's decisions
+table was not changed by the commit and matches §3.
+
+Unsure:
+- 03 F6 still says "In `diagonal.sl` it is non-recursive apart from that call"; 09 §3.4 says
+  the macro's helpers call, apart from `compile` and each other, only `read-file` and
+  `intern-string`. The shorter wording is 09 §4's own suggestion and was kept.
+- 05's coordinator note says README.md's derivation "supplies no interpretation of arithmetic closed
+  under deduction"; 09 says it "does not by itself supply" one. The body uses 09's sense.

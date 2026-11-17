@@ -356,21 +356,25 @@ the items.
   earlier error (`self/elab-main.sl:539`, `:545`, `:739`, `:2152`, each
   testing `(env-run-pos …)` together with `(not $ env-failed …)`, and
   `:2152` also a `many` mode), so after an error it
-  seems not to run the evaluator at compile time; macro expansion is not
-  gated, so a macro bound before the error still runs (10 §2). A
+  seems not to run run-position code through its evaluator. Macro
+  expansion is not gated, so a macro bound before the error still runs
+  at compile time (10 §2). A
   run-position `let` whose right-hand side hoists a temporary leaves its
   binders `Hypothetical`: a call with argument `(Zero)`
   (`proto/review2/after_error_call.sl`, `after_error_call2.sl`) and
   `(Succ (Zero))` (`proto/review4/01_after_error_succ.sl`) give no
   `Settled` result. A macro bound after the error is not dispatched
-  (`after_error_macro.sl`). Otherwise the binders are `Settled` but
-  hold the erased token, not a computed value (`env-set-tokens`,
+  (`after_error_macro.sl`). Otherwise, in the cases 10 traced, the
+  binders are `Settled` but hold the erased token, not a computed value
+  (`env-set-tokens`,
   `self/elab-main.sl:2209-2216`), and slc's discriminant read takes a
   token as the word 0 (`self/eval.sl:51`). So a nullary `(Zero)` bound
   after an error reads as `0` ("expected `Succ`, got 0",
   `proto/review2/after_error_run.sl`) only by coincidence: `(BFalse)`
   reads as `(BTrue)`, and `3` as `0`, giving false later messages (10
-  §1 to §3; BUGS.md 25). Acceptance seems unaffected, since the first
+  §1 to §3; BUGS.md 25). A string literal, or a `Settled` string
+  variable, also leaves the binder `Hypothetical`, for a reason 10 did
+  not trace. Acceptance seems unaffected, since the first
   error already makes slc exit 1 (10 §4).
 - [C] Both implementations read a whole file before elaborating it.
   `reader_phase.sl` (a missing `)` on line 3) and `pragma_phase.sl` (an

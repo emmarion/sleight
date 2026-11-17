@@ -188,16 +188,19 @@ Each item is the tracks' recommendation, not a decision.
     it vary, §69 extends this to `Slots`. 04 takes `slot-eq` answers as an oracle beside the host's
     answers to `world-do` and `read-file`, the theorem at most "values some spec run gives, for the
     same `slot-eq` and world answers, up to crash", itself a proposal (04 §2.6, r2.6, r3.5).
-19. **The `imm` stores look GC-safe in compiled code; the reference interpreter's do not.** On OCaml
-    4.14.1 (amd64, no flambda), 08 reads the FFI's `-imm` operations and slc's `(imm o n)` stores,
-    which skip `caml_modify`, as GC-safe when both the overwritten and the stored word are
-    immediates, every read of such a field is a mutable load, and one domain runs, from runtime
-    sources and stress tests (08 §1, §3, §6, §7). The reference interpreter's `-imm` blits copy
-    boxed `VWord`s raw: `array-blit-imm` segfaults it, under `--build` too, while `slc --interpret`
-    maps them to the ordinary blit (`proto/bugs/blit_imm_interp.sl`; 08 r1; BUGS.md 26).
+19. **The `imm` stores look GC-safe in compiled code; the reference interpreter's `-imm` blits are
+    not.** On OCaml 4.14.1 (amd64, no flambda), 08 reads the FFI's `-imm` operations and slc's
+    `(imm o n)` stores, which skip `caml_modify`, as GC-safe when both the overwritten and the
+    stored word are immediates (for a blit, every word of both ranges), every read of such a field
+    is a mutable load, and the target is not a flat float array, from runtime sources and stress
+    tests; OCaml 5 (one domain read, not run), flambda, arm64, and systhreads are untested (08 §1,
+    §3, §6 to §8).
+    The reference interpreter's `-imm` blits copy boxed `VWord`s raw: `array-blit-imm` segfaults it,
+    under `--build` too, while `slc --interpret` maps them to the ordinary blit
+    (`proto/bugs/blit_imm_interp.sl`; 08 r1; BUGS.md 26).
 20. **Gödel II: possibly, not established** (09's reading). Goal types passing `--goal proved` (§71)
-    appear r.e., and Σ₁ facts and a coded system's consistency can be goals (09 §2.2;
-    `proto/godel/`, both). Missing, unattempted: a Sleight `Prov` formalizing acceptance, with D1 to
+    appear r.e., and Σ₁ facts and a coded system's consistency can be goals (09 §2.2,
+    §2.3; `proto/godel/`, both). Missing, unattempted: a Sleight `Prov` formalizing acceptance, with D1 to
     D3 and a diagonal sentence, and, for the safety limits, lemmas that `(Prov ⌜False⌝)` yields an
     accepted program whose stripped run reaches absurd code (09 §2.4 B, C). The diagonal sentence
     can be a goal type in which a macro splices the unit's own text (`r_self_goal.sl`, both); D2 and
@@ -205,21 +208,23 @@ Each item is the tracks' recommendation, not a decision.
     implications, not obviously a PRA-style one (09 §2.3, §2.4 A). Without Gödel, 03's `read-file`
     diagonal rules out a faithful hypothesis-free non-erased `compile` and uniform H in a recursable
     form, and gives a G1-style unprovable true non-halting statement; Gödel II would add, from
-    consistency alone, that uniform stripped-run safety, and (T) with safety in any form, are
-    unprovable (09 §2.5; 03 F6; 05 §4.3).
+    consistency rather than soundness but only given the missing pieces above, that uniform
+    stripped-run safety, and (T) with safety in any form, are unprovable (09 §2.5; 03 F6; 05 §4.3).
 21. **SOUNDNESS.md part 5 and 03's detour.** SOUNDNESS.md never mentions the driver's call of a
     final `Fn`; part 5's measure argument asks no decrease of a root activation, so 09 reads the
-    call as covered, a reading, as the same sentence puts the driver's loop "outside the claim" (09
-    §3.2). Six premises then carry the argument: (T) and (E) cover that call, (E) giving
-    termination; the spec accepts P as both implementations do; `compile`'s spec run is
-    deterministic, one semantics for evaluator and driver, crashes aside; the macro's other code
-    ends (no P can hold it, as it needs a `MacroWorld`, §65; in `diagonal.sl`, by inspection);
-    `read-file` returns Q's text; the expansion decides Q's verdict (09 §3.4).
-22. **slc after its first error** goes on, but its evaluator no longer runs run-position `let`s,
-    calls, or matches, though macros still expand; a `let` whose right-hand side hoists no temporary
-    gets the erased token, read as the word 0, so later messages can be false (a `(BFalse)` binder
-    "got `(BTrue)`", `3` "got 0"), and some errors are missed (`proto/aftererr/`; 10 §1 to §3).
-    Acceptance seems unchanged, the first error already making slc exit 1 (10 §4; BUGS.md 25).
+    call as covered, a reading only, since part 5's last sentence, while calling each `Program` step
+    "a total call", puts the driver's loop "outside the claim" (09 §3.2). Six premises then carry
+    the argument: (T) and (E), argued, not proved, cover that call, (E) giving termination; the spec
+    accepts P as both implementations do; `compile`'s spec run is deterministic, one semantics for
+    evaluator and driver, crashes aside; the macro's other code ends (no P can hold it, as it needs
+    a `MacroWorld`, §65; in `diagonal.sl`, by inspection); `read-file` returns Q's text; the
+    expansion decides Q's verdict (09 §3.4).
+22. **slc after its first error** goes on, but no longer runs run-position `let`s, calls, or
+    matches, though macros still expand and run; a `let` whose right-hand side hoists no temporary
+    gets the erased token (string binders aside, untraced), read as the word 0, so later messages
+    can be false (a `(BFalse)` binder "got `(BTrue)`", `3` "got 0"), and some errors are missed
+    (`proto/aftererr/`; 10 §1 to §3). Acceptance seems unchanged, the first error already making slc
+    exit 1 (10 §4; BUGS.md 25).
 
 ## 3. Decisions for the owner
 
