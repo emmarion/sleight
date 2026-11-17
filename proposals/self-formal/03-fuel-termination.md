@@ -20,12 +20,13 @@ approved or decided, and where it and DESIGN.md disagree, DESIGN.md is right.
   compiled by both. With `--eval-fuel 1000`, a 93025-step computation
   finishes when cut into `Program` steps and fails with `out of fuel` when
   run as one call, in both implementations.
-- The checker refuses suspension by first-class closures. A
-  continuation closure at a fixed level cannot call another one at the
-  same level. A function also cannot iterate `Program` steps itself.
-  Suspension therefore has to be defunctionalized: explicit data frames,
-  plus one fresh `UniqueFn` per driver step that calls down to the
-  stepper. I compiled each of these claims.
+- The checker refuses suspension by first-class closures of one
+  fixed-level type. A continuation closure at a fixed level cannot call
+  another one at the same level. A function also cannot iterate
+  `Program` steps itself. I compiled these claims (F4). So I propose
+  defunctionalized suspension: explicit data frames, plus one fresh
+  `UniqueFn` per driver step that calls down to the stepper. I did not
+  try level-indexed continuations.
 - A diagonal argument (F6; its mechanism is compiled in
   `proto/fuel/diagonal.sl`, the rest is my reasoning) says that no
   non-erased Sleight function `compile : Src -> Verdict` that takes no

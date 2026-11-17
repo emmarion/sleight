@@ -417,8 +417,13 @@ Values as words:
   The spec is deterministic given the world's answers and the
   `slot-eq` oracle. Pros: no confluence proof, a total step function,
   and the compiler theorem is lock-step. Cons: compilers may not reorder
-  without proof. The reference's `let ... and` for `values` would not
-  meet it; slc's emitter would need checking. Needs DESIGN.md wording
+  without proof. The reference's `let ... and` for `values` meets it
+  only through OCaml 4.14.1's observed, unpromised order; slc's emitter
+  would need checking. As stated, O1 puts the hoisted `(h n)` before the
+  head `(pick)` in `((pick) (h n))`, which is the opposite of what the
+  reference emits (2.2) and of the run-position reading of §6 and §27;
+  "a form head, then the §15 bindings" is the variant that matches
+  both. Needs DESIGN.md wording
   (rules 11, 12). Cost: low.
 - **O2: fix only what DESIGN.md fixes; the spec is a relation over
   orders.** Pros: freedom for compilers. Cons: the compiler theorem
@@ -439,7 +444,8 @@ Values as words:
   equal. Theorem: for each compiled run there is an oracle under which
   the spec run produces the same events and values. It covers the FFI
   `Slots` too (§69): an FFI answer is the model's linear search under
-  some oracle, as long as the FFI says "found" only for an equal word.
+  some oracle, as long as the FFI says "found" only for an equal word
+  (reading; not checked against the `Slots` models).
   Pros: deterministic, fits a `Program`-driven spec. Cons: the theorem
   is existential.
 - **N2: relation.** `slot-eq` is a nondeterministic step, and the
@@ -472,18 +478,24 @@ Values as words:
   Cost: high.
 - **C4 (recommended for compile time): a deterministic bound.** The
   compile-time run is the spec machine with an explicit depth bound
-  taken as compiler input, as `--eval-fuel` already is. Accepting or
-  rejecting is then a function of (source, bound), so owner statement 3
-  ("accepted or rejected") holds per bound. `native-compute` (§72)
+  taken as compiler input, as `--eval-fuel` already is (MANUAL.md: the
+  reference has no bound without the flag; slc's default is 1000000000).
+  Accepting or rejecting is then a function of (source, bound), so owner
+  statement 3 ("accepted or rejected") holds per bound. This departs
+  from §31's "unlimited stack and heap" for compile time and needs
+  owner wording. A depth bound does not bound the heap, so a compile-time
+  heap exhaustion stays host-dependent unless C3's heap bound is added. `native-compute` (§72)
   stays host-dependent: its answer is treated as an oracle, or excluded.
 
 ### Q6. Externs
 
 - **E1: run every model.** The FFI's agreement (§42) is a hypothesis per
-  function. Cons: 2.5. Under the `Nat` model, `(slot-of k)` = tag slot
-  k is false, so programs accepted with externs have no meaning in the
-  spec, unless the spec also elaborates without extern facts (then
-  tagslot.sl is refused by the spec but accepted by the compiler).
+  function. Cons: 2.5. DESIGN.md gives `(slot-of k)` = tag slot `k`
+  only with externs. Either the spec elaborates without extern facts
+  (then tagslot.sl is refused by the spec but accepted by the compiler),
+  or it elaborates with them and runs the model, and must then choose a
+  word for each tag slot (e.g. the interned literal's block), whose
+  consistency is unchecked.
 - **E2 (recommended): `Nat` is a machine primitive; all other models
   run.** `Nat` words are `Imm n` (unbounded in the abstract machine).
   Its extern operations are primitive steps whose results are proved, in
@@ -522,17 +534,26 @@ the `at` reading-back that follows, since both entries are `many`
 ## 4. Decisions for the owner
 
 1. **Does the spec run post-erasure code (R1)?** Recommended: yes. §27
-   and §29 already say the evaluator runs stripped code, and a heap
-   machine cannot run erased code (§35: no word). Depends on it: the
+   and §29 already say the evaluator runs stripped code at compile time,
+   and §19, §36 and §39 describe runtime by post-erasure code, so this
+   mostly confirms DESIGN.md; the open part is the formal spec's object
+   and slc's `CErased` placeholders. (reading) A machine could give
+   erased values placeholder words, as slc does, but §35 says "An erased
+   variable has no word". Depends on it: the
    elaboration spec must output stripped code with its reading-back
    renames, and type soundness is stated over it.
 2. **Machine state A1:** `Imm n | Ptr a` words, abstract, never-reused
    addresses compared only for equality, mutable blocks, explicit
-   continuation, total step, `Program`-driven. Recommended: yes. It meets
-   every requirement found in §33, §35–§38, §41, and §66, and it is
-   fuel-free (prototype).
+   continuation, total step, `Program`-driven. Recommended: yes. (reading)
+   It meets every requirement I found in §33, §35–§38, §41, and §66, and
+   the driver loop needs no fuel (prototype, with the oracle as a
+   function, 2.6).
 3. **Fix the evaluation order (O1/O3)?** Recommended: fix it in the
-   spec, in an order consistent with §15's hoisting (not Proposal A).
+   spec. Sub-question: does §15's "behaves as if ... placed just before"
+   fix timing? If so, it orders argument forms before a form head, which
+   the reference does not do and which conflicts with a run-position
+   reading of §6 and §27 (rough edge 10). Proposal A, applied after
+   hoisting, is one candidate.
    This needs DESIGN.md wording. Leave order-independence as an
    optional later theorem. Depends on it: whether the compiler theorem
    is lock-step (cheap) or needs confluence (expensive).
@@ -542,9 +563,10 @@ the `at` reading-back that follows, since both entries are `many`
 5. **Crash: C2 at runtime, C4 at compile time?** Recommended: yes, with
    C3 as a later strengthening. Depends on it: owner statement 3 holds
    per compile-time bound, and `native-compute` needs its own clause.
-6. **Externs: is `Nat` primitive (E2)?** Recommended: yes. Otherwise the
-   spec must elaborate with `--no-extern` facts, and the compiler would
-   accept programs (tagslot.sl) that the spec refuses.
+6. **Externs: is `Nat` primitive (E2)?** Recommended: yes. Otherwise
+   either the spec elaborates with `--no-extern` facts, and the compiler
+   accepts programs (tagslot.sl) that the spec refuses, or the spec must
+   choose a word for each tag slot under the `Nat` model (E1).
 7. **Stuck: abort (S1)?** Recommended: yes. Compiled code already
    aborts. It gives the theorem content even though no consistency
    theorem is expected.
@@ -565,11 +587,13 @@ the `at` reading-back that follows, since both entries are `many`
    bindings placed before one statement.
 4. **`Nat`'s word under models.** §33's "the word of the `Nat` of its
    position" presupposes that `Nat` k has one word. That holds for an
-   immediate extern `Nat`, not for the model's `Succ` blocks. §35's
-   "with externs too, `(slot-of k)` is tag slot `k`" makes acceptance
-   depend on the extern mode (tagslot.sl). So §42's "running the models
-   instead of the implementations must give a program the same values"
-   cannot be applied to such a program as written.
+   immediate extern `Nat`, not obviously for the model's `Succ` blocks;
+   §33 states the requirement only "With externs on". §35's "with
+   externs too, `(slot-of k)` is tag slot `k`" makes acceptance depend
+   on the extern mode (tagslot.sl), apparently by design. So §42's
+   "running the models instead of the implementations must give a
+   program the same values" has nothing to compare for a program
+   refused under the models.
 5. **What a crash does to earlier effects.** §31's "A crash produces no
    value, never a different one" does not say what happens to effects
    already performed (the world trace), or where a crash may occur.
@@ -588,17 +612,34 @@ the `at` reading-back that follows, since both entries are `many`
 9. **Tests fix free behaviour.** `tests/slot_eq.sl` expects `ESome`
    where §67 allows `ENone`. Not a contradiction, but the tests
    constrain implementations beyond the spec.
+10. **§15's timing against §6 and §27.** If §15's "placed just before the
+   statement or final form that contains the call" is read as timing, a
+   call `((pick) (h n))` runs `(h n)` before the head `(pick)`. In run
+   position, §6 ("The head is elaborated first") and §27 (a form "runs
+   as soon as it has been elaborated") run `(pick)` first. The reference
+   emits `(pick)` first (2.2).
+11. **§61 presumes statement order.** §61's "The write stores `h` before
+   the call" relies on a body statement running before a later one with
+   no dataflow between them, which no general rule states (2.2, 5b).
+12. **Elaboration order of a call's arguments.** §65 threads the macro
+   world "sequentially through all of elaboration" and gensym numbers
+   are observable, but DESIGN.md states only that the head is elaborated
+   first (§6).
 
 ## 6. Unverified claims
 
 - The order-independence conjecture (2.3) is unproved. So is the claim
   that §13's property, as a heap invariant, follows from the uniqueness
   rules.
-- That OCaml leaves the order of `let ... and` and of application
-  arguments unspecified (from memory of the OCaml manual; I did not
-  check it tonight).
-- That the reference interpreter evaluates arguments before the head
-  (`lib/eval.ml` relies on OCaml's order, which I did not check).
+- That the OCaml manual leaves the order of `let ... and` and of
+  application arguments unspecified (from memory; not checked against
+  the manual). What OCaml 4.14.1 does here was checked [compiled]:
+  `let ... and` in written order, application arguments and tuples
+  right to left.
+- That the reference interpreter evaluates arguments before the head:
+  `lib/eval.ml:24` is `apply (eval1 env f) (List.map (eval1 env) args)`,
+  and OCaml 4.14.1 evaluates application arguments right to left, so the
+  `List.map` runs first. Not observed directly in a Sleight run.
 - That GC reuse of addresses is unobservable because a slot word keeps
   its block alive. This is a reading of OCaml's runtime, not checked.
 - CakeML's top-level theorem allowing early termination on resource
