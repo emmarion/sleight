@@ -142,7 +142,7 @@ definition whose header is `(erased name :`.
 | `str-split-fuel` (`base.sl:100-109`) | fuel equal to the string's length | unreachable but not refuted |
 | sugar budget (`elab-main.sl:1871`, `README:385-394`) | budget sized by the form | "internal" error, not refuted |
 | `Steps n` (`elab-main.sl:1243...`) | budget | zero case refuted by type |
-| macro expansions ≤ 10000 (`elab-main.sl:511, 560`: the run's count, `env-expansions`, is checked at `:560`. The elaborator group's first `subterm` parameter, named `fuel` (`elab-main.sl:752`), starts at the same limit for each top-level form (`:3379-3391`), loses one per expansion along a nesting path, and its zero case gives the same message at `:766, 781, 1126, 1258, 1266, 1501, 1541`; `splice-go` keeps a separate counter, started at the limit at `:593` and checked at `:586`) | **specified**: [D] §62 "At most 10000 expansions run in one run, every file on the command line included." | refusal, as §62 requires |
+| macro expansions ≤ 10000 (`elab-main.sl:560`: the run's count, `env-expansions`, is checked at `:560`. The elaborator group's first `subterm` parameter, named `fuel` (`elab-main.sl:752`), starts at the same limit for each top-level form (`:3379-3391`), loses one per expansion along a nesting path, and its zero case gives the same message at about twenty sites, among them `:766, 781, 1126, 1258, 1266, 1501, 1541` and `env-expand`'s check at `:511`; `splice-go` keeps a separate counter, started at the limit at `:593` and checked at `:586`, and `run-toplevel` another, started at the limit at `main.sl:29` and checked at `:3375, 3382`) | **specified**: [D] §62 "At most 10000 expansions run in one run, every file on the command line included." | refusal, as §62 requires |
 
 - [P] So the fuel a correctness theorem must face is the interpreter's;
   `show-at`'s and `heap-strs-fuel`'s, whose zero cases give a wrong answer
@@ -194,9 +194,10 @@ definition whose header is `(erased name :`.
   type `List (Code ctx many-one)` (`core.sl:611`), so nothing in the types
   says that they are atoms.
 - [T] In `proto/04-compiler-route/order.sl` and `ord2.sl`, each call or
-  constructor argument that is not a variable is let-bound before the
-  call that uses it, as §15 describes; two tests do not show that this
-  always holds. The bindings are in source
+  constructor argument that is neither a variable nor a literal is
+  let-bound before the call that uses it, as §15 describes (a literal,
+  such as the `1` of `ord2.sl`'s `(f a 1)`, is passed as a named
+  top-level constant); two tests do not show that this always holds. The bindings are in source
   order in `order.sl`, but not in `ord2.sl` (next item), so the emitted
   order is §15's placement, not source order in general. A multi-value result is sequenced by
   `let tupN_a0 = ... in let tupN_a1 = ... in`, `N` a depth
@@ -218,6 +219,22 @@ definition whose header is `(erased name :`.
   a statement (§27) placed just before the statement or final form that
   contains the call". [T] In `ord2.sl`, `(values (f a a) (f (Succ a) a))`
   binds `Succ a` *before* `(f a a)`, consistent with that sentence.
+- [T] **A head that is a form runs before the arguments.** In
+  `proto/review5/04_head_arg_compiled.sl`, `((pickbig h) (bigbytes k))`
+  has a head whose run crashes in `Array.make` and an argument whose run
+  crashes in `Bytes.create`. slc emits
+  `let v1 = (pickbig h) in let v2 = (bigbytes k) in ((of_any v1 : ...) v2)`,
+  and the program built by `slc --build` (ocamlopt) and by
+  `slc --build --byte` dies with `Invalid_argument("Array.make")`, as the
+  reference interpreter does; with a small `h` it dies in
+  `Bytes.create`, so the argument's crash is reachable. Only this one
+  test, inside a function body, was run. [P] A reading of §15 by timing
+  alone, the argument's binding placed before the statement or final
+  form and the head run inside it, would give the other order. In run
+  position §6 elaborates the head first ("The head is elaborated
+  first") and a head that is a form "runs as soon as it is elaborated";
+  inside a body I found no sentence that places a head that is a form
+  relative to the arguments (rough edge 1).
 - [C] **Refutation is trusted at output.** A match with no default arm, or
   a phantom-index GADT copy that omits refuted constructors, is matched
   after an `of_any` cast. `README:242-244`: "A wrong refutation would
@@ -235,8 +252,11 @@ definition whose header is `(erased name :`.
   `(str-append "a" "b")`, prints `(BTrue)` compiled by `slc --build`
   (ocamlopt) and `(BFalse)` under `slc --build --byte`, under
   `slc --interpret`, and under the reference. `bootstrap.sh` builds the
-  tests it compares with `--byte` (`self/README.md:191`), so its
-  differential runs would not show this. [P] §67 allows both answers ("which
+  tests it compares with `--byte` (`self/README.md:191`), so those runs
+  would not show this; its `native-compute` runs are built with ocamlopt
+  (`elab-main.sl:38`) and compared with `--no-native`, so a test that
+  returned a `slot-eq` answer through `native-compute` could, though I
+  did not look for one. [P] §67 allows both answers ("which
   one a call answers may differ between runs"), and in the compiled run
   the two do hold one word. It is a refinement mismatch only if the spec
   says that every allocation takes a never-used address (the earlier
@@ -244,7 +264,12 @@ definition whose header is `(erased name :`.
 - [C] The `-imm` operations write through `(cast a : int array)` with
   `Array.unsafe_set` and `caml_blit_bytes` (`lib/ffi_core.ml:235-241,
   315-320`), and so do their templates (`lib/ffi_templates.txt:51-52`)
-  and the emitted `imm` cell stores above. [P] These skip `caml_modify`, which I believe is safe only
+  and the emitted `imm` cell stores above. [T] ocamlopt 4.14.1 compiles
+  an `Array.unsafe_set` on an `int array` to a store with no call to
+  `caml_modify`, and the same store on an `Obj.t array` to one with the
+  call (`proto/review5/04_barrier.ml`, read from its assembly); the
+  comment at `ffi_core.ml:315-317` calls `caml_blit_bytes` "a plain
+  memmove". [P] Skipping `caml_modify` is, I believe, safe only
   when both the old and the new words are immediates, as `(imm o n)` and
   `Imm` require ([D] §37, §44). This is a dependency on OCaml runtime
   internals (GC barriers). The code comment at `ffi_core.ml:315-316`
@@ -714,15 +739,20 @@ IR's call and constructor arguments syntactically atomic in either case.
    does take the statements of a body to run in written order: "The write
    stores `h` before the call: left to the invocation, that store would
    follow the call". DESIGN.md does not say whether
-   order is meant to be *unobservable*. [P] It may be. `World` is unique,
-   so effects are data-ordered, and a crash and divergence both produce
-   no value, though the order still decides whether a form with one
-   crashing and one diverging argument crashes or runs forever. That case
-   needs an argument that diverges, which §17's levels ("Termination rests
-   on levels") are meant to rule out; whether they do is not settled here.
-   Question
-   for the owner: is order intended to be
-   unobservable, so that any order is correct?
+   order is meant to be *unobservable*. [P] It is observable without any
+   divergence. `World` is unique, so world effects are ordered among
+   themselves, but not against a crash in pure code: in
+   `proto/review5/04_effect_vs_crash.sl`, `(both (say w) (big n))` has
+   one argument that writes to standard output and one that crashes, and
+   §15 orders the two bindings neither way. [T] slc's native build and
+   the reference interpreter both print `effect ran` and then crash; the
+   other order would crash with no output, and §42 has the driver flush
+   "after every write". A crash and a divergence in two arguments are a
+   second such case, if §17's levels ("Termination rests on levels")
+   leave any divergence, which is not settled here. Head-versus-argument
+   order is in 2.5. Question for the owner: is order meant to be fixed,
+   and if not, is every order a correct run, so that the output above
+   may differ between implementations?
 2. **A crash at compile time.** §31: "A real run may crash where the host
    cannot represent what is asked of it." §72 makes a crashed native run
    "an error at its argument". DESIGN.md does not say what a crash (or
@@ -741,12 +771,16 @@ IR's call and constructor arguments syntactically atomic in either case.
 4. **"Fresh address" versus sharing.** §38 says "Nothing relies on two
    slots being distinct", and §67 lets `ENone` be answered always. §36
    says "two separately built cells with equal contents are `is`-equal
-   and are two blocks", which is about cells. §33 fixes the word of a
-   value with no non-erased field, "however the value was built", so
-   separately built values of that kind do share one word. For a value
-   with a non-erased field, and for a value of an extern type such as
-   the `String`s of `slot_eq_share.sl`, DESIGN.md does not say whether
-   two separately built ones may share one word. That matters for
+   and are two blocks", which is about cells, and §37 calls the result of
+   a `many` `cell-write` "a fresh block" and that of a `many` invocation
+   with a store "a fresh copy". §33 fixes the word of a value with no
+   non-erased field, "however the value was built", when its type is
+   tagged or is untagged and not marked `extern` ("an unspecified word
+   otherwise"), so separately built values of that kind do share one
+   word. For any other value with a non-erased field, and for a value of
+   an extern type such as the `String`s of `slot_eq_share.sl`, I found
+   no sentence saying whether two separately built ones may share one
+   word. That matters for
    whether `==` (2.5) refines the spec's `slot-eq`.
 5. **§27 and §29 name "the evaluator"** as part of the semantics (§27:
    "the evaluator runs the code"; §29: "The evaluator runs that code"). [P] A formal spec needs its own run in that role. DESIGN.md
@@ -786,6 +820,8 @@ Not DESIGN.md, but found:
   only one two-argument test on 4.14.1 (2.5). That today's emitted code
   does not depend on it: shown for two tests only, and resting on the
   untyped atom invariant.
+- That slc's compiled code runs a head that is a form before the
+  arguments in general: one test in a function body (2.5).
 - Whether flambda shares more constants than plain ocamlopt does: not
   tried (plain ocamlopt already shares, 2.5).
 - That the `-imm` and `imm`-store barrier bypass is GC-safe on 4.14 or OCaml 5: not
@@ -799,8 +835,10 @@ Not DESIGN.md, but found:
 
 Evidence files: `proposals/self-formal/proto/04-compiler-route/`
 (`order.sl`, `ord2.sl`, `deep.sl`, `slot_eq_share.sl`, `tc3.ml`,
-`tc4.ml`, `share.ml`, `argorder.ml`), and `proto/review2/04-deep-fn.sl`
-and `proto/review2/04-tc-direct.ml` from the second review. Compile them with
+`tc4.ml`, `share.ml`, `argorder.ml`), `proto/review2/04-deep-fn.sl`
+and `proto/review2/04-tc-direct.ml` from the second review, and
+`proto/review5/04_head_arg_compiled.sl`, `04_effect_vs_crash.sl`, and
+`04_barrier.ml` from the fifth. Compile them with
 an slc built by `self/release.sh` and with `ocamlfind ocamlopt` (4.14.1).
 
 ## Review notes
@@ -1155,3 +1193,88 @@ Points I am unsure of:
 - The [P] that the `imm` and `-imm` stores are GC-safe when both words
   are immediates is still unchecked against the runtime sources (none
   are installed here).
+
+## Fifth review notes
+
+A fifth adversarial review read the brief, CLAUDE.md, and all of
+DESIGN.md, opened the cited lines in `self/`, `lib/`, `mini/`,
+`MANUAL.md`, `MINIMAL.md`, and `INTERNALS.md`, and re-ran `order.sl`,
+`ord2.sl`, `slot_eq_share.sl` (native, `--byte`, `--interpret`, and the
+reference), `share.ml`, `argorder.ml`, `tc3.ml`, `tc4.ml`,
+`04-tc-direct.ml`, and the five `imm` stores of `tests/cell_imm.sl`. All
+those [T] results held. `deep.sl` under `--interpret` was not re-run.
+
+1. 2.5 said every call or constructor argument that is not a variable
+   is let-bound. A literal is not: `ord2.sl`'s `(f a 1)` passes the
+   top-level constant `a1560`. Reworded to "neither a variable nor a
+   literal".
+2. The open point on head-versus-argument order in slc's compiled code
+   is settled for one test. `proto/review5/04_head_arg_compiled.sl`
+   gives a head and an argument that crash differently; slc let-binds
+   the head first, and both the native and the `--byte` build die in
+   the head's `Array.make`, as the reference interpreter does; with the
+   head made harmless they die in the argument's `Bytes.create`. Added
+   to 2.5 and section 6, with §6's run-position wording and the gap
+   inside a body.
+3. Rough edge 1's [P] said order "may be" unobservable and named only a
+   crashing and a diverging argument as a counterexample, which needs a
+   divergence §17 may rule out. A world effect in one argument and a
+   crash in another observe order with no divergence:
+   `proto/review5/04_effect_vs_crash.sl` prints `effect ran` and then
+   crashes, under slc's native build and the reference, and the other
+   order, which §15 does not exclude, prints nothing (§42: the driver
+   flushes "after every write"). Rewritten, and the question to the
+   owner reworded.
+4. Rough edge 4 said §33 makes separately built values with no
+   non-erased field share one word. §33 fixes the word only for a
+   tagged type or an untagged one not marked `extern`, "an unspecified
+   word otherwise". It also left out §37's "a fresh block" (a `many`
+   `cell-write`) and "a fresh copy" (a `many` invocation with a store).
+   Both added; "DESIGN.md does not say" narrowed to "I found no
+   sentence".
+5. The 2.3 row on macro expansions listed seven zero-case sites of the
+   per-path `fuel` as if they were all; there are about twenty. It also
+   grouped `:511` with the run's count, while `:511` is `env-expand`'s
+   check of the same per-path budget (`expand-one` passes `fuel` to
+   `expand` and on to `env-expand`, `:754, 570, 564`), and it left out
+   `run-toplevel`'s own counter (`main.sl:29`, checked at `:3375,
+   3382`). Rewritten.
+6. 2.5 said `bootstrap.sh`'s differential runs "would not show" the
+   `slot-eq` sharing because they build with `--byte`. Its
+   `native-compute` runs are built with ocamlopt (`elab-main.sl:38`)
+   and compared with `--no-native`, so such a test could show it.
+   Hedged.
+7. The `-imm` paragraph's barrier claim had no test. ocamlopt 4.14.1
+   compiles an `Array.unsafe_set` on an `int array` with no
+   `caml_modify` and on an `Obj.t array` with it
+   (`proto/review5/04_barrier.ml`, assembly read). Added as [T]; the
+   safety condition stays [P].
+
+Re-checked and found right: the 12 files and their line counts,
+`bootstrap.sh:23, 26`, `release.sh:17`, `main.sl:187-191`,
+`interp.sl:15, 95-114`, `Code`'s 17 constructors at `core.sl:604-622`
+and `CApp` at `:611`, `core.sl:337, 3614`, the `elab-main.sl` lines for
+the interpreter's errors, `native-run`, `native-batch`, the `hop-`
+constants, `splice-go`, and the `Steps` functions, the 20 `"internal:`
+sites, `elab.sl:984, 1659, 4680-4730, 4784, 4890`, the `eval.sl` and
+`base.sl` lines, the `emit.sl` lines cited in 2.5, the `ffi_core.ml`,
+`ffi_templates.txt`, and `prelude.sl` lines, 103 FFI functions and 7
+extern types, 6 `extern at` functions, the `mini/` citations,
+`MANUAL.md:154-166`, the reference's 6,909 lines, the README citations,
+and the quotations from §6, §15, §27, §29, §31, §33, §36, §37, §42,
+§45, §62, §67, §69, and §72. The README's "Not modelled: ... macros"
+is stale under `--no-extern` too: the reference expands `std/macro.sl`'s
+`and` with and without it.
+
+Points I am unsure of:
+
+- Whether `README:254-258`'s "the generated printer" means the emitted
+  OCaml printers or `show-type`, which generates them with the `show-fuel`
+  budget; the emitted printers take no fuel, so the sentence's "take a
+  `Nat`" fits only the generator. Either way it does not name `show-at`,
+  so 2.3's "silent" stands.
+- `slc --interpret` on `04_head_arg_compiled.sl` was killed for lack of
+  memory here, so its order on this test is not shown; 00-summary
+  cites other tests for it.
+- The [P] that the `imm` stores are GC-safe when both words are
+  immediates is still unchecked against the runtime sources.

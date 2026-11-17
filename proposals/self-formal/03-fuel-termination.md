@@ -74,8 +74,9 @@ decisions, which is an earlier session's paraphrase, not the owner's words.
   program's final `Program` value at unique (§27) and applies each
   continuation once."
 - §42: "`(Program L)` is an enum indexed by a level, read by the driver
-  (§27)." "It never recurses, so an unbounded interaction is the driver's
-  loop over total functions." Also: "the world, the one value of `World`,
+  (§27)." "The driver flushes after every write. It never recurses, so an
+  unbounded interaction is the driver's loop over total functions." Also:
+  "the world, the one value of `World`,
   which only the driver supplies". So compile-time code holds no `World`
   and cannot itself be a driven `Program` (my reading).
 - §29: "Every fact derived from a stored value ... relies on the evaluator
@@ -119,7 +120,7 @@ decisions, which is an earlier session's paraphrase, not the owner's words.
 | # | Where | What it bounds | On exhaustion | Removable? |
 |---|---|---|---|---|
 | 1 | interpreter `eval`/`apply`, `self/elab-main.sl:159-190, 405-430`. Default `1000000000` in `self/core.sl:3614` (`MkMacros ... 1000000000`), `--eval-fuel` in `self/main.sl:121-132` | Depth of application nesting. Two units per interpreted call, and tail calls spend too. Fresh per run-position form (`elab-main.sl:450-462, 550, 744`), per macro run (`:525`), and per interpreted `Program` step (`interp.sl:109,143`) | `BError "out of fuel"`. The form is refused like any runtime error (MANUAL.md:163-165) | Only by restructuring (options below). This is the fuel that matters. |
-| 2 | Expansion budget: `expansion-limit` 10000 (`self/elab.sl:26`), checked globally at `elab-main.sl:559-560`. Also threaded as the structural `fuel` parameter of the elaborator block, reset to 10000 per top-level item (`elab-main.sl:3379, 3387, 3391`) | §62's language rule. The per-item parameter is also the block's first termination measure | Error "more than 10000 macro expansions" | The global count is the spec and stays. The per-item parameter looks like a measure the global count always hits first. I have not verified that. |
+| 2 | Expansion budget: `expansion-limit` 10000 (`self/elab.sl:26`), checked globally at `elab-main.sl:559-560`. Also threaded as the structural `fuel` parameter of the elaborator block, reset to 10000 per top-level item (`elab-main.sl:3379, 3387, 3391`), and as `run-toplevel`'s own `fuel` (`elab-main.sl:3362`), 10000 per file (`self/main.sl:29`), spent at `elab-main.sl:3375` and `3382` | §62's language rule. The per-item parameter is also the block's first termination measure | Error "more than 10000 macro expansions" | The global count is the spec and stays. The two parameters look like measures the global count always hits first. I have not verified that. |
 | 3 | Termination measures: `xf`, `callbacks`, `hop-k` (`elab-main.sl:147-159`; erased in `eval`, though `expand` takes `xf` at `many`, `elab-main.sl:555`), `Steps` (`elab.sl:1241-1244`, whose `SS` field is `many`), and the sugar budget | Termination evidence. I did not check that every zero case is refuted. The sugar budget's zero case is an internal error (README "Choices") | Refuted or internal error | Already not fuel in the sense of an extra outcome. |
 | 4 | Generated printer `show-fuel` 100000 (`self/emit.sl:4, 1379-1438`) | Recursion through types when emitting printers | Falls back to `"show_any"` or empty arms (`emit.sl:1380, 1417, 1438`). This changes emitted code, not a verdict | Possibly, by a measure on the memo. Unverified. |
 | 5 | Store walks: `list-refs` and `rope-walk` with fuel = heap size or twice it (`self/eval.sl:171-180, 455-473`), and `heap-strs`/`heap-pairs`/`heap-jobs` with 1000000 (`eval.sl:1018-1055`) | Walking lists in the mutable store | `None` or `Fail`, then an error block | Needs either an acyclicity measure (addresses pointing below) or a visited set. I could not determine whether `hwrite` can make cycles. |
@@ -160,10 +161,12 @@ The file behind 3 was not saved. Reproduce each from the text here.
    one measure covering `bind` and the continuations together. I also
    did not test a level-indexed `Res` whose continuations sit at
    existentially bound lower levels and carry `Predates` proofs. 06 F4.2
-   found that a closure whose level is packed in its argument can be
+   found that a closure whose level is packed with it in the state can be
    applied and extended at that packed level when two `Predates` proofs
-   and a counter are packed with it (`proto/review4/06_packed_counter.sl`);
-   what fails, on 06's reading of §18, is extending it at a newly minted
+   and a counter are packed with it too
+   (`proto/review4/06_packed_counter.sl`). A closure extended at a newly
+   minted level is accepted, but on 06's reading of §18 the stepper
+   cannot then apply it, and a packed `Predates` cannot reach the new
    level.
 2. **A function cannot iterate `Program` steps.** The function `run-all :
    (subterm unique (Program L) p) (World) -> ...` matches `Continue _ k`,
@@ -219,13 +222,17 @@ they are rough:
 | implementation | per machine step, batched | extra per `Continue` |
 |---|---|---|
 | reference interpreter (93025 steps) | ≈ 4 µs | ≈ 4 µs |
-| `slc --interpret` (93025 steps) | — (elaboration dominates) | ≈ 1 µs |
+| `slc --interpret` (93025 steps) | ≈ 1 µs | ≈ 1 µs |
 | reference `--build` (31M steps) | ≈ 11 ns | ≈ 10 ns |
 | `slc --build` (31M steps) | ≈ 15 ns | ≈ 9 ns |
 
 A reviewer's rerun of the reference rows, subtracting a 0.46 s run with
 n = 0, gave ≈ 6.6 µs per batched step and ≈ 4.6 µs extra per `Continue`.
-That is the same order. The compiled rows were not re-run.
+A later rerun (three runs each, on a shared machine) gave 12 to 17 ns
+per batched step and 6 to 12 ns extra per `Continue` for both compiled
+rows, and, subtracting a 0.3 s run with n = 0, ≈ 1.4 µs and ≈ 1.4 µs for
+`slc --interpret`. That is the same order throughout; the difference
+between the two compiled rows is within the noise.
 
 With bursts of 1000 steps per `Continue` the overhead is negligible. The
 only friction was the level order (F4.3) and a type and a constructor
@@ -260,17 +267,33 @@ argument concerns Q run with them. Q can read each file of its unit, since
 each is a source file. Q's spec run consists of one macro run of a total
 function plus ordinary elaboration, so it ends, by SOUNDNESS.md's (T)
 for the macro run and (C) for the rest; since §27 strips erased
-positions before a run, the run's termination also uses (E).
+positions before a run, the run's termination also uses (E). (The
+detour below needs (T) and (E) only for an accepted program, and (C)
+not at all.)
 SOUNDNESS.md states these "about any program the checker accepts", and
 Q may be rejected. Read literally, that scope does not cover Q, and it
 makes (C) vacuous, since an accepted program's elaboration has ended. A
-detour through an accepted program, Q's text before the macro call
-followed by that call in run position, is circular: that program is
-accepted only if the call ends. In my reading the claims still apply,
-because part 5's argument for (T) is a measure on the activations of
-checked functions, and `compile` and the macro's function are checked
-before the macro call, and part 6's argument for (C) does not use
-acceptance. Q's spec verdict is the opposite of the answer the spec's
+detour through an accepted program covers Q if the call to `compile` is
+placed where acceptance does not depend on it. Let P be Q's text before
+the macro call, followed by a function of no arguments that applies
+`compile` to Q's files written as literals, as P's final value. A
+`def-fns` "involves no evaluation" (§29), and the driver applies a final
+`(Fn L -> (many T y))` only after elaboration (§27), so P is accepted
+if Q's text before the macro call is. `proto/review5/03_detour.sl` is
+that P for `toy-compile`: `--extract` accepts it, and run, it prints
+`(BFalse)`. (T) and (E) for P then say that this call of `compile`
+returns, reading part 5 as counting the driver's call as one of the
+activations it covers. Q's text before the macro call elaborates as in
+P, and the macro's call of `compile` is the same call on the same
+text, so it returns too, if its result is determined by its code and
+argument (below). The macro's other code can be treated the same way,
+apart from `read-file`, which is host I/O. The rest of Q is the
+elaboration of the macro's output, one `compile-error` or nothing, so
+Q's spec run ends without (C) being applied to Q (my reasoning). With
+the call in run position instead, the detour would be circular: that
+program is accepted only if the call ends.
+
+Q's spec verdict is the opposite of the answer the spec's
 own run of `compile` on Q gives, which contradicts the assumption. This
 takes that answer to be determined by Q. If
 `compile` calls `slot-eq`, whose answer may differ between runs (§67),
@@ -357,7 +380,12 @@ happens at these places:
   evaluator (§29)" (§45);
 - `native-compute`, which runs compiled code (§72), through an external
   compile in both implementations (MANUAL.md:195);
-- `read-file`, which is host I/O (§65).
+- `read-file`, which is host I/O (§65);
+- possibly literals: §45 defines a numeral's value as what
+  `(bin-to-nat b)` returns, and its entries are "as if minted by
+  run-position forms", but leaves to the implementation "whether a
+  literal's entries are produced by elaborating statements or created
+  directly to the same effect".
 
 The top level cannot loop (§3, §20), apart from macro re-expansion,
 which §62 caps. So H would follow from two things:
@@ -578,11 +606,12 @@ source whose compile-time run diverges has no derivation.
   the files from `Src` would need none. The steps marked as inference in
   F6 (that recursion on an erased halting derivation scales from 05's toy
   to a compiler, and H not provable) are untested.
-- That SOUNDNESS.md's (T), (C), and (E), stated for accepted programs,
-  cover the run of the possibly rejected Q, as F6 reads part 5's
-  per-activation measure and part 6.
-- That the per-item expansion parameter (F3 row 2) never binds before
-  the global count.
+- That the detour through the accepted program P carries (T) and (E)
+  over to the run of the possibly rejected Q (F6). It assumes that the
+  spec accepts P as the checker does and that part 5 covers the
+  driver's call. Only P's shape is compiled, with `toy-compile`.
+- That the per-item and per-file expansion parameters (F3 row 2) never
+  bind before the global count.
 - Whether the store can hold cycles (F3 row 5).
 - That `show-fuel` exhaustion only degrades printing (F3 row 4).
 - That the macro primitives' elaborator callbacks never evaluate, which
@@ -772,6 +801,9 @@ Unsure:
    cannot stand in for the faithful `compile`, which the second review's
    correction of F6 had superseded. Reworded to match F6; flagged by the
    third review of 00-summary.
+2. F4.1's last sentence still gave 06's superseded "built but not
+   applied" finding; restated to match 06 F4.2 after its fourth review.
+   Flagged by the fourth-round propagation check of 00-summary.
 
 ## Third review notes
 
@@ -886,6 +918,3 @@ Unsure:
   states of the full semantics of a program, and Q is not such a
   program when rejected.
 - The compiled timing rows and the 22 MB figure, still not re-run.
-2. F4.1's last sentence still gave 06's superseded "built but not
-   applied" finding; restated to match 06 F4.2 after its fourth review.
-   Flagged by the fourth-round propagation check of 00-summary.

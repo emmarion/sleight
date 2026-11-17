@@ -1,0 +1,7 @@
+(def-adts $ (False : -> Type) enum)
+(def-adts $ (Nat : -> Type) enum (many Zero : -> (Nat)) (many Succ : (many (Nat) p) -> (Nat)))
+(def-prim $ (erased gensym-unique : -> (erased (False) e)))
+(def-fns _ $ (many absurd lift : (erased (False) e) -> (many (Nat) r)) e)
+(let ((erased p)) (gensym-unique))
+(def-fns _ $ (many go : -> (many (Nat) r)) (lift p))
+go

@@ -227,8 +227,9 @@ calls itself "a sketch" outside `lean/`'s fragment, and says its
 argument "rests on lemmas … that are not proved", among them the
 preservation of (I1), which "this note does *not* prove". So H is
 *claimed and argued* by SOUNDNESS.md, not established. Even if true, it
-is not something Sleight can prove about itself, on my reading of §4.3
-below. Part 7 also says of its argument for "(E)" (the stripped run
+is not something Sleight can prove about itself for all programs in a
+form a function can recurse on, if its logic is sound, on my reading of
+§4.3 below. Part 7 also says of its argument for "(E)" (the stripped run
 follows a run of the full semantics): "Without (T) this step fails".
 That matters for T7.
 
@@ -390,14 +391,22 @@ My reading of the limits, hedged:
 - **Diagonal.** Suppose `cr : (many (String) src) -> (many (Result (Nat)) r)`
   were a Sleight function (hence total, if SOUNDNESS.md (T) holds),
   sound, and complete for the spec's run of programs whose final value
-  is a `Nat`. A program Q containing its own text (a quine; strings make
-  this routine) can compute `cr(Q)` in run position and return its value
-  plus 1, or 0 on `Fail`. Q's own code is total, so the spec run of Q
-  halts. Soundness and completeness then contradict each other. So,
+  is, or computes, a `Nat`. A program Q containing its own text (a
+  quine; strings make this routine) can end in a final value of type
+  `(Fn L -> (many (Nat) y))` that computes `cr(Q)` and returns its value
+  plus 1, or 0 on `Fail`. Defining it "involves no evaluation" (§29),
+  so Q is accepted before `cr` runs, and the driver then applies it
+  (§27), so (T) covers that call and the spec run of Q halts with a
+  `Nat`. Soundness and completeness then contradict each other. (With
+  `cr(Q)` in run position instead, Q would be accepted only if that run
+  ended, and (T), stated for accepted programs, could not be used to
+  show that it does.) So,
   assuming soundness of the logic and the existence of quines (I have not
   written one), no internal total, sound, and complete compile-and-run
   for Sleight source exists. Without a quine, Q can do the same in a
-  macro that reads its own file with `read-file` (03 F6). Applied to
+  macro that reads its own file with `read-file` (03 F6, which carries
+  (T) over to that possibly rejected Q through an accepted program with
+  the call as its final value). Applied to
   `compile`, the argument needs T1 to T4 and the spec's determinism on
   Q (through T3), not T5: as in 03 F6, Q's macro expands to a
   `compile-error` exactly when `compile` accepts Q. T3 holds per oracle,
@@ -420,23 +429,30 @@ My reading of the limits, hedged:
   meets the conditions.
 
   H, read uniformly over all programs, together with internal
-  stripped-run type safety would imply internal consistency. Take an
-  accepted program with a `many` run-position form of type `(False)`.
-  H says its run halts with a value, preservation says the value has
-  type `(False)`, and canonical forms say no such value exists.
+  stripped-run type safety would imply internal consistency. Take a
+  program with a `many` run-position form of type `(False)` that the
+  checker accepts as a form. H, read as covering every such form, says
+  its run halts with a value, preservation says the value has type
+  `(False)`, and canonical forms say no such value exists.
   "Normalization implies consistency" is the general form of this. The
   same holds of uniform (T) and full-semantics safety. So, if Sleight is
   consistent and meets the theorem's conditions, it cannot prove both
   halves of either pair. For the stripped run, H is not even needed (my
   reasoning): an erased proof `p` of `(False)` gives an accepted program
-  whose first run-position form is `(lift p)`, `lift` an `absurd`
-  function from an erased to a `many` `(False)`. The stripped run drops
-  `p` and enters `lift`'s body at once, against safety
-  ([`proto/review4/05_stripped_absurd.sl`]: with `p` from an axiom
-  under `--no-prelude`, both implementations report "absurd code
-  reached" at that form). So uniform stripped-run safety alone would
-  give internal consistency. In the full semantics `p` runs first, so
-  this needs (T). The diagonal above rules out uniform H in one form
+  whose final value is a `(Fn L -> (many (Nat) r))` with body
+  `(lift p)`, `lift` an `absurd` function from an erased `(False)` to a
+  `many` value. Defining it runs nothing (§29), so the program is
+  accepted; the driver's stripped run drops `p` and enters `lift`'s
+  body at once, against safety
+  ([`proto/review5/05_stripped_absurd_final.sl`]: with `p` from an
+  axiom under `--no-prelude`, `--extract` and `--build` accept it, and
+  the reference, the built program, and `slc --interpret` stop with
+  "absurd code reached"). With `(lift p)` in run position instead, the
+  program is refused at that form
+  ([`proto/review4/05_stripped_absurd.sl`]; `--extract` fails), so it
+  says nothing about accepted programs. So uniform stripped-run safety
+  alone would give internal consistency. In the full semantics `p` runs
+  first, so this needs (T). The diagonal above rules out uniform H in one form
   without Gödel, if the logic is sound: uniform H, in a form a function
   can recurse on (an erased `Halts` for every source, for a faithful
   step), would give `compile-h` a hypothesis-free caller (option 1

@@ -1,0 +1,13 @@
+(def-fns _ $ (many g : (many (Nat) x) -> (many (Nat) r)) (Succ x))
+(def-fns _ $ (many bigarr : (many (Nat) n) -> (many (Nat) r))
+  (let ((erased xs) (unique a) (erased p)) (array-new (Nat) n))
+  0)
+(def-fns _ $ (many bigbytes : (many (Nat) n) -> (many (Nat) r))
+  (let ((erased xs) (unique b) (erased p)) (bytes-make n (MkU8 (Zero) u8-modulus-pos)))
+  0)
+(def-fns _ $ (many pickbig : (many (Nat) h) -> (many (Fn (level-of g) (many (Nat) x) -> (many (Nat) r)) f))
+  (let ((many z)) (bigarr h))
+  g)
+(def-fns _ $ (many top : (many (Nat) h) (many (Nat) k) -> (many (Nat) r)) ((pickbig h) (bigbytes k)))
+(def-fns _ $ (many main : -> (many (Nat) r)) (top 1152921504606846976 1152921504606846976))
+main
