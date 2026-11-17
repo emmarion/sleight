@@ -900,3 +900,57 @@ Unsure, not changed:
   other numbers, not printed; the earlier notes did not say so (now in
   §3.6).
 - The summary is still far beyond the brief's 15 lines.
+
+## Fifth review notes
+
+Added by a fifth, independent review. Every test under
+`proto/spec-shape/` and the `proto/review2/`, `proto/review3/` and
+`proto/review4/01_*` tests this file cites were rerun on the reference
+and on `_build/release/slc --interpret` (and `fuel.sl` and a
+`--no-prelude` program under `--eval-fuel 5`, the `slot_eq` pair under
+the reference's `--no-extern`); the outputs quoted reproduce. The code
+citations were reopened. New tests are `proto/review5/01_*.sl`.
+
+1. §3.7 said, of two files where the second has a syntax error,
+   "Acceptance is unaffected, since either way the run is rejected".
+   Not so when the first file's final value is a `Program`:
+   `review5/01_prog_first.sl` followed by `review2/rf_b.sl` or
+   `review5/01_late_error.sl` is accepted by the reference (it prints
+   `effect`, exits 0, and reports nothing about the second file) and
+   rejected by slc (exit 1, the `Program` not run). Rewritten, and
+   added as section 5 item 14: §27 does not say when the driver runs a
+   file's final value relative to later files.
+2. §4.5 and decision 9 (c) had the spec capture `Nat`, `Char`, and
+   `String` "when the prelude ends". The shipped prelude uses literals
+   before it ends (`lib/prelude.sl:2526`, `:2542`, in the `let` that
+   defines the two macros), so that capture point cannot serve them.
+   Reworded; where the capture happens is left open.
+3. §4.2's `Program` judgment had one `final`; §27 gives a final value
+   to each file that ends in an expression, and both implementations
+   print one per file (two files ending `(Zero)` and `(Succ (Zero))`
+   print `0` then `1`). Now `finals`.
+4. §3.7 and section 5 item 11 said DESIGN.md is silent on more than
+   one error; §4's "Warnings go to standard error and do not stop
+   elaboration" is nearby text that may imply errors do stop it. Added.
+5. §3.10 called `Eval` "fuelled"; the relation `Eval` takes no fuel,
+   its deriving function `eval` does (`mini/eval.sl:53`). Fixed.
+6. §3.7 said each of slc's four gates is `(and (env-run-pos …) $ not $
+   env-failed …)`; `:2152` also tests a `many` mode. Fixed.
+7. Decision 8 said `--warnings-as-errors` depends on warnings "defined
+   in WARNINGS.md, not in DESIGN.md"; DESIGN.md defines some (§4, and
+   the prelude's warnings of §69). Reworded.
+8. Section 5 item 12 quoted §42 as "before any file is read"; it is
+   "Before any file is read", and the entries are in scope then, not
+   made then. Fixed.
+9. The [C] tag's description named only `proto/spec-shape/`, while many
+   [C] claims rest on `proto/review*/` tests. Fixed.
+
+Unsure, not changed:
+- Whether the reference reads a later file at all once a `Program`
+  final has exited, or only does not report it; the test shows only the
+  latter.
+- Whether elaboration order is also observable without macros, through
+  introduction order (§5, §18), was looked at briefly: `prove-predates`
+  needs a level made by `def-lvl`, a statement, which cannot stand in an
+  argument, so no such program was found.
+- The summary is still far beyond the brief's 15 lines.

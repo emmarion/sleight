@@ -995,3 +995,43 @@ Unsure, not changed:
    disagreed with Q8 as corrected by fourth review note 6. Restated to
    match Q8. Flagged by the fourth-round propagation check of
    00-summary.
+
+## Fifth review notes
+
+Added by a fifth, independent review. All five files under `proto/dyn/`
+were rerun on the reference (with and without `--no-extern`) and on
+`_build/release/slc --interpret`; `imm_eq.sl` under `--build` on both
+and under the reference's `--no-extern --build`; `order1.sl` and
+`order2.sl` under `--extract`; `machine.sl` with an all-false tape;
+`review2/machine_fn_oracle.sl`, `review2/const_share.sl`,
+`review3/head_arg_order.sl`, and `review4/02_share_pair.sl` (interpreted
+and built, both implementations); and the OCaml order test on 4.14.1.
+The OCaml 4.14 manual's three quoted sentences were checked against
+ocaml.org/manual/4.14/expr.html. The outputs and quotes reproduce, and
+the code citations were reopened. The new test is
+`proto/review5/02_big_nat_slot_eq.sl`.
+
+1. N1 and decision 4 said "there is an oracle" covers every
+   implementation seen, without saying that this needs `Nat` words to
+   be immediates (E2): built code answers `ESome` for `(add 1 2)`
+   against `3` (`imm_eq.sl`), which a spec running the `Nat` model
+   could not reproduce, since an oracle only turns `ESome` into
+   `ENone`. Decision 4 also now names Q8's sharing condition. Added, as
+   reading.
+2. N4's claim about the host's big `Nat`s was a reading of the
+   interpreter's `VWord`, not a test. `review5/02_big_nat_slot_eq.sl`
+   compares two separately computed `Nat`s equal to 2^63: built by the
+   reference or by slc it answers `ENone`; the same program with `Nat`s
+   equal to 6 answers `ESome` when built by the reference. Now
+   [compiled].
+3. The [compiled] tag's description named only the reference and
+   `proto/dyn/`, while several [compiled] claims use slc, OCaml, or
+   `proto/review*/` files. Fixed.
+
+Unsure, not changed:
+- C4's count bounds the steps of Sleight code; under E2 a primitive
+  step on a huge `Nat`, or an FFI primitive of another extern if the
+  spec ever runs one, is one step whatever its host cost. That seems
+  intended by the abstract machine, but it means the bound says nothing
+  about host time.
+- The summary is still longer than the brief's 15 lines.
