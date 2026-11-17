@@ -550,7 +550,7 @@ source whose compile-time run diverges has no derivation.
 - F6 beyond its mechanism. `diagonal.sl` checks the mechanism with a toy
   `compile`, but no Q holds a faithful compiler. slc as it stands cannot
   play that part, since it is not faithful (its fuel can reject) and its
-  elaborator carries a `World`, though, as F6 now says, a version taking
+  elaborator carries a `World`, though, as F6 says, a version taking
   the files from `Src` would need none. The steps marked as inference in
   F6 (that recursion on an erased halting derivation scales from 05's toy
   to a compiler, and H not provable) are untested.

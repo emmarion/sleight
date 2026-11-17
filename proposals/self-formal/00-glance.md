@@ -29,7 +29,7 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
   differ (interpreters vs `--build` binaries with externs on `imm_eq.sl`; slc's native build vs `--byte`,
   `--interpret`, and the reference on `slot_eq_share.sl`). That an `ENone` answer rejects is inferred. The output
   theorem therefore cannot be "the same values, up to crash"; 04 makes `slot-eq` a second oracle beside `world-do`
-  (§2 items 5, 18).
+  (00-summary §2 items 5, 18).
 - **Evaluation order.** DESIGN.md fixes eagerness and some run-position order, but not body statements, sibling arguments,
   `values` entries, or several §15 bindings in general; elaboration order is visible through gensyms (00-summary §2 item 6).
 - **slc printer defect.** `slc --interpret` on a 100003-element list prints 49,999 `Cons _ 0` then `Cons _ _ _)`:
@@ -56,7 +56,7 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 | 8a | Compile-time run small-step over the compiler's machine? | (a) yes, to keep the evaluator proof small (07) | 8 | no |
 | 8b | Next spike on unique `Array` heap, abstract addresses? | yes, before scaling (06) | — | no |
 | 9 | Externs in the spec? | tracks disagree (02: E2; 04, 05: parameterize) | 2 | no |
-| 10 | Where may a compiled run crash? | C2, named resource events; C3 later (02); 04: "a value some spec run gives, or a crash" | — | no (unsure) |
+| 10 | Where may a compiled run crash? | C2, named resource events; C3 later (02); 04 asks if "a value some spec run gives, or a crash" | — | no (unsure) |
 | 11 | What happens when the spec goes wrong? | 02: S1 defined `abort`; 05: no recommendation | — | no (unsure) |
 | 12 | Compile-time values in output: trees or heap graphs? | V1 trees, unless a reason for V2 (02) | — | no |
 | 13 | Intrinsic theorems, positive `Fails`, rejection contents? | intrinsic, positive `Fails`; tracks disagree on its shape | 3 | no |
@@ -67,7 +67,7 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 | 18 | How is fuel kept out of results and theorems? | tracks disagree | 17 | no |
 | 18a | Resumable checker: derivation zipper or replay? | zipper for a new kernel; replay only retrofitting slc (07) | 17, 18 | no |
 | 18b | Certified stepper invariant: erased trace or counter closure? | erased trace, as a working hypothesis (06) | — | no |
-| 18c | Apply a closure whose level is packed in its argument? | no change proposed (06) | — | only if changed |
+| 18c | Apply a closure whose level is packed beside it? | no change proposed (06) | — | only if changed |
 | 19 | Judgment shape and staging? | 01 §4.2 layers (Γ/Σ home of run-position facts open); run relation as a parameter (01) | — | no |
 | 20 | Where does the proof stop at the output end? | O1 now, O2 + O4 later (04) | — | no |
 | 21 | `native-compute`? | N3, same trust as the output end (04) | — | no, unless 6 changes §72 |

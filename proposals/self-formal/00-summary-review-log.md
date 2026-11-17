@@ -1532,3 +1532,73 @@ Unsure, not changed:
 - 03's own section 6 still says slc's elaborator "needs a `World`" as
   the reason it cannot play Q, which its revised F6 no longer relies
   on; that file is outside this review.
+
+## Condensation review notes
+
+A review of the condensation compared 00-summary.md and 00-glance.md item by item with this file
+(as corrected by its three review sections) and spot-checked them against files 01 to 07 as they
+now stand. Every decision (1 to 23, 8a, 8b, and 18a to 18c), rough edge (1 to 29), open cross-file
+item, and unverified item survives. Re-run: `tagslot.sl` (`3`; refused under `--no-extern`).
+
+Errors found and corrected in 00-summary.md (and 00-glance.md where it repeats them):
+
+1. Cross-file item 16 (03 §6 against F6) is resolved: 03 §6 now gives slc's fuel as the reason and
+   says a version taking the files from `Src` needs no `World` (03 coordinator note 1). Dropped;
+   its number is left as a gap.
+2. Decision 10 put 04's question ("is the outcome space 'a value some spec run gives, or a
+   crash'?") in the recommendation slot as if 04 recommended it. Restored as 04's question, in the
+   summary and in 00-glance row 10.
+3. Rough edge 5 stated "It decides crash versus divergence" unconditionally; 04 r2.20 says order
+   decides between them when one argument does each. Restored the condition and the attribution.
+4. Decision 15 said 01's review is unsure about "the last two" excluded flags (`--hints`,
+   `--warn-unused`); it is unsure about `--no-native` and `--warn-unused` (01's review notes,
+   "Not changed, but unsure": "decision 8's exclusion of `--warn-unused` and `--no-native`").
+   Named them.
+5. Decision 1: "which an unproved total front end gives" had dropped the old text's "could give"
+   (04 r2.19). Restored.
+6. Decision 6: 03's "treat `OutOfFuel` as outside the spec" (a recommendation) had become the
+   statement "`OutOfFuel` sits outside the spec"; 02's C4 "would hold per bound, provided the rest of
+   elaboration terminates" had become "holds"; 05's question lost "on 05's reading of §31", and its
+   "the crash-free one" read as either the spec or the oracle (it is the oracle). 04 and 07 were
+   run into 05's bullet. Restored and split. The dropped "a third compiler outcome is a choice for
+   the theorem only" is back in the wording line.
+7. Key finding 4: "A total step looped by the driver needs no fuel" generalised "runs with no fuel";
+   "fixed-level closures call one another only with a decreasing argument" generalised the tested
+   pair (refused without one, accepted with an erased counter); the packed-level closure lost 06's
+   "as far as found" and "by the stepper"; "is minted before" lost "must be" and the 05 F6
+   citation. Restored. Decision 18's echo of the closure claim and 18c's hedge were aligned.
+8. Key finding 2: "05 §4.3 gets the same with no quine" could read as 05 reaching the same
+   conclusion independently; 05 runs the same `read-file` macro argument (05 §4.3). Reworded, with
+   "it keeps a quine" restored to the clause that had lost its verb, and "(untested, assuming
+   soundness) H ... is unprovable" restored to "assuming Sleight is sound ... that H ... is not
+   provable".
+9. Key finding 11: "GC moves caught by tests only" read as the moves being caught; the point is that
+   the move detection is checked only by tests. "(unchecked)" after the write barrier read as the
+   bypass being unchecked; it is the safety. Reworded.
+10. Key finding 15: "slc several" errors replaced by the old "slc later ones too" (the count is not
+    given in 01 §3.7). Key finding 16 lost 06 F2 for refused components. Key finding 17's "A
+    self-looping `step` is refused" did not say which spike; it is 07 (07 r3).
+11. Picture, "Spec shape": "where run-position facts live being open" did not parse. Reworded.
+    Key finding 6: "with §6 a form head before arguments" read as §6 being a head; reworded.
+12. Decision 5 lost 04's treating `slot-eq` answers as an oracle (old text, key finding 18), and
+    05's oracle "logging crash points and files" misplaced who logs (the compiler logs; the oracle
+    records crash points and file contents). Restored.
+13. Decision 19's "(S2, S3 in either order)" named stages the text never numbers; now "Staging S0 to
+    S6" with S2 and S3 identified (01 §4.6). Decision 23's "justifies ... but not the stripped run's
+    (E)" read two ways; restored "does not settle". Decisions 10 and 11's "marked none; unsure"
+    reworded as a plain statement.
+14. Section 6, Gödel item: "the consistency step checked as far as" a file named no step and dropped
+    05's condition; restored the step ("uniform H plus stripped-run safety gives consistency") and
+    05's reading that the diagonal already rules out uniform H in a recursable form if the logic is
+    sound (05 §4.3, r2.3).
+15. Decision 14, 05's (b): "not callable without a proof" dropped "in practice". Restored.
+16. Oxford commas added in decisions 2, 10, 15, 19, section 6, section 7, and key finding 6. 00-glance
+    cited "§2 items 5, 18" without "00-summary"; fixed. Its row 18c said "packed in its argument"
+    where the summary says "packed beside it"; aligned.
+
+Unsure, not changed:
+- 03 §6 now reads "as F6 now says", which narrates a revision (CLAUDE.md rule 18); 03 is outside
+  this review.
+- Key finding 10 says the printer defect "reaches" three consumers; 00-glance says "confined to
+  `show-at`". Both follow 04 r2.2 to r2.4 and this file's third review; no further consumer was
+  searched for.
