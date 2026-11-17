@@ -48,7 +48,8 @@ decisions, which is an earlier session's paraphrase, not the owner's words.
   evidence of H(src) for the one source. Read as mathematics, "under H,
   compile is a total function" is untouched by F6. "H(src) ⇒ halts" may
   be provable internally from a spec derivation. My inference is that H
-  for all sources is not, if Sleight is sound.
+  for all sources, in a form a function can recurse on, is not, if
+  Sleight is sound.
 - Recommendation for the owner to weigh: a hybrid. Make the interpreter a
   stepped machine. Run it inline in bursts, and when a burst runs out,
   suspend to the driver and replay the current top-level form. Fuel
@@ -257,13 +258,18 @@ each is a source file. Q's spec run consists of one macro run of a total
 function plus ordinary elaboration, so it ends, by SOUNDNESS.md's (T)
 for the macro run and (C) for the rest; since §27 strips erased
 positions before a run, the run's termination also uses (E).
-SOUNDNESS.md states these for programs the checker accepts, and Q may
-be rejected. In my reading they still apply: the same call of `compile`
-on Q's text runs in an accepted program, Q's text before the macro call
-followed by that call in run position, and when `compile` rejects Q, Q
-is accepted and the claims apply to Q itself. Q's spec verdict is the
-opposite of `compile(Q)`, which contradicts the assumption. This takes
-`compile`'s answer on Q to be the same inside Q's run as outside it. If
+SOUNDNESS.md states these "about any program the checker accepts", and
+Q may be rejected. Read literally, that scope does not cover Q, and it
+makes (C) vacuous, since an accepted program's elaboration has ended. A
+detour through an accepted program, Q's text before the macro call
+followed by that call in run position, is circular: that program is
+accepted only if the call ends. In my reading the claims still apply,
+because part 5's argument for (T) is a measure on the activations of
+checked functions, and `compile` and the macro's function are checked
+before the macro call, and part 6's argument for (C) does not use
+acceptance. Q's spec verdict is the opposite of the answer the spec's
+own run of `compile` on Q gives, which contradicts the assumption. This
+takes that answer to be determined by Q. If
 `compile` calls `slot-eq`, whose answer may differ between runs (§67),
 the argument applies instead to its copy with every `slot-eq` answered
 `ENone`, which §67 allows an implementation to do always, so that copy
@@ -365,7 +371,8 @@ which §62 caps. So H would follow from two things:
 
 In that reading, H is an instance of the language's own termination
 claim plus I/O. By F6's inference (untested, and assuming Sleight is
-sound), it is not provable in Sleight for all sources.
+sound), it is not provable in Sleight for all sources in a form a
+function can recurse on, such as erased step counts.
 For one given source it is a statement about that source, so it may be
 provable case by case.
 
@@ -493,7 +500,8 @@ source whose compile-time run diverges has no derivation.
   need a step relation, and `step` must return erased evidence that
   relates its input to its output. This is structural recursion on the
   derivation, so it may be an erased Sleight function. F6 does not
-  forbid it: F6 concerns H for all sources, not H(src) ⇒ halts.
+  forbid it: F6's inference concerns H for all sources, not H(src) ⇒
+  halts.
   Unverified.
 - Determinism: v is unique.
 - Owner decision 3 then reads "∀ src, H(src) ⇒ the driver reaches
@@ -524,7 +532,8 @@ source whose compile-time run diverges has no derivation.
    do better, and the prototype shows the `Program` loop can carry it.
    (i) can be paired with (iii) of the summary, a Sleight function that
    takes erased H(src) evidence, as an internal form of the same theorem.
-   This choice decides between (a)/(e) and (b)/(c).
+   (a), (b), and (e) can give (i), since each leaves any unbounded
+   iteration to the driver; (c) gives (ii).
 3. **Which route: (a), (b), (c), or (e)?** Recommended: (e) for slc, and
    (a) only for a new small kernel built that way from the start. (b) is
    the cheap stopgap. Converting the interpreter to a stepped machine is
@@ -567,8 +576,8 @@ source whose compile-time run diverges has no derivation.
   F6 (that recursion on an erased halting derivation scales from 05's toy
   to a compiler, and H not provable) are untested.
 - That SOUNDNESS.md's (T), (C), and (E), stated for accepted programs,
-  cover the run of the possibly rejected Q, through the accepted
-  program described in F6.
+  cover the run of the possibly rejected Q, as F6 reads part 5's
+  per-activation measure and part 6.
 - That the per-item expansion parameter (F3 row 2) never binds before
   the global count.
 - Whether the store can hold cycles (F3 row 5).
@@ -817,3 +826,60 @@ Unsure:
   route for a `compile` that calls `slot-eq`.
 - The compiled timing rows and the 22 MB figure were not re-run by any
   review.
+
+## Fourth review notes
+
+A fourth adversarial reviewer read the brief, CLAUDE.md, DESIGN.md in
+full, SOUNDNESS.md parts 0 to 7 and 9, and MANUAL.md:150-166, and
+re-ran `diagonal.sl` (969 bytes, accepted) and a copy with one byte
+added (`proto/review4/03_diag/diagonal.sl`, 970 bytes, rejected with
+"toy-compile accepts this source") under the reference and `slc
+--interpret`, `fr/a.sl` to `fr/d.sl`, `suspend.sl` 0/1/2 and 3 under
+a timeout, and the `--eval-fuel 1000` pair under both. All behave as
+the body says.
+
+Errors found and changed:
+
+1. F6, carrying (T), (C), and (E) over to a rejected Q (added by third
+   review note 2). The detour through "an accepted program, Q's text
+   before the macro call followed by that call in run position" is
+   circular: that program is accepted only if the call ends, which is
+   what the step is meant to show. Also, read with part 1's scope
+   ("about any program the checker accepts"), (C) is vacuous. F6 now
+   rests the step on part 5's per-activation measure over checked
+   functions and on part 6's argument for (C), as a reading; section 6
+   updated. The sentence after it, "the same inside Q's run as outside
+   it", now says what the step needs: that the answer of the spec's run
+   of `compile` on Q is determined by Q.
+2. Summary and F7, "H for all sources is not [provable]". F6's
+   inference covers only H in a form a function can recurse on, such
+   as erased step counts ("in this form"); the summary and F7 had
+   dropped that qualifier. Restored.
+3. Decision 2, "This choice decides between (a)/(e) and (b)/(c)". Q1(b)
+   restarts in the driver, and "Fuel never shows in a result", so (b)
+   gives form (i), as Q2's P3 already treats it; only (c) gives (ii).
+   Fixed.
+4. Q2 P3, "F6 concerns H for all sources": F6's main argument concerns
+   a hypothesis-free `compile`; its inference is what concerns H.
+   Reworded.
+
+Confirmed: the F1 quotes against DESIGN.md (§3, §17, §20, §27, §29,
+§31, §32, §42, §49, §62, §65, §72); grep finds no "fuel" in DESIGN.md;
+§62 says nothing about what reaching the cap does; MANUAL.md:154-166
+(depth, units given back on return, `out of fuel` citing §31);
+`interp.sl:105-114, 143`, `main.sl:186-191`, `elab.sl:1987-2004`, and
+that `Continue` occurs in `self/` only at `interp.sl:114` and
+`main.sl:191`. The F6 diagonal checked step by step: Q's verdict is the
+negation of the value the spec's own run of `compile` on Q produces,
+so the contradiction needs only that run to end and to be
+deterministic, not that `compile` be evaluated "outside" Q. Q's
+`read-file` of the other files of its unit (`std/macro.sl` here) needs
+a `Pos` naming each, which a macro can build (§65 "`here` must name one
+of these, spelled as the command line names it").
+
+Unsure:
+- Whether part 5's argument really needs nothing from the acceptance of
+  the rest of Q: its invariants (I1) to (I3) are stated for reachable
+  states of the full semantics of a program, and Q is not such a
+  program when rejected.
+- The compiled timing rows and the 22 MB figure, still not re-run.

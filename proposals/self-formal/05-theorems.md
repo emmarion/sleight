@@ -10,9 +10,10 @@ reference (`_build/default/bin/main.exe`) at commit 164fcf1;
 **[owner n]** is item n of the brief's "Owner decisions", which are an
 earlier session's paraphrases, not the owner's words; everything
 else is my own reading and is hedged as such. `bove_use.sl`, `fuel.sl`,
-`model.sl`, `fuel_run.sl`, and `halts_reflect.sl` need `bove.sl` (the
-last two also `fuel.sl`, and `halts_reflect.sl` also `fuel_run.sl`)
-earlier on the same command line.
+`model.sl`, `fuel_run.sl`, `halts_reflect.sl`, and
+`proto/review3/05_halts_uniform.sl` need `bove.sl` (`fuel_run.sl` and
+`halts_reflect.sl` also `fuel.sl`, and `halts_reflect.sl` also
+`fuel_run.sl`) earlier on the same command line.
 
 ## 1. Summary
 
@@ -32,13 +33,16 @@ earlier on the same command line.
 - In my reading, T4 (every source is accepted or rejected) cannot be an
   unconditional Sleight function if the compiler is faithful (T1 to
   T3): if Sleight's functions terminate and its checking ends
-  (SOUNDNESS.md's (T), (C), and (E), argued there, not proved), a
+  (SOUNDNESS.md's (T), (C), and (E), argued there, not proved), and,
+  since T1 to T3 are stated by erased derivations, its logic is sound, a
   diagonal argument rules out a total, sound, and complete compiler or
   run-function for Sleight source written in Sleight. The
   self-reference can come from `read-file` in a macro (03 F6, whose
   mechanism `proto/fuel/diagonal.sl` compiles), so no quine is needed. Gödel's second
-  theorem, if Sleight meets its conditions (unchecked), gives a related
-  limit on proving H. Two fuel-free shapes compile: recursion on an
+  theorem, if Sleight is consistent and meets its conditions
+  (unchecked), gives a related limit: on my reasoning (§4.3), Sleight cannot prove uniform
+  stripped-run safety, nor uniform (T) together with full-semantics
+  safety. Two fuel-free shapes compile: recursion on an
   erased `Halts` derivation, and a typed step machine driven by
   `Program` [proto]. A third shape, "honest fuel", whose out-of-fuel
   result carries a proof, also compiles [proto], but it uses fuel. The
@@ -334,8 +338,10 @@ answers would have to be expressible as an oracle the spec can choose.
   uses (T) ("Without (T) this step fails"). On my reading of §4.3,
   uniform (T) and full-semantics safety cannot both be proved inside
   Sleight if it is consistent and meets Gödel II's conditions
-  (unchecked). So, consistent with [owner 1]'s "no `no_false`", I expect
-  T7 for the stripped run to stay a meta-theorem. T6 then either assumes
+  (unchecked), and on my reasoning there uniform stripped-run safety
+  alone would already give internal consistency. So, consistent with
+  [owner 1]'s "no `no_false`", I expect T7 for the stripped run to stay
+  a meta-theorem. T6 then either assumes
   "the spec run of `src` does not go wrong", as CompCert assumes a safe
   source, or defines going wrong as a behaviour after which anything is
   allowed. Either way it is not vacuous for accepted programs only if
@@ -394,7 +400,12 @@ My reading of the limits, hedged:
   macro that reads its own file with `read-file` (03 F6). Applied to
   `compile`, the argument needs T1 to T4 and the spec's determinism on
   Q (through T3), not T5: as in 03 F6, Q's macro expands to a
-  `compile-error` exactly when `compile` accepts Q. This is, as I understand it, the
+  `compile-error` exactly when `compile` accepts Q. T3 holds per oracle,
+  so the oracle in `compile`'s verdict must govern the run of `compile`
+  inside Q. That holds if `compile` calls no `slot-eq`; otherwise, as
+  in 03 F6, the argument goes through its copy with every `slot-eq`
+  answered `ENone`, which an oracle may always choose (§67) (my
+  reasoning). This is, as I understand it, the
   classical "no total self-interpreter on source text" barrier. Brown
   and Palsberg's typed self-interpreter for F_ω, cited by name, is to my
   understanding not subject to it because its input is a typed
@@ -416,12 +427,21 @@ My reading of the limits, hedged:
   "Normalization implies consistency" is the general form of this. The
   same holds of uniform (T) and full-semantics safety. So, if Sleight is
   consistent and meets the theorem's conditions, it cannot prove both
-  halves of either pair. The diagonal above already rules out one half
+  halves of either pair. For the stripped run, H is not even needed (my
+  reasoning): an erased proof `p` of `(False)` gives an accepted program
+  whose first run-position form is `(lift p)`, `lift` an `absurd`
+  function from an erased to a `many` `(False)`. The stripped run drops
+  `p` and enters `lift`'s body at once, against safety
+  ([`proto/review4/05_stripped_absurd.sl`]: with `p` from an axiom
+  under `--no-prelude`, both implementations report "absurd code
+  reached" at that form). So uniform stripped-run safety alone would
+  give internal consistency. In the full semantics `p` runs first, so
+  this needs (T). The diagonal above rules out uniform H in one form
   without Gödel, if the logic is sound: uniform H, in a form a function
   can recurse on (an erased `Halts` for every source, for a faithful
   step), would give `compile-h` a hypothesis-free caller (option 1
-  below). Whether full-semantics safety is provable is my guess, not a
-  result.
+  below). Whether full-semantics safety alone is provable is my guess,
+  not a result.
 - **What I expect remains provable inside Sleight.** H for one
   particular program, either by an `erased` proof for that program or
   by a fuel run in run position whose finished result is
@@ -441,8 +461,8 @@ Options:
    `erased` halting proof (for that input, or for every input, which
    the next sentence rules out for a faithful compiler), or a fuel run whose result
    carries the derivation, which has then already computed the
-   verdict. The diagonal above is exactly why no Sleight code can supply
-   `h` for every `src`. So, as a way to *run* the compiler, it still
+   verdict. The diagonal above is exactly why, under its premises, no
+   Sleight code can supply `h` for every `src`. So, as a way to *run* the compiler, it still
    needs fuel or a proof; its use is as a statement. If the logic were
    unsound, `h` could be fake and `compile-h` could diverge. *Cost:* low
    (F4).
@@ -492,7 +512,7 @@ Options:
 
 | Item | Source | Can a proved compiler remove it? |
 |---|---|---|
-| Sleight's logic is sound (OPEN.md 1–3), in a sense stronger than consistency: an erased derivation in `Verdict` must correspond to one that exists, which is SOUNDNESS.md (T)+(E) | §14, SOUNDNESS.md 1 | No. On my reading of §4.3, it cannot be proved internally if Gödel II applies (unchecked). `lean/` covers a fragment. Option 4.1.3 moves it onto a certificate checker. |
+| Sleight's logic is sound (OPEN.md 1–3), in a sense stronger than consistency: an erased derivation in `Verdict` must correspond to one that exists, which is SOUNDNESS.md (T), (S), and (E) | §14, SOUNDNESS.md 1 | No. On my reading of §4.3, it cannot be proved internally if Gödel II applies (unchecked). `lean/` covers a fragment. Option 4.1.3 moves it onto a certificate checker. |
 | The checker that checks the proof: `lib/` (OCaml), or slc compiled to OCaml | MANUAL.md `--goal` | No. It can be mitigated by checking with both, or by a proved slc checking its own proof. That is a consistency check, not a proof; CakeML's in-logic bootstrap, cited by name, is the known pattern. |
 | Axioms `predates-trans`, `subterm-trans`, `predates-subterm` (§18), `gensym-unique` (§65), `placed-slot`, `placed-eq` (§66) | §18, §65, §66 | Not from the logic. Their truth *in the spec* (SOUNDNESS.md (I2), (I3), and the gensym counter) are safety invariants that I expect to be provable inside Sleight. Using them for the stripped run still needs (E). |
 | Character literal bounds "asserted rather than decided" | §45 | Yes in principle: a lemma over the 256 codes, decided rather than asserted. |
@@ -613,6 +633,9 @@ value is the only reference to it." My reading of its role:
   here, given `slot-eq` and the crash allowances.
 - SOUNDNESS.md's (T), (C), and (E) themselves, on which H rests (§2.3).
 - That the three sources of a `Halts` argument in F4 are the only ones.
+- That uniform stripped-run safety alone, proved inside Sleight, would
+  give internal consistency (§4.3). The program shape is compiled; the
+  internal formalization of "accepted" and of the stripped run is not.
 - That full-semantics safety is provable inside Sleight. (That uniform
   H, in a form a function can recurse on, is not provable rests on the
   diagonal and the logic's soundness, §4.3.)
@@ -829,3 +852,64 @@ Unsure:
   out, so T7 is unchanged.
 - Whether Gödel II's conditions hold for Sleight; unchecked by all
   three passes.
+
+## Fourth review notes
+
+A fourth adversarial reviewer read the brief, CLAUDE.md, DESIGN.md in
+full, SOUNDNESS.md parts 0 to 7 and 9, and OPEN.md 1 to 4, and re-ran
+every `proto/theorems/` file (with `bove.sl`, `fuel.sl`, and
+`fuel_run.sl` first where needed), `--goal proved spec.sl proof.sl`,
+`sloteq_ct.sl` with and without `--no-extern`, and
+`proto/review3/05_halts_uniform.sl`. Each behaves as stated.
+
+Errors found and changed:
+
+1. Header: `proto/review3/05_halts_uniform.sl` also needs `bove.sl`
+   first; alone it fails with "unbound name `Halts`". Added.
+2. Summary, the diagonal's premises. T1 to T3 are erased derivations,
+   so the contradiction with a spec `Fails` derivation needs those
+   derivations to be true, which is soundness of the logic, not only
+   (T), (C), and (E). §4.3 says "assuming soundness of the logic"; the
+   summary did not. Added.
+3. §4.3, the diagonal applied to an intrinsic `compile`. T3 holds per
+   oracle, and `compile` chooses the oracle in its verdict, so the
+   argument needs that oracle to govern `compile`'s own run inside Q.
+   Added that this holds without `slot-eq`, and otherwise goes through
+   the `ENone` copy, as 03 F6 does.
+4. §4.3, the Gödel paragraph, an underclaim (third review's unsure
+   point). For the stripped run, H is not needed: an erased proof `p`
+   of `(False)` gives an accepted program whose first run-position form
+   `(lift p)` enters an `absurd` body at once, since stripping drops
+   `p`. New `proto/review4/05_stripped_absurd.sl` (with `p` from a
+   `def-prim` axiom under `--no-prelude`) is checked and then fails at
+   that form with "absurd code reached" under the reference and `slc
+   --interpret`. So uniform stripped-run safety alone would give
+   internal consistency (my reasoning). Updated §4.3, T7, the summary,
+   and section 9.
+5. Summary, "Gödel's second theorem ... gives a related limit on
+   proving H". Gödel limits H only together with stripped-run safety,
+   and (item 4) limits that safety alone; the summary also omitted
+   consistency as a condition. Reworded.
+6. §4.3 option 1, "no Sleight code can supply `h` for every `src`" was
+   unconditional. Now "under its premises".
+7. §5 table, row 1: an erased derivation corresponding to one that
+   exists needs (T) for it to finish and (S)'s preservation for its
+   type, not "(T)+(E)" alone. Now (T), (S), and (E).
+
+Confirmed: the §9, §21, §27, §31, §42, §65, §67, §71, and §72 quotes;
+SOUNDNESS.md's "(C)", "(T)", "a sketch", "does *not* prove", "Without
+(T) this step fails", and part 6's "Run-position forms run total code
+by (T)"; README.md's anticlassicality and IΣ₂ text; `prelude.sl:67` and
+the `def-prim` range 1401 to 2250; the run-position quine diagonal of
+§4.3 (with completeness, cr(Q) = Ok v gives v = v + 1, and Fail gives
+Ok 0); the Gödel step "uniform H plus stripped-run safety gives
+internal consistency"; and T3's weak-completeness reading.
+
+Unsure:
+- Item 4 rests on formalizing "accepted" and the stripped run inside
+  Sleight, which no one has tried.
+- §4.3's quine form and 03 F6 both lean on SOUNDNESS.md's claims for a
+  program that may be rejected; 03's fourth review notes say how that
+  scope is read.
+- Whether Gödel II's conditions hold for Sleight; unchecked by all four
+  passes.

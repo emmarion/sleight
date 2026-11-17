@@ -142,7 +142,7 @@ definition whose header is `(erased name :`.
 | `str-split-fuel` (`base.sl:100-109`) | fuel equal to the string's length | unreachable but not refuted |
 | sugar budget (`elab-main.sl:1871`, `README:385-394`) | budget sized by the form | "internal" error, not refuted |
 | `Steps n` (`elab-main.sl:1243...`) | budget | zero case refuted by type |
-| macro expansions ≤ 10000 (`elab-main.sl:511, 560`; the elaborator group's first `subterm` parameter, named `fuel`, is this budget and is checked again at `:586, 764, 779`) | **specified**: [D] §62 "At most 10000 expansions run in one run, every file on the command line included." | refusal, as §62 requires |
+| macro expansions ≤ 10000 (`elab-main.sl:511, 560`: the run's count, `env-expansions`, is checked at `:560`. The elaborator group's first `subterm` parameter, named `fuel` (`elab-main.sl:752`), starts at the same limit for each top-level form (`:3379-3391`), loses one per expansion along a nesting path, and its zero case gives the same message at `:586, 766, 781, 1126, 1258, 1266, 1501, 1541`) | **specified**: [D] §62 "At most 10000 expansions run in one run, every file on the command line included." | refusal, as §62 requires |
 
 - [P] So the fuel a correctness theorem must face is the interpreter's;
   `show-at`'s and `heap-strs-fuel`'s, whose zero cases give a wrong answer
@@ -504,8 +504,8 @@ the statement.
   device. It uses [O]2's driver loop, though not in the fuel-free way
   [O]2 has in mind.
 - *Cons:* restarts repeat work. [P] How much depends on what fuel counts:
-  with fuel that counts steps and doubles, the failed attempts cost at
-  most about as much as the last one; with slc's fuel, which bounds
+  with fuel that counts steps and doubles, the failed attempts together
+  cost less than twice what the last one does; with slc's fuel, which bounds
   nesting depth (MANUAL.md:154-157), a failed attempt can do nearly all
   of the successful run's work, so the overhead can grow with the number
   of doublings.
@@ -739,9 +739,13 @@ IR's call and constructor arguments syntactically atomic in either case.
 4. **"Fresh address" versus sharing.** §38 says "Nothing relies on two
    slots being distinct", and §67 lets `ENone` be answered always. §36
    says "two separately built cells with equal contents are `is`-equal
-   and are two blocks", which is about cells. DESIGN.md does not say
-   whether two separately built immutable values may share one word. That matters for whether `==` (2.5) refines the
-   spec's `slot-eq`.
+   and are two blocks", which is about cells. §33 fixes the word of a
+   value with no non-erased field, "however the value was built", so
+   separately built values of that kind do share one word. For a value
+   with a non-erased field, and for a value of an extern type such as
+   the `String`s of `slot_eq_share.sl`, DESIGN.md does not say whether
+   two separately built ones may share one word. That matters for
+   whether `==` (2.5) refines the spec's `slot-eq`.
 5. **§27 and §29 name "the evaluator"** as part of the semantics (§27:
    "the evaluator runs the code"; §29: "The evaluator runs that code"). [P] A formal spec needs its own run in that role, and
    DESIGN.md does not say whether that run executes the models or the
