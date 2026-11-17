@@ -478,7 +478,11 @@ Values as words:
   the spec run produces the same events and values. It covers the FFI
   `Slots` too (§69): an FFI answer is the model's linear search under
   some oracle, as long as the FFI says "found" only for an equal word
-  (reading; not checked against the `Slots` models).
+  (reading; not checked against the `Slots` models). The existence of
+  an oracle also depends on E2 (Q6), or some other choice that makes
+  equal `Nat`s one word: compiled code answers `ESome` for `(add 1 2)`
+  against `3` (`imm_eq.sl`, 2.4), which a spec running the `Nat` model,
+  with separately built `Succ` blocks, could not match (reading).
   Pros: deterministic, fits a `Program`-driven spec. Cons: the theorem
   is existential.
 - **N2: relation.** `slot-eq` is a nondeterministic step, and the
@@ -488,8 +492,12 @@ Values as words:
   implementations would disagree with the spec, so a compiler would have
   to answer `ENone` too. Not meaningful.
 - **N4: truthful.** Cons: the reference interpreter and slc fail it
-  (2.4). The host's boxed big `Nat`s fail it too, which is my reading of
-  `VWord` with `Z`.
+  (2.4). So does compiled code for big `Nat`s, which the extracted OCaml
+  boxes as `Z.t` above `max_int`: [compiled]
+  `proto/review5/02_big_nat_slot_eq.sl`, comparing two separately
+  computed `Nat`s equal to 2^63, answers `ENone` when built by the
+  reference or by slc, where the same program with small `Nat`s
+  answers `ESome` when built by the reference.
 
 ### Q5. Crash
 
@@ -622,7 +630,8 @@ option, with the spec's own store a heap (as 01's Σ is).
    is lock-step (cheap) or needs confluence (expensive).
 4. **`slot-eq`: oracle (N1)?** Recommended: yes. It keeps the spec a
    function, and "there is an oracle" covers every implementation seen
-   tonight.
+   tonight, provided `Nat` words are immediates as E2 proposes (N1) and
+   the spec's store shares `Settled` values (Q8).
 5. **Crash: C2 at runtime, C4 at compile time?** Recommended: yes, with
    C3 as a later strengthening; 01's decision 7 is the alternative.
    The depth bound counts activations, tail calls included (C4).

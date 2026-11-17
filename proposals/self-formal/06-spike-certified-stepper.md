@@ -208,10 +208,9 @@ refused in `step-back` at `ExSeq` [ran, third review].
    minted at the top level before the stepper's `S`, and as I read §18
    any level with a `Predates` to `S` was minted before `S`, so this is
    item 1 with the level hidden; item 1's counter makes packing the level
-   unnecessary. The
-   trace of F2 is the same closure
-   defunctionalized: `step-back` is the code of each closure, and
-   `Trace` is the list of them.
+   unnecessary. The trace of F2 is the same closure defunctionalized:
+   `step-back` is the code of each closure, and `Trace` is the list of
+   them.
 3. **Numerals in an erased derivation** (`total_demo.sl`, first draft):
    `RSet ... 0 ...` was refused against `(SetNth ... (Zero) ...)`, with
    the note that `0` "is a numeral literal, opaque to the checker". §45:
@@ -644,3 +643,77 @@ Points I am unsure of:
 - `06_packed_counter.sl` mints its packed level at the top level, before
   the stepper's; I did not try packing a level that is itself passed in
   from a caller.
+
+## Fifth review notes
+
+A fifth adversarial review read DESIGN.md in full, every file in
+`proto/stepper/`, `proto/review3/06_*`, and `proto/review4/06_*`, and
+re-ran at fb2c533 (no code change since d6644d9): `run.sl` under the
+reference, `--no-extern`, `--build`, `slc --interpret`, and
+`slc --build`; `complete.sl total_demo.sl` under the same five;
+`ho_counter.sl` and `06_packed_counter.sl` under the reference,
+`--no-extern`, and `slc --interpret` (both print `0`, the `Halted`
+case); `ho_exist_build.sl`; the three bad files (messages and positions
+as quoted); `06_packed_predates_bad.sl` cut after line 13 (accepted);
+`06_packed_counter.sl` without `(predates pb)` ("`L` is not a level
+minted by `def-lvl`"); `06_vacuous.sl`; all three teeth checks; a wrong
+`runs-fn` step; the numeral refusal and its note; the prelude warning
+for redeclaring `SCons` and `Exec` (F4.4); a `step` whose body is
+`(SStuck _ _)`, with which `machine.sl`, `complete.sl`, and both demos
+are accepted, and `total_demo.sl` and `run.sl` print `(AgreeStuck _ _ _)`
+and `stuck`; the F5 line counts, the 47-line `runop-fn`, the 15-line
+`step-back`, `RWrite`'s 15 fields, and the 24 + 2 failure sites; the
+`lib/prelude.sl`, `std/list.sl`, and `machine.sl`/`spec.sl` line
+citations; the DESIGN.md quotes; and the timings (one-line file
+0.40 s, the four files 0.48–0.51 s, slc 0.24–0.27 s and 0.32 s; 7821
+steps 1.37 s, 0.57 s, and 0.00 s built; 26021 steps 10.8 s, 3.43 s, and
+0.07 s built; peak 22–41 MB). All matched except as below. Errors found
+and changes made:
+
+1. Q2.1 said `NthNo` would carry "a `NoNth` derivation" and failures
+   would be refuted "with `nth-fn` or a like lemma". No `NoNth` exists
+   in the stepper's files, `std/list.sl`, or the prelude (it is 07's,
+   `proto/roundtrip/spec.sl:33`), and `nth-fn` (functionality) cannot
+   refute a missing index; 07 needs `nth-nonth` for that. Reworded to
+   name both kinds of lemma.
+2. Q1.4 said that with `Step`/`Star` as the spec "the trace is the
+   derivation". `Trace` is a snoc-list and `Star` a cons-list, and no
+   conversion is written (as Q1.4 itself says). Now: immediate only if
+   the spec's closure is `Trace` itself.
+3. F4.2 stated as fact that "the packed level is then one minted before
+   the stepper's". That holds for `06_packed_counter.sl` (`L0`); in
+   general it is a reading of §18 (I did not try, for example, a level
+   reached through `predates-subterm` on a field of an earlier value).
+   Hedged, and the file's level named.
+4. F4.1 and F4.2 said the closure shapes "halt a small loop" without
+   saying that the loop in `ho_counter.sl` and `06_packed_counter.sl`,
+   `fin`, takes a fuel of 1000. The closures take no fuel; the test
+   driver does. Said so, since the spike's title is "fuel-free".
+5. F6 gave single figures for the long runs where the reviews measured
+   a spread (for example 10.8–12.1 s for 26021 steps); now ranges, and
+   slc's short-run range is 0.24–0.27 s.
+6. §6: the `--build` timings were re-run (0.00 s and 0.07 s), and
+   `_build/release/slc` is dated after the last change to `self/`
+   (0bbc5e4 on 2026-11-06; the binary is from 2026-11-17); still not a
+   check of its build.
+
+The theorem's type was checked against the claims again: `advance`
+takes the trace at `(Cons c0 Nil, m0)` and its `Halted` carries
+`(erased (Runs m0 c0 mf) d)`; `Running` needs a real `Step` from the
+current state and so is determined by `step-det`, and is impossible on
+the empty stack; `run-total`'s `AgreeHalted` carries `(many mf is r)`.
+The vacuous implementations that pass are those already listed: a
+`step` answering `SStuck` (compiled above), an `advance` answering
+`Ended` with `Stuck`, and a `run-total` answering `AgreeStuck`.
+
+Points I am unsure of:
+
+- Whether a level reached by forcing a field of an erased value
+  introduced before the stepper's level (so that `predates-subterm`
+  gives it a `Predates` to that level) could serve as a packed level
+  that each step changes. I expect such levels to be finitely many,
+  since the value is finite, so it would not give an unbounded run;
+  not compiled.
+- The "Proof is about 210 lines" in §1 is F5's determinism, soundness
+  glue, result types, and `complete.sl` rows (83 + 41 + 34 + 52);
+  `complete.sl` includes `finish` and `run-total`, which are code.

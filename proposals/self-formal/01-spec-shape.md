@@ -6,7 +6,8 @@ approved, and nothing here is a design decision (CLAUDE.md rules 1, 11).
 Where this file and DESIGN.md disagree, DESIGN.md is right.
 
 Tags used below: **[D]** DESIGN.md says it (quoted); **[C]** the code
-does it (file:line, or a test under `proto/spec-shape/` run with
+does it (file:line, or a test under `proto/spec-shape/` or a
+`proto/review*/` directory, run with
 `_build/default/bin/main.exe`, the reference, and with an slc built by
 `self/release.sh` and run as `slc --interpret`); **[O]** an owner
 statement from the brief; **[A]** this agent's reading or proposal.
@@ -162,13 +163,15 @@ depends on it.
    parameter. Not in the spec are
    `--eval-fuel`, `--no-native`, `--hints`, and `--warn-unused`.
    *Open:* `--warnings-as-errors`. DESIGN.md mentions it (§4), but its
-   effect depends on warnings defined in WARNINGS.md, not in DESIGN.md.
+   effect depends also on warnings that WARNINGS.md defines, beyond the
+   few DESIGN.md defines (§4's, and the prelude's warnings in §69).
    *Recommended:* acceptance ignores warnings, and the flag is a policy
    of the driver that the theorem does not cover.
 9. **What is the prelude to the spec?** *Options:* (a) a fixed elaborated
    snapshot Σ0; (b) the shipped text, as an input; (c) any prelude text,
    with the spec finding the names it needs (`Nat`, `String`, `Macro`,
-   `Raw`, and so on) at the end of the prelude. *Recommended:* (c),
+   `Raw`, and so on) in the prelude (where exactly is open, §4.5).
+   *Recommended:* (c),
    with the shipped prelude as one instance. The compiler theorem would
    quantify over it, and `--no-prelude` would be the empty prelude,
    except that §42 then allows `extern` anywhere ("only in the source
@@ -339,9 +342,11 @@ the items.
 - [D] There is a positive error *content* requirement in places: a
   failed `comptime-match` "prints the expected constructor and the actual
   value" (§28), `compile-error` reports "the text of `m`" (§4), and §62
-  says which macro calls a message names. DESIGN.md says nothing about
-  reporting more than one error. "whichever one the elaborator meets
-  first" appears in §15.
+  says which macro calls a message names. DESIGN.md says nothing
+  explicit about reporting more than one error. "whichever one the
+  elaborator meets first" appears in §15, and §4's "Warnings go to
+  standard error and do not stop elaboration" may be read as implying
+  that an error does stop it.
 - [C] `two_errors.sl`: the reference reports only `one`, and slc reports
   `one` and `two`; self/README.md:298-301 says slc records errors and
   goes on, and slc's `--first-error` (MANUAL.md) stops at the first.
@@ -349,7 +354,8 @@ the items.
   later `compile-warn`, but then refuses a later macro call as not
   constant-known. slc gates its run-position runs on there being no
   earlier error (`self/elab-main.sl:539`, `:545`, `:739`, `:2152`, each
-  `(and (env-run-pos …) $ not $ env-failed …)`), so after an error it
+  testing `(env-run-pos …)` together with `(not $ env-failed …)`, and
+  `:2152` also a `many` mode), so after an error it
   seems not to run the evaluator at compile time. Accordingly a call of
   a function, defined before or after the error, gives no `Settled`
   result (`proto/review2/after_error_call.sl`, `after_error_call2.sl`),
@@ -367,8 +373,18 @@ the items.
   (`proto/review2/rf_a.sl` then `rf_b.sl`, on both implementations);
   the reference even prints the first file's final value, `0`, on
   standard output before the second file's syntax error, and exits 1.
-  [A] Acceptance is unaffected, since either way the run is rejected. So reading can be a separate total function per file,
-  or for all files at once.
+  When the first file's final value is a `Program`, the two differ in
+  acceptance: with `proto/review5/01_prog_first.sl`, whose `Program`
+  writes `effect` and exits 0, followed by `review2/rf_b.sl` (a syntax
+  error) or `review5/01_late_error.sl` (a `compile-error`), the
+  reference prints `effect` and exits 0, reporting no error, and slc
+  reports the second file's error and exits 1 without running the
+  `Program`. So the reference seems to run a file's final value when
+  that file ends, before any error in a later file is reported. [A]
+  Where reading or elaboration fails only in a
+  later file, acceptance then depends on when the driver runs, which
+  section 5 item 14 raises; otherwise reading can be a separate total
+  function per file, or for all files at once.
 - [C] mini/ makes each judgment total with "an [Ok] with what was
   derived or an [Err] with the first reason found" (`mini/elab.sl:3-4`).
   `Fails` is a one-constructor relation over a derivation of
@@ -429,8 +445,9 @@ DESIGN.md does not define the unit.
 - Not compatible with the full language: keywords are reserved `RKey`s
   (`mini/elab.sl:8-38`; README:138), but §19 says special forms "may be
   shadowed"; `Sexp` has no `Pos`; `ElabTerm` is pure (README:125), but
-  a type can contain a macro call (§9); `Eval` is environment-based and
-  fuelled (`mini/eval.sl:53`), not a heap machine; and malformed shapes
+  a type can contain a macro call (§9); `Eval` is environment-based, not
+  a heap machine, and its deriving function `eval` is fuelled
+  (`mini/eval.sl:53`); and malformed shapes
   get stuck.
 - What was cut is exactly the hard part. MINIMAL.md "What is removed"
   item 4 removes `Settled`, "the compile-time round trip", macros, and
@@ -479,9 +496,12 @@ DESIGN.md does not define the unit.
   - Run-position rule: `Elab … (Ok code)`, `Strip code c`, and
     `Run Γr Σ c (ws, Σ')`. The entries become `Settled` with words in
     `Σ'.heap`, a minted type, and a minted `is` (§29).
-- `Program flags fs ffi prelude files (Accept Σ final | Reject e)`,
-  including the treatment of the final value in §27 (a final `Fn` "in
-  neither form … is an error").
+- `Program flags fs ffi prelude files (Accept Σ finals | Reject e)`,
+  with one final value per file that ends in an expression (§27: "A
+  file that ends in a statement produces nothing. Otherwise the type of
+  the final value decides what the driver does with it"), including the
+  treatment of each final value in §27 (a final `Fn` "in neither form …
+  is an error").
 
 ### 4.3 Rejection
 
@@ -503,8 +523,13 @@ error at p ⇒ spec Reject at p; compiler crashes ⇒ nothing.
 
 See decision 9. Under (c), the spec must say how it finds the prelude's
 `Nat`, `Char`, and `String`. §45 says literals refer to them "whatever
-names the program has shadowed since". [A] So they are captured when the
-prelude ends.
+names the program has shadowed since". [A] So they are captured from
+the prelude, not looked up in the program's scope. [C] Capturing them
+when the prelude ends would not cover the prelude's own literals: the
+shipped prelude (2881 lines) uses its first string literal at
+`lib/prelude.sl:2526` and its first numeral at `:2542`, in the `let`
+that defines `unary` and `prove-literal-lt`. Where in the prelude the
+capture happens is open.
 
 ### 4.6 Staging [A]
 
@@ -574,14 +599,16 @@ before one that only adds rules.
 10. `dump-context` is defined by reference to MANUAL.md (§27, §54) and
     always stops elaboration. [A] For the spec it is an `Err` with
     unspecified content.
-11. Multiple errors: DESIGN.md is silent. The two implementations differ
-    after the first error (tested).
+11. Multiple errors: DESIGN.md says nothing explicit (§4's "Warnings
+    ... do not stop elaboration" may imply that errors do). The two
+    implementations differ after the first error (tested).
 12. Where `Settled` entries come from: §29 says "`Settled` arises at three
     sites" and "Nothing else creates a `Settled`", and concludes "So
     any `Special` or `Macro` that is ever invoked (§6) comes from run
     position". [A] Possibly in tension with this: the built-in
     `Special` entries of §42, which §6 needs to be `Settled` to
-    dispatch, exist "before any file is read", not in run position; and
+    dispatch, are in scope "Before any file is read" (§42), not made in
+    run position; and
     `mint-settled` and `mint-settled-erased` mint "a fresh anonymous
     `Settled` entry", and `settled-ty-apply` and `settled-val-apply` give
     a handle to one (§65), inside a macro's run, which is not obviously
@@ -596,6 +623,16 @@ before one that only adds rules.
     which error is reported, so this may be no conflict; but read
     literally, §6 would report the head's error. A question for the
     owner.
+14. When the driver runs a file's final value: §27 has "Several files
+    on one command line share one scope, in order" and gives each file
+    that ends in an expression a final value for the driver, but does
+    not say whether a `Program` final runs when its file ends or after
+    every file is elaborated, nor whether its `Exit` ends the unit. The
+    reference runs it when its file ends and, in the two units tested,
+    reports no error in the later file; slc elaborates every file first
+    (§3.7,
+    `proto/review5/01_prog_first.sl`). So the two disagree on
+    acceptance for such a unit. A question for the owner.
 
 ## 6. Unverified claims
 

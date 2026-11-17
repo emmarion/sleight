@@ -617,7 +617,7 @@ source whose compile-time run diverges has no derivation.
 - That the macro primitives' elaborator callbacks never evaluate, which
   (e) requires.
 - That P3 can be written as an erased Sleight function.
-- The cost of option (a) on slc. The cost figures in F5 come from single
+- The cost of option (a) on slc. The cost figures in F5 come from a few
   timings on one machine.
 - That a generic `burst` over any step function would type-check through
   a level factory (§57). The prototype avoided it by using one machine
@@ -918,3 +918,79 @@ Unsure:
   states of the full semantics of a program, and Q is not such a
   program when rejected.
 - The compiled timing rows and the 22 MB figure, still not re-run.
+
+## Fifth review notes
+
+A fifth adversarial reviewer read the brief, CLAUDE.md, DESIGN.md in
+full, and SOUNDNESS.md in full, re-ran `diagonal.sl` and its one-byte
+copy, `fr/a.sl` to `fr/d.sl`, the `cek.sl` rows under the reference and
+`slc --interpret`, the `--eval-fuel 1000` pair, and `suspend.sl` 3
+under a timeout, and built `cek.sl` with both implementations to re-run
+the compiled timing rows, which no earlier review had done.
+
+Errors found and changed:
+
+1. F6, carrying (T) and (E) over to the possibly rejected Q. The fourth
+   review found the detour with the call in run position circular and
+   rested the step on a reading of parts 5 and 6, leaving it unsure. A
+   detour that is not circular exists: P, Q's text before the macro
+   call followed by a function of no arguments that applies `compile` to
+   Q's files as literals, as P's final value. Defining it "involves no
+   evaluation" (§29) and the driver applies it only after elaboration
+   (§27), so P is accepted without the call running, and (T) and (E)
+   for P cover it. `proto/review5/03_detour.sl` (new) is that P for
+   `toy-compile`: `--extract` accepts it, and the reference and `slc
+   --interpret` print `(BFalse)`. The rest of Q's run is the macro's
+   output, so (C) is not needed for Q. F6 and section 6 rewritten.
+2. F5, the timing rows. The compiled rows had never been re-run. Three
+   runs each of `cek.sl` with n = 1000000 (31000025 steps), built by
+   the reference and by slc, gave 12 to 17 ns per batched step and 6 to
+   12 ns extra per `Continue` for both, so the 15 ns versus 11 ns gap
+   between the two compiled rows is within the noise. The `slc
+   --interpret` row said "— (elaboration dominates)" for a batched step;
+   subtracting a 0.3 s run with n = 0 gives about 1.4 µs, which is
+   measurable. The table and the text below it now say so.
+3. F4.1, 06 F4.2 paraphrased. "A closure whose level is packed in its
+   argument" is packed with it in the state, and "what fails ... is
+   extending it at a newly minted level" misstates 06: that extension
+   is accepted (`ho_exist_build.sl`), and what fails is the stepper
+   applying it, or reaching the new level with a packed `Predates`.
+   Reworded.
+4. F1, §42's "It never recurses". The quote dropped its antecedent ("The
+   driver flushes after every write."), and next to "`(Program L)` is
+   an enum" it read as saying that `Program` never recurses. Restored.
+5. F3 row 2 left out a third expansion bound: `run-toplevel`'s own
+   `fuel` (`elab-main.sl:3362`), set to `expansion-limit` per file at
+   `self/main.sl:29` and spent at `elab-main.sl:3375` and `3382` with
+   the same "more than 10000 macro expansions" error. Added to the row
+   and to section 6's unverified claim.
+6. F7 omitted literals as a possible compile-time evaluation site: §45
+   defines a numeral as what `(bin-to-nat b)` returns, "as if minted by
+   run-position forms", and leaves to the implementation whether
+   statements are elaborated. Added, hedged.
+7. The Fourth review notes' "Unsure" list ended with an item numbered 2
+   that is a coordinator note (F4.1 restated to match 06). Moved to the
+   Coordinator notes as item 2.
+
+Confirmed: the 22 MB figure (`suspend.sl` 3: maximum resident set
+22284 KB at 3 s and 22192 KB at 8 s); the `cek.sl` reference rows (about
+6 µs batched and 3 µs extra per `Continue` in one run, the same order);
+the `--eval-fuel 1000` pair under both implementations; `diagonal.sl`
+(969 bytes, accepted) and the 970-byte copy (rejected) under the
+reference; the `fr/` errors; `core.sl:3614`, `interp.sl:61`, `67`,
+`105-114`, `143`, `main.sl:133`, `186-191`, `eval.sl:1492-1494`,
+`elab.sl:26`, and `elab-main.sl:559-560`; and that DESIGN.md has no
+"fuel" and says nothing of a compile-time crash outside §72. The F6
+diagonal, the `slot-eq` copy, the H-evidence rerun, the "H for all
+sources" inference, and Q1(b)'s log₂ bound check step by step under the
+premises stated.
+
+Unsure:
+- Item 1 assumes that the spec accepts P as the checker does, and reads
+  part 5 as covering the driver's call of a final value ("each step
+  being a total call" is said of the `Program` loop).
+- With item 1, (C) is no longer used by F6, but the summary still lists
+  it among the premises; that only weakens the stated result, so it is
+  unchanged.
+- The macro's other code than `compile` is covered in item 1 by
+  "the same way"; no P for it was written.

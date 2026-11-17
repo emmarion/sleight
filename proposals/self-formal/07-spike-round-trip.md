@@ -7,7 +7,8 @@ and DESIGN.md disagree, DESIGN.md is right.
 Tags: **[D]** DESIGN.md, quoted; **[C]** compiled or run. Unless marked
 otherwise, files are under `proto/roundtrip/` and were run with
 `_build/default/bin/main.exe` at commit 669b328 (no change to `bin/`,
-`lib/`, `src/`, or `self/` since, up to ad07c35, 07692f2, c236135, and e0aaf2c), and also with slc
+`lib/`, `src/`, or `self/` since, up to ad07c35, 07692f2, c236135, e0aaf2c,
+and fb2c533), and also with slc
 (`_build/release/slc`; `slc --interpret`, `slc --goal`).
 **[A]** marks my own reading or proposal. The only owner item the body
 mentions is the brief's statement 3, in decision 4, and it is an earlier
@@ -300,9 +301,12 @@ proved) it has neither derivation, since `Evals` and `Sticks` both need
 a finite `Runs` and `Step` is deterministic; the loop runs at constant
 memory. That is consistent with "no verdict if and only if a run that
 the checker reaches diverges" (a program rejected before a diverging
-`Let` still gets a verdict). Of the two directions, "a diverging run
-gives no verdict" is evident from the code (a `Waiting` state leaves
-only on `Halt`); the converse is not. Neither direction is proved. [A] The divergence comes from the toy's untyped object
+`Let` still gets a verdict). For the zipper, both directions can be
+read from the code, though neither is proved: a `Waiting` state leaves
+only on `Halt`, so a diverging run gives no verdict; and each other
+step either ends with a verdict or handles one statement, so if every
+run the checker reaches halts, a verdict comes after finitely many
+steps. [A] The divergence comes from the toy's untyped object
 language, which has no levels; whether a run-position form of full
 Sleight can diverge at all bears on §17 ("Termination rests on
 levels"), see §5 below.
@@ -436,7 +440,9 @@ levels"), see §5 below.
   that is, the order in which a form's items are elaborated. §6 says
   "The head is elaborated first", and §15 places each argument's
   hoisted binding "just before the statement or final form that
-  contains the call", but neither orders two arguments. [A] A
+  contains the call", but neither orders two arguments. §50's "an
+  argument (its parameter, given the arguments before it)" fixes what an
+  argument is checked against, not when it is elaborated or run. [A] A
   zipper or a positive `Fails` in the mirror shape needs that order
   (F3). This adds to the evidence for 01's decision 5.
 - §28: "On a mismatch, the error prints the expected constructor and
@@ -726,3 +732,68 @@ Points I am unsure of:
   premises can fail independently. With independent premises and a
   diverging run (F7), the chosen order would decide whether a verdict
   exists; that is a reading, not compiled.
+
+## Fifth review notes
+
+A fifth adversarial review read DESIGN.md in full, every file in
+`proto/roundtrip/`, `proto/review2/07_*`, and `proto/review4/07_*`, and
+re-ran at fb2c533 (no code change since 669b328): programs 0 to 5 in
+both variants under the reference and `slc --interpret` (outputs, exit
+codes, and step counts as in F2, identical between the two); program 6
+(22 MB at 4 s and at 10 s, both variants); the three
+`--goal proved: PASS` sets and the replay set without `impl.sl`
+("unbound name `vals`") under both checkers; the four refusals under
+both, with the quoted messages; `07_loop_step_bad.sl` (refused, then
+`--goal proved: FAIL`); both bare-`ne` refusals (`(CNe c2 c2)` at
+`det.sl:107`, `(CNe c c)` at `:120`); the `p0` refusal; the three
+`predates` variants of `drive.sl`; `07_nondet_both.sl` under both
+checkers and `det.sl` against `07_nondet_spec.sl`; that the current
+files run with no warnings; the line and rule counts, F4's sub-counts
+(`det.sl:1-25`, `27-88`, `90-123`), and the `goal.sl` and `Waiting`
+excerpts; `self/elab-main.sl:159` and `443-462`; and the cross-references
+to 01 decisions 4 and 5, 03 decision 3 and Q1(e), and 05 F4, T5, and
+decisions 4 and 5. All matched. Errors found and changes made:
+
+1. F7 said that of "a diverging run gives no verdict" and its converse
+   only the first is evident from the code. For the zipper the converse
+   reads off the code as easily: every step that is not a machine step
+   ends with a verdict or handles one statement, so if every run the
+   checker reaches halts, a verdict comes in finitely many steps. Both
+   are now given as read from the code, and neither as proved.
+2. §5, first rough edge: §50's "an argument (its parameter, given the
+   arguments before it)" is the nearest DESIGN.md comes to an argument
+   order; it concerns what an argument is checked against. Added, so
+   the "could not find" covers it.
+3. Fourth review note 5 says a search for `terminat` and the like found
+   only §17, §18, §33, and §42. It also matches the overview line
+   "Termination: §17 to §20" (DESIGN.md line 25) and the word
+   "terminator" in §2 and §3; neither changes the rough edge.
+4. Fourth review notes, second unsure point: "every premise in the toy
+   depends on the one before it, so no two premises can fail
+   independently" is false for `ElNeed`, whose `Elab es rest` does not
+   depend on its `Nth` fact premise. So the toy can observe the order:
+   in `Let 3; Need 0 Succ; Let omega`, the mirror-shaped `FNeedFact`
+   gives a `Fails` (both variants print "rejected: need: the fact is not
+   known after 4 Program steps" on a scratch copy of `drive.sl`), while
+   a `Need` rule that required the rest first would give no derivation,
+   the rest's run diverging (reasoning; such a rule was not written).
+5. Third review notes, second unsure point: the `p0` wording of F5 is
+   now reproduced exactly, by passing `p0` for `src` at `replay.sl:116`:
+   "`p0`, declared `erased`, used in a non-erased position".
+6. Header: names this review's commit.
+
+The theorem's type was checked against the claims again: `MkCertified`
+packs `S`, `L`, an unconstrained `init`, a `step` whose `Fin` must carry
+a `Verdict p` for the same erased `p`, and an `excl` that mentions only
+`spec.sl` relations. Vacuous implementations that pass: a `step` that
+answers `More` on some or all states, with any `init`, and any reason
+string. I found no third.
+
+Points I am unsure of:
+
+- That the toy's `exclusive` and 05's `t1_toy.sl` one are "the same
+  induction" (decision 3): both match on `Fails` and recurse on a
+  sub-derivation, but `t1_toy.sl` recurses with `subterm` on the source
+  term and needs no determinism lemma, having no state.
+- Whether full Sleight's levels rule out a diverging run-position form
+  (first review's open point); not examined here.

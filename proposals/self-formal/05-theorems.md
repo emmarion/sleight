@@ -165,7 +165,7 @@ else is my own reading and is hedged as such. `bove_use.sl`, `fuel.sl`,
   naming the field in a signature, since a type has no projection, so
   the form usable across signatures is "index the record by its
   relations". `(many Type T)` is accepted as a
-  parameter declaration, but no non-erased argument exists: `(f (Nat))`
+  parameter declaration, with a warning, but no non-erased argument exists: `(f (Nat))`
   gives "type constructor `Nat` applied in a non-erased position"
   [proto `manytype_bad.sl`, `manytype2_bad.sl`], consistent with §21 "A
   value of type `Type` is erased." A `TyCtor` parameter has no opened
@@ -207,7 +207,8 @@ else is my own reading and is hedged as such. `bove_use.sl`, `fuel.sl`,
 - **§65** `gensym` "mints a number, counting from 1 over the whole run".
   The numbers are observable, so determinism also needs the order of
   macro expansion fixed. I could not determine whether DESIGN.md fixes
-  the order in which several macro calls within one form expand. (The
+  the order in which several macro calls within one form expand; §6
+  says only that "The head is elaborated first." (The
   evaluation-order question in general belongs to other tracks.)
 
 ### 2.3 What SOUNDNESS.md already says about H
@@ -275,7 +276,9 @@ records crash points, as §4.2 option 1 proposes, and a crash at
 compile time counts as a rejection (decision 4), a compiler that always
 picks "crash at once" rejects every source that runs any compile-time
 code and satisfies T1 to T3, so the guard against a vacuous compiler is
-lost. §31 says "The semantics is
+lost. With the shipped prelude that is every source, since the
+prelude's own run-position forms run code (`lib/prelude.sl:354` calls
+`pow2`). §31 says "The semantics is
 that of a machine with unlimited stack and heap" and treats a crash as
 something "A real run may" do, which I read as saying that a crash is
 not a behaviour of the spec. Completeness would then have to be stated
@@ -396,7 +399,7 @@ My reading of the limits, hedged:
   `(Fn L -> (many (Nat) y))` that computes `cr(Q)` and returns its value
   plus 1, or 0 on `Fail`. Defining it "involves no evaluation" (§29),
   so Q is accepted before `cr` runs, and the driver then applies it
-  (§27), so (T) covers that call and the spec run of Q halts with a
+  (§27), so (T) and (E) cover that call and the spec run of Q halts with a
   `Nat`. Soundness and completeness then contradict each other. (With
   `cr(Q)` in run position instead, Q would be accepted only if that run
   ended, and (T), stated for accepted programs, could not be used to
@@ -405,7 +408,7 @@ My reading of the limits, hedged:
   written one), no internal total, sound, and complete compile-and-run
   for Sleight source exists. Without a quine, Q can do the same in a
   macro that reads its own file with `read-file` (03 F6, which carries
-  (T) over to that possibly rejected Q through an accepted program with
+  (T) and (E) over to that possibly rejected Q through an accepted program with
   the call as its final value). Applied to
   `compile`, the argument needs T1 to T4 and the spec's determinism on
   Q (through T3), not T5: as in 03 F6, Q's macro expands to a
@@ -635,7 +638,7 @@ value is the only reference to it." My reading of its role:
 ## 9. Unverified claims
 
 - The diagonal argument (§4.3) assumes that the spec of a program whose
-  compile-time code is total halts. Its run-position form assumes that
+  compile-time code is total halts. Its quine form assumes that
   quines are writable in Sleight; I did not write one. Its macro form
   needs no quine (03 F6).
 - That Sleight meets the conditions of Gödel's second theorem (r.e.
@@ -650,8 +653,9 @@ value is the only reference to it." My reading of its role:
 - SOUNDNESS.md's (T), (C), and (E) themselves, on which H rests (§2.3).
 - That the three sources of a `Halts` argument in F4 are the only ones.
 - That uniform stripped-run safety alone, proved inside Sleight, would
-  give internal consistency (§4.3). The program shape is compiled; the
-  internal formalization of "accepted" and of the stripped run is not.
+  give internal consistency (§4.3). The program shape, with `(lift p)`
+  in the final value, is compiled; the internal formalization of
+  "accepted" and of the stripped run is not.
 - That full-semantics safety is provable inside Sleight. (That uniform
   H, in a form a function can recurse on, is not provable rests on the
   diagonal and the logic's soundness, §4.3.)
@@ -929,3 +933,77 @@ Unsure:
   scope is read.
 - Whether Gödel II's conditions hold for Sleight; unchecked by all four
   passes.
+
+## Fifth review notes
+
+A fifth adversarial reviewer read the brief, CLAUDE.md, DESIGN.md in
+full, SOUNDNESS.md in full, OPEN.md 1 to 4, and README.md's "Logic and
+strength", and re-ran every `proto/theorems/` file, `--goal proved
+spec.sl proof.sl`, `sloteq_ct.sl` with and without `--no-extern`,
+`proto/review3/05_halts_uniform.sl`,
+`proto/review2/05_erased_to_many_false.sl`, and
+`proto/review4/05_stripped_absurd.sl` under both implementations. Each
+prints or refuses as the body says.
+
+Errors found and changed:
+
+1. §4.3, the stripped-run Gödel step (added by fourth review note 4).
+   It said an erased proof `p` of `(False)` "gives an accepted program
+   whose first run-position form is `(lift p)`". That program is not
+   accepted: the run-position form runs during checking, so it is
+   refused at that form (`proto/review4/05_stripped_absurd.sl`;
+   `--extract` fails with "absurd code reached"), and a refused program
+   says nothing about the safety of accepted ones. The step holds with
+   `(lift p)` in the body of a final `(Fn L -> (many (Nat) r))` instead:
+   `proto/review5/05_stripped_absurd_final.sl` (new) is accepted by
+   `--extract` and `--build`, and the reference, the built program, and
+   `slc --interpret` stop with "absurd code reached". §4.3 and section 9
+   updated. The second review's "Confirmed" remark, "inconsistency gives
+   an accepted `many` run-position `(False)` form", has the same flaw.
+2. §4.3, the quine diagonal had Q "compute `cr(Q)` in run position" and
+   then used (T), which SOUNDNESS.md states for accepted programs; such
+   a Q is accepted only if that run ends (the fourth review's unsure
+   point). With the call in Q's final value, Q is accepted before `cr`
+   runs (§29) and the driver's call is covered. Rewritten; the macro
+   form now points to 03 F6's matching detour. Section 9's "run-position
+   form" is now "quine form".
+3. §4.3, "H ... together with internal stripped-run type safety". "Take
+   an accepted program with a `many` run-position form of type
+   `(False)`" was self-defeating: if the program is accepted, that form
+   already ran. It now takes a form the checker accepts, and H read as
+   covering every such form, as [owner 4]'s "every accepted
+   compile-time form" reads.
+4. §2.3, "it is not something Sleight can prove about itself" had lost
+   §4.3's qualifiers (for all programs, in a form a function can
+   recurse on, if the logic is sound), as 03's summary had before its
+   fourth review. Restored.
+5. §3 T3, the crash oracle "rejects every source that runs any
+   compile-time code". With the shipped prelude that is every source:
+   its own run-position forms run code (`lib/prelude.sl:354` calls
+   `pow2`). Added.
+6. §2.2, the expansion order. Added §6's one statement on it, "The head
+   is elaborated first."
+7. F7, `(many Type T)` "is accepted": it is, with a warning that a
+   `Type` is always erased (both `manytype` files). Added.
+
+Confirmed: README.md:107-119 as quoted in F8 and F9 (the IΣ₂ sentence
+says "anticlassicality aside"); OPEN.md 1 to 4 as used in §1 and §5;
+SOUNDNESS.md's part 1 claims and scope, part 5's "outside the claim",
+part 6, and part 7's "Without (T) this step fails"; `prelude.sl:67`,
+`1337-1342`, and the `def-prim` range 1401 to 2250; DESIGN.md says
+nothing of an evaluator crash at compile time (grep "crash": §31, §39,
+§42, §72 only) and mentions no coinductive data. The step "uniform (T)
+plus full-semantics safety gives internal consistency" holds with the
+final-value program of item 1, and the T4(c) step from the F5 lemma
+(`Lt f k` against `f ≥ k`) checks.
+
+Unsure:
+- Item 1's program takes `p` from a `def-prim` under `--no-prelude`,
+  which SOUNDNESS.md part 1 excludes; it shows only the shape that an
+  internal proof of `(False)` would give.
+- Items 1 and 2 read SOUNDNESS.md part 5 as covering the driver's call
+  of a final value.
+- Whether Gödel II's conditions hold for Sleight; unchecked by all five
+  passes.
+- 00-summary's Gödel bullet repeats item 1's flaw ("so the program is
+  refused") and needs propagating; not edited here.
