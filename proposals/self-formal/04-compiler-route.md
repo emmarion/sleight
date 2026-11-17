@@ -132,7 +132,7 @@ definition whose header is `(erased name :`.
 |---|---|---|
 | interpreter `eval`/`apply` (`elab-main.sl:185-187, 424`) | fuel. MANUAL.md:154-162: "bounds how deeply applications nest, a tail call nesting inside the call it replaces"; slc's default 10^9 | error value "out of fuel", reported as an error. MANUAL calls it a §31 crash |
 | `show-at` depth 100000 (`elab.sl:4680-4682`, used by `show-typed` at `elab.sl:4730`, which the `comptime-match` mismatch message uses at `:4784`, and by `slc --interpret`'s final printer at `interp.sl:15`) | printer fuel | **prints `_` silently**. The budget is spent twice per nested field (`show-at` at `elab.sl:4682` and `shown-field` at `:4717`). [T] `slc --interpret deep.sl` (a 100003-element list, stack unlimited) prints 49,999 `Cons _ 0` and then `Cons _ _ _)`. [P] That is a wrong output under §45 ("Any other value prints by its type", and `_` is listed only for a union with more than one constructor, erased fields, cells, slots, functions, opaque proofs, and values with no readable `Matchable`), not a §31 crash ("A crash produces no value, never a different one"). It also contradicts `self/README.md:254-258` ("running out returns an error value, never a wrong answer silently") |
-| `show-fuel` 100000 (`emit.sl:4`, `:1473`, `:1478`) | fuel for *generating* the emitted OCaml printers, one per type, memoized (`emit.sl:1379-1386`) | [C] uses `show_any`, which prints `?` (`self/runtime.ml:18`). [P] It bounds the nesting of types met while generating, not of values, so it seems hard to reach. [T] The generated printer recurses on the value with no bound: `deep.sl` compiled by slc (the 22 MB output built with `ocamlc` under an unlimited stack) and `proto/review2/04-deep-fn.sl` (the same list, built at run time) compiled by `slc --build` both print all 100003 elements, where `slc --interpret` cuts them as above |
+| `show-fuel` 100000 (`emit.sl:4`, `:1473`, `:1478`) | fuel for *generating* the emitted OCaml printers, one per type, memoized (`emit.sl:1379-1386`) | [C] uses `show_any`, which prints `?` (`self/runtime.ml:18`). [P] It bounds the nesting of types met while generating, not of values, so it seems hard to reach. [T] The generated printer recurses on the value with no bound: `deep.sl` compiled by slc (the 22 MB output built with `ocamlc` under an unlimited stack) and `proto/review2/04-deep-fn.sl` (the same list, built at run time) compiled by `slc --build` both print all 100003 elements, byte for byte as the reference does (`deep.sl` under the reference, unlimited stack, about 7 minutes), where `slc --interpret` cuts them as above |
 | `heap-strs-fuel` 10^6 (`eval.sl:1018-1025`; also passed to `heap-pairs` and `heap-jobs`, `eval.sl:1055, 1146, 1159`) | fuel | truncates the list (returns `Nil`) |
 | `str-split-fuel` (`base.sl:100-109`) | fuel equal to the string's length | unreachable but not refuted |
 | sugar budget (`elab-main.sl:1871`, `README:385-394`) | budget sized by the form | "internal" error, not refuted |
@@ -747,8 +747,6 @@ Not DESIGN.md, but found:
   from §13/§16, not tested adversarially.
 - Tail calls with many arguments on non-amd64 targets: not tested.
 - Effort figures for every route: guesses.
-- Whether the reference prints the 100003-deep list correctly: it did not
-  finish within 120 s under an unlimited stack, so I do not know.
 - The fraction of slc's elaborator that R2's front end would remove: not
   measured.
 
@@ -856,3 +854,104 @@ Uncertain points the review could not settle:
   flambda. Only amd64 4.14.1 without flambda was checked.
 - The [P] claim that `-imm` stores are safe when both words are
   immediates (2.5) was not checked against the OCaml runtime sources.
+
+## Second review notes
+
+A second adversarial review read the brief, CLAUDE.md, and all of
+DESIGN.md, opened the cited lines, and re-ran every evidence file with
+`_build/release/slc`, the reference, and OCaml 4.14.1 (no flambda).
+
+1. `Code` is at `core.sl:604-622`, not `604-623`; `CC` starts at 623
+   (the first review's note 1 says 624-628). Summary and 2.1 corrected.
+2. The first review's open question on the compiled printer is settled.
+   `show-fuel` bounds the *generation* of the emitted printers, one per
+   type, and its zero case emits `show_any`, which prints `?`
+   (`emit.sl:1379-1380`, `self/runtime.ml:18`). The emitted printer
+   recurses on the value with no bound: `deep.sl` compiled by slc (built
+   with `ocamlc` under an unlimited stack; `ocamlc` overflows its own
+   stack otherwise) and the new `proto/review2/04-deep-fn.sl` print all
+   100003 elements. The 2.3 table, 2.3's [P], and the summary are
+   updated.
+3. The reference also prints the full list, byte for byte as compiled
+   slc does (about 7 minutes). The section 6 item saying this was unknown
+   is removed.
+4. The `show-at` defect contradicts `self/README.md:254-258` ("never a
+   wrong answer silently"), and `show-typed` also feeds the
+   `comptime-match` mismatch message (`elab.sl:4784`). Added.
+5. The `Slots` implementation was missing from the OCaml-internals risks:
+   it hashes raw addresses (`Obj.magic`, `ffi_core.ml:336`) and tracks
+   GC moves by a sentinel and the compaction count (`:345-360`). The 2.6
+   table said `Slots` "searches with `slot-eq`", which is what the models
+   do (§69), not the implementation. Added to 2.5, 2.6, and the trusted
+   base.
+6. 2.6's "The correctness theorem can only be 'same values, up to
+   crash'" ignored §42's own `slot-eq` exception, §67 ("which one a call
+   answers may differ between runs"), and §69's extension of the
+   exception to `Slots`. The spec run is nondeterministic there, and
+   `slot_eq_share.sl` shows two different values. 2.6, decision 5, and
+   the trusted base corrected; `slot-eq` joins `world-do` as an oracle.
+7. `slot_eq_share.sl`: `(BTrue)` holds for a native build only;
+   `slc --build --byte`, `slc --interpret`, and the reference all print
+   `(BFalse)`. `bootstrap.sh` compares tests built with `--byte`, so it
+   would not see such a difference. Added.
+8. 2.5 cited `emit.sl:966-968` for `slot-eq`, while the first review's
+   notes said 969; the code is at 964-969. Corrected.
+9. "In practice the elaborator hoists every non-variable argument" was a
+   generalization from two tests. Reworded to what the tests show.
+10. The `let tup_ai` sequencing exists, by its comment, to avoid an
+    ocamlopt failure (`emit.sl:362-364`), not for evaluation order.
+    Added.
+11. The templates state the atom assumption themselves ("Every hole but
+    a body is filled with a variable name", `ffi_templates.txt:4`).
+    Added.
+12. Of the three `Bytes.unsafe_to_string` sites, 148 and 173 convert a
+    fresh local buffer; only 260 and the `bytes-str` template
+    (`ffi_templates.txt:80`, what emitted programs use) convert the
+    argument. Clarified.
+13. The `-imm` lines are `ffi_core.ml:235-241`, not 234-241.
+14. O2's list of "what is actually emitted" left out what the templates
+    emit (`if`, machine-integer arithmetic, Zarith and Stdlib calls) and
+    `absurd ()`. Added.
+15. O3 attributed the fast-code aim to §1; it is in DESIGN.md's opening
+    paragraphs, before §1. "so O3 is allowed" was an inference labelled
+    [D]; now [P].
+16. R1 claimed everything proved and trusted only "the spec, the
+    checker, OCaml, and the FFI", while R3 lists the output end as
+    trusted; the emitter cannot be proved without an OCaml model.
+    R1 aligned with Q3.
+17. R2 said "§45 literals depend on stored values". What depends on the
+    evaluator is §45's `prove-literal-lt` (quoted) and §49's `unary`.
+    Corrected.
+18. F1 called `read-file` idempotent; it repeats its answer only if the
+    file is unchanged. Hedged.
+19. Decision 2 said source text "rules out R2's trusted front end for
+    [O]3". [O]3's wording asks for totality (every source accepted or
+    rejected), which a total unproved front end can give; proving the
+    reader and expander is needed for a correctness claim about text.
+    Decision 2 and R2's round-trip item reworded.
+20. Rough edge 1's [P] that order may be unobservable left out that order
+    decides between a crash and divergence when one argument does each.
+    Added.
+21. `self/README.md:463-465` is stale, not "looks stale": the reference
+    elaborates the `and`/`or` macros of `std/macro.sl` that slc's sources
+    use (`self/README.md:61-62`). 2.1 and section 5 updated.
+22. The direct 20-argument tail call the first review describes is now
+    an evidence file (`proto/review2/04-tc-direct.ml`).
+
+Re-checked and found right: the file and line counts, 20 `"internal:`
+sites, 103 FFI functions and their five class counts, 7 extern types, 6
+`extern at` functions, 21 request kinds, `main.sl:187-191`, the
+expansion-limit sites, `MANUAL.md:154-164`, the `mini/` citations and
+sizes, `base.sl:157-161, 181-182`, `release.sh:17`, every [T] result in
+2.5 (order, ord2, argorder, share, tc3, tc4), and the `show-at` cutoff
+(49,999 `Cons _ 0`, then `Cons _ _ _)`).
+
+Points I am unsure of:
+
+- The 2.6 class names describe the classes loosely: "bytes (mutation at
+  unique)" includes pure reads such as `bytes-get` and `bytes-cmp`.
+- The [P] that `-imm` stores are GC-safe when both words are immediates
+  is still unchecked against the OCaml runtime sources.
+- Whether the theorem shape proposed in item 6 ("values some spec run
+  gives, for the same `slot-eq` and world answers") is the right one is
+  itself a proposal, not a finding.
