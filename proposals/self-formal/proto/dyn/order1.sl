@@ -1,0 +1,5 @@
+(def-fns _ $ (many g : (many (Nat) x) -> (many (Nat) r)) (Succ x))
+(def-fns _ $ (many h : (many (Nat) x) -> (many (Nat) r)) (Succ $ Succ x))
+(def-fns _ $ (many f : (many (Nat) a) (many (Nat) b) -> (many (Nat) r)) (Succ a))
+(def-fns _ $ (many top : (many (Nat) n) -> (many (Nat) r)) (f (g n) (h n)))
+(top 1)

@@ -1,0 +1,463 @@
+# 01. The shape of the formal spec: the static side, and where it starts
+
+Written by an agent overnight at the owner's request. It is a proposal
+and an agent's reading of DESIGN.md and the code; nothing in it is
+approved, and nothing here is a design decision (CLAUDE.md rules 1, 11).
+Where this file and DESIGN.md disagree, DESIGN.md is right.
+
+Tags used below: **[D]** DESIGN.md says it (quoted); **[C]** the code
+does it (file:line, or a test under `proto/spec-shape/` run with
+`_build/default/bin/main.exe`, the reference, and with an slc built by
+`self/release.sh` and run as `slc --interpret`); **[O]** an owner
+statement from the brief; **[A]** this agent's reading or proposal.
+
+## 1. Summary
+
+- [A] DESIGN.md's elaboration cannot, as far as this reading goes, be
+  stated as a typing relation separate from evaluation. Head dispatch,
+  `comptime-match`, macros, the literal lemmas, and `native-compute` all
+  read run results. The fact engine of §7 is the one part that is free
+  of evaluation. The proposal is three layers: a pure fact engine, then a
+  run relation that reads the fact engine and the scope, then an
+  elaboration relation that has run premises. A store Σ is threaded
+  through all of elaboration, and the scope Γ is restored when a scope
+  ends.
+- [A] Recommended start is source bytes: a small reader *function* in
+  front of a relation over DESIGN.md §63's `Raw`. The spec's parameters
+  are the file names and bytes, a few flags, a file-system oracle for
+  `read-file`, the FFI table's names and arities, and the prelude text.
+- [A] Owner statement 3, "every source is accepted or rejected", looks
+  provable only relative to a termination hypothesis H (statement 4),
+  or with fuel and a third outcome. Even under H, the 10000-expansion
+  limit of §62 is needed, because each macro run halts but nothing else
+  bounds how many expansions happen.
+- [C] Three things DESIGN.md leaves open turn out to affect acceptance:
+  `slot-eq` at compile time can flip it (tested), the order of
+  elaboration is visible through gensym numbers (tested), and a crash at
+  compile time (fuel) rejects (tested). Each needs an owner decision
+  before a spec can be functional (deterministic).
+- [A] Rejection: a positive `Fails` as the `Err` outcome of one total
+  relation (mini/'s shape). Malformed syntax becomes a positive error,
+  not "no derivation" as in mini/. Exclusivity of accept and reject then
+  follows from the relation being functional.
+- [A] Staging: fix the judgment's *shape* first (Σ, positions, errors,
+  run mode), then add rules. The order is reader, then mini/ recast in
+  that shape, then `Settled` and the round trip, then erasure, then
+  macros with extern models and the prelude, then slots and cells, then
+  sugar.
+
+## 2. Decisions for the owner
+
+Each one says what it needs, the agent's recommendation if any, and what
+depends on it.
+
+1. **Where does the spec start?** Bytes, `Raw`, or a core language.
+   *Recommended:* bytes. Reading is a small structurally recursive
+   function (`read : files → Items | ReadErr`) that serves as the spec of
+   reading. Everything after it is a relation over `Raw` with `Pos`.
+   *Why:* statement 3 is about "source code". Positions can be observed
+   by a program (§4.4 below). A core-level start would leave out head
+   dispatch and macros, which DESIGN.md's opening paragraph makes
+   central ("the constant-knownness of a head (§6) is what reconciles
+   the two"). *Depends on it:* the statement of theorem 3, and whether
+   `Pos` is in the judgment.
+2. **What form does theorem 3 take?** A Sleight proof with no fuel and
+   no hypothesis would need compile-time evaluation proved terminating
+   inside Sleight. [A] That looks like the diagonal obstacle the owner
+   already ruled out for `no_false` (statement 1); this is unverified.
+   *Options:* (a) relative to H, "every compile-time run in the spec
+   halts". (b) A fuel parameter, with a third outcome `OutOfFuel`.
+   (c) A coinductive "diverges" outcome. *Recommended:* (a), stated
+   so that (b) is a corollary. *Depends on it:* whether the deriving
+   function for elaboration takes fuel, and where.
+3. **Does the spec keep the expansion limit?** *Recommended:* yes, as a
+   parameter `N` (10000 by default). Without it, theorem 3 fails even
+   under H (§3.5). *Depends on it:* theorem 3, and determinism, because
+   the count is global.
+4. **What does a rejection carry?** *Options:* (a) only "rejected";
+   (b) the first error's position and macro-call trace; (c) also a
+   structured reason, including the text DESIGN.md requires (the string
+   of `compile-error`, and the expected and actual values of a failed
+   `comptime-match`); (d) the full message text. *Recommended:* (b) in
+   the main agreement theorem, with (c) available in the relation, and
+   never (d). *Why:* DESIGN.md already speaks of "whichever one the
+   elaborator meets first" (§15). The reference and slc agree on the
+   first message but not on later ones (§3.7). *Depends on it:* how
+   much of the elaboration order the spec must pin down (decision 5).
+5. **Is the order of elaboration part of the language?** It is visible
+   through gensym numbers, the expansion count, and which error comes
+   first (§3.6). DESIGN.md fixes only part of it. *Recommended:* yes.
+   The order would be: the head first, then the items left to right,
+   depth first, each statement before the code after it. This is the
+   reference's order, as tested. It needs DESIGN.md wording, which is
+   the owner's to give.
+6. **How is `slot-eq` handled at compile time?** It can make one program
+   both accepted and rejected under DESIGN.md (§3.8). *Options:*
+   (a) `Run` is nondeterministic, and the theorem says the compiler's
+   outcome is one of the spec's outcomes; theorem 3 then gives
+   existence only, with no exclusivity. (b) An oracle parameter (a
+   stream of answers), so the spec is functional for each oracle.
+   (c) Fix the compile-time answer to word equality, which is a change
+   to the language. (d) Forbid `slot-eq` from reaching run position or
+   a macro, also a change to the language. *Recommended:* (b). It
+   changes nothing in DESIGN.md and uses the same mechanism as the
+   `read-file` oracle.
+7. **Is a crash at compile time a rejection, a third outcome, or
+   outside the spec?** This covers §31 crashes, `--eval-fuel`, and a
+   `native-compute` compile or crash. *Recommended:* the spec's machine
+   never crashes (§31's "unlimited stack and heap"). The agreement
+   theorem allows a third compiler outcome, `Crashed`, which proves
+   nothing about the spec. DESIGN.md says a crash is an error only for
+   `native-compute` (§72); see §5.
+8. **Which flags are spec parameters?** *Recommended:* in the spec are
+   prelude on or off (§42), extern on or off (§33 item 9 and §35 depend
+   on it), `--fn-same` (§70), the `--goal` mode (§71), the
+   `--comptime-unconfine` names (§65), the FFI table's names and
+   arities (§42, §43), and the expansion limit. Not in the spec are
+   `--eval-fuel`, `--no-native`, `--hints`, and `--warn-unused`.
+   *Open:* `--warnings-as-errors`. DESIGN.md mentions it (§4), but its
+   effect depends on warnings defined in WARNINGS.md, not in DESIGN.md.
+   *Recommended:* acceptance ignores warnings, and the flag is a policy
+   of the driver that the theorem does not cover.
+9. **What is the prelude to the spec?** *Options:* (a) a fixed elaborated
+   snapshot Σ0; (b) the shipped text, as an input; (c) any prelude text,
+   with the spec finding the names it needs (`Nat`, `String`, `Macro`,
+   `Raw`, and so on) at the end of the prelude. *Recommended:* (c),
+   with the shipped prelude as one instance. The compiler theorem would
+   quantify over it, and `--no-prelude` is the empty prelude. *Why:*
+   (a) needs a concrete elaboration of about 2900 lines proved inside
+   Sleight, which can only be done by reflection, and that relies on
+   the evaluator (§29). That is circular for a verified compiler.
+10. **Judgment shape.** *Recommended:* the layers and the Σ/Γ split of
+    §4.2. Where possible, the run relation is a *parameter* of
+    elaboration, so that the metatheory of elaboration (determinism, and
+    the theorem-3 skeleton) is proved once for every lawful run
+    relation. That a Sleight ADT can usefully be indexed by a
+    relation-valued `TyCtor` is unverified.
+11. **Staging order.** *Recommended:* §4.6. This affects how much of
+    mini/ is rewritten.
+
+## 3. Findings
+
+### 3.1 Elaboration reads run results [D]
+
+- Dispatch: "If its result is a `Settled`, non-erased entry whose minted
+  type canonicalizes to `(Special)` … the list is the special form named
+  by that entry's stored value" (§6 item 1). Macros work the same way
+  (§19). `Settled` arises "once the form has run" (§29 site 1).
+- "`(comptime-match m x (C f1 ... fn))` asserts … that `x` is a
+  `Settled`, non-erased value headed by `C`" (§28). §7 adds that a
+  verified fact "holds afterwards".
+- In run position, a form "is elaborated, its erased positions are
+  stripped, the evaluator runs the code, and its results become
+  `Settled`", and this happens "before the code after it is checked"
+  (§27). Round trips nest (§29).
+- `prove-literal-lt` "relies on the evaluator" (§45). `unary` "mints the
+  `Eq` … after checking it with `nat-cmp`" (§49). In the prelude, both
+  are macros [C] `lib/prelude.sl:2480`, `:2571`.
+- `native-compute` (§72). And: "Code runs at compile time only where a
+  run-position form runs … and where a call of a macro is expanded"
+  (§7).
+
+### 3.2 The fact engine does not, and the run reads the elaborator [D]
+
+- "Canonicalization never reads a `Settled` entry's stored value" (§7).
+  "The engine of §7 reads no stored value" (§29). "The checker never
+  evaluates" (§29). So canonicalization and unification can be a layer
+  free of evaluation, as in mini/ (`canon.sl`, `unify.sl`).
+- Some macro primitives read elaboration state while they run.
+  `resolve` "looks a name up in the scope at the macro call". `settled-eq`
+  canonicalizes "against the facts of the innermost run position
+  enclosing the call". `settled-ty-apply` and `settled-val-apply` are
+  "checked again" where they run. `intern-*` and `mint-settled` add
+  entries (§65). [A] Each of these needs only the fact engine, a scope
+  lookup, or Σ, never the full elaborator. So the layers do not form a
+  cycle: fact engine, then Run, then Elab.
+
+### 3.3 The macro world is the threaded store [D]
+
+"The macro world is the elaborator's program store: the run-position
+entries with their values and facts, the literal table, the gensym
+counter and the expansion count. It is threaded sequentially through
+all of elaboration, carried out of every scope where uses are carried,
+and passed along rather than joined" (§65). [A] This is Σ. Owner
+statement 6 asks for a mutating heap. A unique top-level `Settled` "may
+be `unique`" (§32), and an extern may mutate a unique value in place
+(§43). So Σ needs a heap whose blocks change, not a map from entries to
+trees.
+
+### 3.4 Parameters DESIGN.md makes acceptance depend on
+
+- [D] `read-file` reads the file system, relative to "a source file or
+  to a name `--comptime-unconfine` adds". `here` must be "spelled as the
+  command line names it", and the path must stay inside that directory
+  "through any symlinks" (§65). [A] So the spec needs an oracle
+  `(name, path) → Result String`, and the file names as given.
+- [D] `extern` on a name "the table lacks, or … already claimed, is an
+  error" (§42). There is also a shape check against the
+  implementation's arities (§43). `coercible-tag` "is refused … under
+  `--no-extern`, and without the prelude" (§33 item 9). [A] So the FFI
+  table's keys and arities, and the extern flag, are parameters.
+- [D] `--no-prelude` (§42), `--fn-same` (§70), `--goal` (§71), and
+  `--warnings-as-errors` (§4) are flags DESIGN.md names. [C]
+  `--eval-fuel 5` rejects every program, failing inside the prelude
+  (`proto/spec-shape/fuel.sl`: "lib/prelude.sl: runtime error: out of
+  fuel"). slc's fuel defaults to 1000000000 (MANUAL.md, `--eval-fuel`).
+
+### 3.5 Termination [D/A]
+
+- [D] "At most 10000 expansions run in one run, every file on the
+  command line included" (§62). SOUNDNESS.md part 6 argues that checking
+  terminates from (T) plus "Macro expansion is bounded (§62)". [A] The
+  bound carries real weight. Each macro function is total by levels,
+  but a macro whose output calls itself expands without end
+  (`proto/spec-shape/expansion_limit.sl` [C], refused with "more than
+  10000 macro expansions").
+- [C] The reference never resets its counter (`lib/elab.ml:553`,
+  `:683-684`), so in principle prelude expansions count. The prelude
+  defines macros (`lib/prelude.sl:2480`) but [A] seems to call none.
+  `gensym_order.sl` [C] starts its numbering at 1.
+- [O] Statement 4 already frames compile-time termination as hypothesis
+  H. [A] Theorem 3 without H needs (T), "every function activation
+  returns" (SOUNDNESS.md part 1), proved inside Sleight about Sleight.
+
+### 3.6 Elaboration order is visible [C]
+
+`proto/spec-shape/gensym_order.sl` prints `(MkPair _ _ 1 $ MkPair _ _ 2
+3)` on both implementations. The numbers go to the head's arguments
+left to right, depth first. A macro can branch on its number, so the
+order can decide acceptance. [D] DESIGN.md fixes "The head is elaborated
+first" (§6), that statements come before the code after them (§27), that
+"the forms inside a form run before it does" (§27), and hoisting (§15),
+which places hoisted bindings "just before the statement or final form
+that contains the call" but does not order them among themselves.
+[A] I could not find a sentence that fixes the left-to-right order of
+the items.
+
+### 3.7 Errors [D/C]
+
+- [D] There is a positive error *content* requirement in places: a
+  failed `comptime-match` "prints the expected constructor and the actual
+  value" (§28), `compile-error` reports "the text of `m`" (§4), and §62
+  says which macro calls a message names. DESIGN.md says nothing about
+  reporting more than one error. "whichever one the elaborator meets
+  first" appears in §15.
+- [C] `two_errors.sl`: the reference reports only `one`, and slc reports
+  `one` and `two`. `error_then_effects.sl`: after the first error, slc
+  still prints a later `compile-warn`, but then refuses a later macro
+  call as not constant-known. [A] It seems slc stops running
+  compile-time code after an error, which fits statement 4(i). Not
+  checked in slc's source.
+- [C] The reference reads a whole file before elaborating it.
+  `reader_phase.sl` (a missing `)` on line 3) and `pragma_phase.sl` (an
+  unknown pragma) print no earlier `compile-warn`. Reading is per file,
+  though: with two files on the command line, where the second has a
+  syntax error, the first file's `compile-warn` is still printed
+  (tested ad hoc). [A] Acceptance is unaffected, since either way the
+  run is rejected. So reading can be a separate total function per file,
+  or for all files at once.
+- [C] mini/ makes each judgment total with "an [Ok] with what was
+  derived or an [Err] with the first reason found" (`mini/elab.sl:3-4`).
+  `Fails` is the `Err` outcome of `ElabProgram` (`mini/elab.sl:1224-1241`).
+  But "A malformed shape is not a reason: the relations have no
+  derivation for one" (`mini/elab.sl:40-42`; `mini/README.md:140`), and
+  `elab-program` can answer `ProgramStuck` (`mini/elabfn.sl:2374-2380`).
+  [A] At source level that gap breaks theorem 3, so malformed syntax
+  must become a positive `Err`.
+
+### 3.8 Nondeterminism that reaches acceptance
+
+- [D] `slot-eq`: "an implementation may always answer [ENone], and which
+  one a call answers may differ between runs" (§67). [C]
+  `slot_eq_comptime.sl` (`comptime-match` on `ESome`) is accepted, and
+  `slot_eq_comptime_none.sl` is refused, on both implementations and
+  under `--no-extern`. [A] So an implementation that answers `ENone`
+  would conform to DESIGN.md and have the opposite outcomes. Acceptance
+  is not a function of the source under DESIGN.md as written.
+- [D] `native-compute` "may crash where the evaluator would not" (§72).
+  §31 crashes are a host matter. [A] These are compiler outcomes, not
+  spec outcomes (decision 7).
+- [A] Gensym numbering and the expansion count are deterministic once
+  the order is fixed (decision 5). `read-file` is deterministic given a
+  fixed oracle, but a file changing during compilation is outside any
+  static oracle. I could not determine whether §50's meta solving can
+  depend on order within one boundary.
+
+### 3.9 What a source-level spec must cover in the reader [D/C]
+
+§1: atoms, `;` comments, string tokens, digit atoms, `#\c`, `#"..."` raw
+names, and the ban on `__` names (refused: [C]). §2: `$`, and "the
+missing `)` is an error" (`dollar_top.sl` [C]). §4: `;! warn`,
+`;! suppress` and `;! restore` "at any nesting depth", `;! file "name"`
+(new file name and line numbering), and "Any other word after `;!` is an
+error". §45: numeral, character, and string syntax and escapes. §63:
+literals are interned "just before" each top-level form is elaborated.
+[A] So the reader outputs literal *tokens*, and interning is an
+elaboration step that changes Σ. Positions can be observed: [C]
+`pos_observable.sl` gives a macro its `here`, which prints as
+`(MkPos "pos_observable.sl" 7 13)` and `… 7 21` across a tab. Columns
+are 1-based byte counts, and a tab counts 1. DESIGN.md does not define
+the unit.
+
+### 3.10 mini/ as a starting point [C/A]
+
+- It keeps: the canonicalization and unification layer, structural and
+  free of fuel (`mini/README.md:49-60`); the Ok/Err total judgments; ids
+  that are never reused, with the context's `next` surviving `Leave`
+  (`mini/README.md:120-125`), which is Σ/Γ in embryo; and the
+  relation-plus-deriving-function pairing.
+- Not compatible with the full language: keywords are reserved `RKey`s
+  (`mini/elab.sl:8-38`; README:138), but §19 says special forms "may be
+  shadowed"; `Sexp` has no `Pos`; `ElabTerm` is pure (README:125), but
+  a type can contain a macro call (§9); `Eval` is environment-based and
+  fuelled (`mini/eval.sl:53`), not a heap machine; and malformed shapes
+  get stuck.
+- What was cut is exactly the hard part. MINIMAL.md "What is removed"
+  item 4 removes `Settled`, "the compile-time round trip", macros, and
+  `Special` as a value, so that "Elaboration is a pure function from raw
+  syntax to core terms; evaluation is a separate phase after it". The
+  decisions it records ("Evaluation and typing are relations", "A
+  positive `Fails` relation … beside the relation that types it") are
+  MINIMAL.md's record, and may need to be revisited once the two
+  relations are intertwined.
+
+## 4. Options
+
+### 4.1 Where the spec starts
+
+| Start | Design | Pros | Cons | Cost (rough, [A]) |
+|---|---|---|---|---|
+| Bytes | `read` function, then a relation over `Raw` | Theorem 3 literally; positions and pragmas covered | Reader rules (pragmas, escapes, `$`) must be specified | Reader: a few hundred lines |
+| `Raw` | Relation over §63's `Raw` plus pragma events | Reuses the language's own `Raw`; reader trusted | Theorem 3 is about `Raw`, not source; pragmas need a side channel | Smallest step over mini/ |
+| Core | Typing over expanded, dispatched code, with Σ given | Closest to mini/; cheap | No dispatch, macros, or `read-file`; theorem 3 is not about source | Low, but leaves the hard part outside |
+
+### 4.2 Judgment forms [A]
+
+- `read : List (Name, Bytes) → Items | ReadErr Pos Reason`. `Items`
+  holds `Raw` forms with `Pos`, literal tokens, and pragma events.
+- Fact engine: `Canon F t t'`, `Unify mode F eqs (Ok F' | Contra)`.
+- `Run Γr Σ code (ws, Σ')`, where Γr is the read-only scope and the
+  facts of the innermost run position (for `resolve` and `settled-eq`).
+- `Elab Γ ρ Σ raw (Ok Γ' code ids | Err e) Σ'`, where ρ is the mode:
+  run position, or a body with its level and subterm arguments, or an
+  erased position.
+  - Γ, restored when a scope ends: the scope list of §5; the facts,
+    split into the facts of the innermost run position and the facts
+    forced in branches, because §6 and §65 read only the former; the
+    opened `Matchable`s and `AtFn`s; and the ambient level and subterm
+    arguments.
+  - Σ, threaded: the heap; the id counter (introduction order); the
+    literal table; the out-of-scope minted entries; gensym; the
+    expansion count; the claimed extern names; the goal and qed state;
+    the slot-eq oracle stream; and the emitted warnings. Uses of unique
+    binders are threaded per path and joined at a match (§15).
+  - Run-position rule: `Elab … (Ok code)`, `Strip code c`, and
+    `Run Γr Σ c (ws, Σ')`. The entries become `Settled` with words in
+    `Σ'.heap`, a minted type, and a minted `is` (§29).
+- `Program flags fs ffi prelude files (Accept Σ final | Reject e)`,
+  including the treatment of the final value in §27 (a final `Fn` "in
+  neither form … is an error").
+
+### 4.3 Rejection
+
+(i) `Reject` is "not accepted": weak, and gives no constructive
+exhaustiveness. (ii) A positive `Fails` as the Err outcome (recommended):
+exhaustiveness is totality, which needs H, and exclusivity is
+functionality, which needs decisions 5 and 6. (iii) A separate `Fails`
+relation, with exclusivity and exhaustiveness proved: more duplication,
+against rule 5.
+
+### 4.4 Determinism
+
+Per decision 6 for `slot-eq`. Everything else seems deterministic once
+the order is fixed. The agreement theorem would read: compiler accepts
+⇒ spec Accept with the same Σ-observables; compiler rejects with first
+error at p ⇒ spec Reject at p; compiler crashes ⇒ nothing.
+
+### 4.5 The prelude
+
+See decision 9. Under (c), the spec must say how it finds the prelude's
+`Nat`, `Char`, and `String`. §45 says literals refer to them "whatever
+names the program has shadowed since". [A] So they are captured when the
+prelude ends.
+
+### 4.6 Staging [A]
+
+The principle: a feature that changes the judgment's *signature* goes
+before one that only adds rules.
+
+1. S0, the reader and Items, with a positive ReadErr. It is total and
+   needs no fuel. It is independent of everything else.
+2. S1, mini/ recast into the final shape: Σ threaded; `Pos` and a
+   positive Err for malformed syntax; `Raw` from §63 (without
+   `RawSettled`); special forms resolved through scope entries bound to
+   `Special` values that are `Settled` from the start (§42), not
+   `RKey`.
+3. S2, `Settled`, run position, the round trip, `comptime-match`, and
+   forwarding `let`, with `Run` as a parameter (mini/'s `Eval`, or the
+   heap machine of the run track). Stripping is the identity at this
+   stage.
+4. S3, multiplicities, erasure, and uses (§13 to §16), `Matchable` and
+   its open (§8), and the real strip. Doing S2 before S3 is the reverse
+   of the order the coordinator suggested. The argument is that S2
+   changes every rule's signature (Σ, ρ, the Run premise), while S3
+   mostly adds per-entry data and checks. Both orders seem workable.
+5. S4, extern models with the FFI-table parameter, then `Macro`, `Raw`,
+   the macro world, the expansion limit, gensym, the `read-file` oracle,
+   literals, and finally the real prelude as input. `Raw` and `String`
+   are `extern` (§63, §45), so macros need extern models first.
+6. S5, slots, `at`, cells, placement, at-functions, `coerce`, `tail`,
+   and `delegate`.
+7. S6, the sugar of §46 to §53, warning pragmas, goals (§71), and
+   `native-compute` (§72).
+
+## 5. Rough edges, contradictions, and gaps in DESIGN.md
+
+1. The left-to-right order of items is not stated, but gensym ("counting
+   from 1 over the whole run", §65), the expansion count (§62), and the
+   first error (§15) make it observable.
+2. `slot-eq`'s freedom (§67) reaches acceptance through `comptime-match`
+   in run position (tested).
+3. A crash in run position: only §72 says "a run that crashes is an
+   error". MANUAL.md (`--eval-fuel`) says a crashing run-position form
+   "is refused". DESIGN.md is silent for the general case.
+4. Numerals: §1 says "Atoms made only of digits … are numeral …
+   literals", and §45 says a numeral has "no leading zero". It does not
+   say what `042` is. [C] The reference: "syntax error: 042 has a
+   leading zero" (`leading_zero.sl`).
+5. String escapes: "Any other byte, including a newline, stands for
+   itself" (§45) could be read as allowing `\q`. [C] The reference
+   refuses it: "unknown escape \q" (`esc.sl`).
+6. `Pos` columns and lines: the unit is not stated. [C] It is bytes,
+   1-based, with a tab counting 1. It is observable by macros.
+7. The expansion limit's scope says "every file on the command line
+   included" (§62). It does not say whether the prelude counts. [C] The
+   reference does not reset its counter.
+8. `--warnings-as-errors` is in DESIGN.md (§4), but which warnings exist
+   beyond §4's is in WARNINGS.md. So under that flag, acceptance depends
+   on text outside the spec. [C] `fuel.sl` draws an implementation
+   warning ("same-level call … mark it `notail`").
+9. "The prototype's FFI is a fixed table keyed by the declared name"
+   (§42) puts one implementation's table into the definition of
+   acceptance.
+10. `dump-context` is defined by reference to MANUAL.md (§27, §54) and
+    always stops elaboration. [A] For the spec it is an `Err` with
+    unspecified content.
+11. Multiple errors: DESIGN.md is silent. The two implementations differ
+    after the first error (tested).
+
+## 6. Unverified claims
+
+- That an inductive relation in Sleight can usefully take another
+  relation (a first-class `TyCtor`) as a parameter (decision 10).
+- That a proof of theorem 3 without hypotheses would hit the diagonal
+  obstacle of statement 1 (decision 2). This is an analogy, not an
+  argument.
+- That slc stops running compile-time code after its first error (from
+  one test, not from its source).
+- That the prelude calls no macros at its own elaboration.
+- That §50's meta solving is independent of order within a boundary.
+- That the Run layer needs only the fact engine, scope lookup, and Σ,
+  and never the full elaborator (§3.2). This comes from reading §65,
+  not from code.
+- The cost estimates in §4.1 and §4.6.
