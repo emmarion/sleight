@@ -12,12 +12,16 @@ Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
 
 ## 1. Summary
 
-- DESIGN.md already places its run on stripped code: a run-position form
-  "is elaborated, its erased positions are stripped, the evaluator runs
-  the code" (§27). A run on full code is not defined, because erased
-  entries have no word (§35). (reading) So a heap machine runs stripped
-  code, and the owner's stripped-mode worry turns into a type-soundness
-  obligation over stripped code with a heap typing.
+- DESIGN.md already places its compile-time run on stripped code: a
+  run-position form "is elaborated, its erased positions are stripped,
+  the evaluator runs the code" (§27), and §19, §36 and §39 speak of the
+  post-erasure code at runtime. DESIGN.md defines no run on unstripped
+  code; §35 says "An erased variable has no word". (reading) So a heap
+  machine would run stripped code, and the stripped-mode concern (which
+  owner statement 6 says goes away with a mutable heap) becomes a
+  type-soundness obligation over stripped code with a heap typing. (slc's
+  interpreter does give an erased position a placeholder: `CErased`
+  evaluates to a `BToken` block, `self/elab-main.sl:173-176`.)
 - Proposal: a small-step machine whose words are `Imm n | Ptr a`, with
   `a` an abstract address that can only be compared. Blocks are mutable.
   The step function is total, and an explicit continuation stack holds
@@ -25,28 +29,38 @@ Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
   immediates and the representation identities of §33, §35 and §41 are
   added. A prototype (`proto/dyn/machine.sl`) compiles and runs a total
   step looped by the `Program` driver with no fuel.
-- Evaluation order: DESIGN.md fixes eagerness (§31), the hoisting of
-  arguments (§15), and run-position nesting (§27). It does not fix the
-  order of body statements, of hoisted sibling arguments, of head
-  against arguments, or of `values` entries. Proposal A ("head first,
-  left to right") **conflicts with §15**: hoisting runs every argument
-  in a statement before that statement's own calls [compiled].
-- (reading, unproved) In the abstract machine, order seems observable
-  only through crashes, stuck states, and cost: world effects are
+- Evaluation order: DESIGN.md fixes eagerness (§31) and run-position
+  nesting (§27), and with §6 ("The head is elaborated first") the
+  head-before-arguments order in run position (reading). §15's hoisting
+  ("behaves as if ... bound ... placed just before the statement") fixes
+  a timing only if "behaves as if" covers time, which DESIGN.md does not
+  say; read that way it puts argument forms before a form head, against
+  the run-position reading. DESIGN.md does not state the order of body
+  statements in general (though §61 presumes written order in one
+  case), of sibling arguments, or of `values` entries. Whether Proposal A
+  conflicts with §15 depends on whether A applies before or after
+  hoisting (2.2).
+- (reading, unproved conjecture) In the abstract machine, order seems
+  observable only through crashes, stuck states, divergence, and cost
+  (which a program can itself read through the `Measure` request): world
+  effects are
   totally ordered by the unique `World`, and mutation goes only through
   unique references. Recommendation: fix one order in the spec (no
   confluence proof needed), and leave order-independence as an optional
   later theorem.
 - `slot-eq` is nondeterministic by §67, and in practice too: the
-  reference interpreter answers `ENone` where compiled code answers
-  `ESome` [compiled]. Recommendation: make the spec a deterministic
+  reference interpreter answers `ENone` where compiled code with externs
+  answers `ESome` [compiled]; under `--no-extern` the compiled code also
+  answers `ENone`. Recommendation: make the spec a deterministic
   function of the program, the world's answers, and an oracle tape of
   `slot-eq` bits; the compiler theorem says some oracle exists.
 - Crash: "agrees or crashes" has no teeth. Recommendation: allow a crash
   only at named resource events, and make compile-time crash a
   deterministic function of an explicit depth bound.
-- Externs: under models, §33's representation sentence and §35's literal
-  tag slots fail, so acceptance depends on the extern mode [compiled].
+- Externs: §35 gives literal tag slots only "with externs", and §33's
+  extern-`Nat` requirement is stated only "With externs on", so acceptance
+  depends on the extern mode by DESIGN.md's own text [compiled]. A spec
+  that runs the `Nat` model must still choose a word for each tag slot.
   Recommendation: make `Nat` a machine primitive (immediate words) and
   run every other extern's model.
 
@@ -134,39 +148,64 @@ Fixed by DESIGN.md:
 2. §15: "Every argument to a constructor, a function or a cell behaves
    as if it were first bound to an anonymous variable. ... That binding
    is a statement (§27) placed just before the statement or final form
-   that contains the call". So the non-variable arguments of every call
-   in a statement or final form run before that statement or final
-   form.
-3. §27, run position only: "the forms inside a form run before it does,
-   and the statements of a `let`'s right-hand side complete before the
-   enclosing `let` does". Run-position statements are sequential (§32:
-   "since run-position statements are sequential").
+   that contains the call". §15 is about uses of unique binders, and its
+   first paragraph says "The order of the uses does not matter". (reading)
+   It fixes evaluation order only if "behaves as if" covers time and
+   statements run in written order; DESIGN.md says neither in general.
+   Eagerness alone already makes an argument run before its call.
+3. §27, run position only: a run-position form "runs as soon as it has
+   been elaborated, before the code after it is checked"; "the forms
+   inside a form run before it does, and the statements of a `let`'s
+   right-hand side complete before the enclosing `let` does".
+   Run-position statements are sequential (§32: "since run-position
+   statements are sequential"). (reading) With §6 item 1, "The head is
+   elaborated first", a head that is a form runs, in run position, before
+   the argument forms are elaborated, so before they run.
 4. Skipped calls and at-matches still evaluate their arguments and
    scrutinee (§39, §40).
 5. (reading) World requests are totally ordered by dataflow: `world-do`
    takes `(unique (World) w ...)` and gives back `w2` (§42), so only one
    world is ever usable. `MacroWorld` is threaded the same way (§65).
 
-Not fixed (DESIGN.md does not say):
-- The order of the statements of a function body at runtime. Only
-  scoping and dataflow order them.
+5b. §61 presumes an order of body statements in one case: "The write
+   stores `h` before the call: left to the invocation, that store would
+   follow the call and the `tail` claim would fail." No dataflow orders
+   that `cell-write` statement before the `let` of the call (`cell2` is
+   used only in the final form), so (reading) §61 presumes written order
+   there, or reads it off §19's tail-call requirement.
+
+Not fixed in general (DESIGN.md does not say, as far as I found):
+- The order of the statements of a function body at runtime, beyond
+  §61's case. Otherwise only scoping and dataflow order them.
 - The mutual order of several bindings hoisted by §15 before the same
   statement.
-- Head against arguments. §15 names only arguments. §29 speaks of "the
-  elaborator's own binders for its head, arguments and scrutinee
-  (§15)", but §15 binds no head and no scrutinee (§5 below).
+- Head against arguments outside run position. §15 names only
+  arguments. §29 speaks of "the elaborator's own binders for its head,
+  arguments and scrutinee (§15)", but §15 binds no head and no scrutinee
+  (§5 below).
 - The order of the entries of a `values`, and of the stores of one
   invocation.
 
-[compiled] `order2.sl`: in `(values (g (h n)) (h (g n)))` the reference
-binds `(h n)`, then `(g n)`, and only then the two outer calls, which it
-emits as OCaml `let x = ... and y = ...`, whose order OCaml leaves
-unspecified, as far as I know. In `((pick) (h n))` it binds the head
-first, then the argument. So Proposal A ("within one form,
-sub-expressions left to right, head first") gives `(h n)`, `g`, `(g n)`,
-`h`, which §15's hoisting contradicts. slc's interpreter evaluates a
-call's head before its arguments (`self/elab-main.sl:174-176`). The
-arguments are variables by then, since the code is post-§15.
+[compiled, `--extract`] `order2.sl`: in `(values (g (h n)) (h (g n)))`
+the reference emits `(h n)`, then `(g n)`, and then the two outer calls
+as OCaml `let x = g .. and y = h .. in`. The OCaml manual leaves the
+order of `let ... and` unspecified (from memory; not checked against the
+manual tonight); OCaml 4.14.1, as installed, evaluates it in written
+order, both `ocamlopt` and `ocamlc` [compiled], while it evaluates
+application arguments and tuple components right to left. In
+`((pick) (h n))` the reference emits the head `(pick)` first, then
+`(h n)`, then the application: it does not hoist the argument above a
+form head. `order1.sl` emits `(g n)` then `(h n)` for `(f (g n) (h n))`.
+
+(reading) Applied to source forms before hoisting, Proposal A ("within
+one form, sub-expressions left to right, head first") gives `(h n)`,
+`(g ..)`, `(g n)`, `(h ..)` for the `values`, while hoisting with
+statements in written order gives `(h n)`, `(g n)`, `(g ..)`, `(h ..)`.
+Applied after hoisting, A agrees with hoisting there. For `((pick) (h
+n))`, A and the reference agree (head first), and a timing reading of
+§15 would not. slc's interpreter evaluates a call's head before its
+arguments (`self/elab-main.sl:178-182`), threading its world through
+both.
 
 ### 2.3 Is order observable in the abstract machine?
 
@@ -186,16 +225,30 @@ arguments are variables by then, since the code is post-§15.
   identity, which dataflow fixes. A specific oracle tape consumed in
   step order would make the answers depend on order, so an
   order-independence statement has to quantify over oracles.
-- Compile time: gensym numbers follow elaboration order and the unique
-  `MacroWorld`. Macro calls are elaborated in a fixed order.
+- Compile time: within one macro run, `gensym`, `read-file` and the
+  other §65 primitives are ordered by the unique `MacroWorld`. Which
+  number a given `gensym` call gets also depends on the order in which
+  the elaborator reaches macro calls. §65 threads the world "sequentially
+  through all of elaboration", and §6 elaborates the head first, but I
+  found no statement of the order in which a call's arguments are
+  elaborated. A gensym number can reach the output (`intern-nat`, §65),
+  so elaboration order is observable; that is a question about the
+  elaboration spec, separate from runtime evaluation order.
   `native-compute` results are fieldless constructors (§72), so sharing
   plays no part.
+- `Measure` (`lib/prelude.sl:1386`) answers wall and CPU time and GC
+  counts "since the Program began", so a program can observe cost, and
+  through it the order of work between two requests. In a spec where the
+  world's answers are inputs, this is absorbed by quantifying over
+  answers, not by order-independence.
 - Not covered: crashes, stuck states, and divergence. In `(f
   (world-do w (WriteOut "x")) (array-new _ huge))`, the order decides
-  whether "x" is written before a crash. Divergence and reaching absurd
-  code are possible only if erased proofs can be forged. No consistency
-  theorem is expected (owner statement 1), so the spec must handle
-  them. Cost also differs, which is allowed.
+  whether "x" is written before a crash. Within one `Program` step,
+  divergence and reaching absurd code look possible only if erased proofs
+  can be forged or §17's termination argument fails (unproved); across
+  steps, an unbounded run is allowed (§42). No consistency theorem is
+  expected (owner statement 1), so the spec must handle them. Cost also
+  differs, which §42 allows between models and implementations.
 
 Conjecture (needs proof, relies on §13 as a heap invariant): the set of
 crash-free, stuck-free behaviours, meaning world traces and final values
@@ -211,9 +264,11 @@ up to renaming addresses, does not depend on evaluation order.
   bound whose exhaustion "crashes with `out of fuel` (DESIGN.md section
   31)" and says "A run-position form whose evaluation crashes is
   refused".
-- slc's store is already a mutating heap with monotone addresses:
-  `Store` keeps an erased allocation history plus a `writes` overlay
-  (`self/heap.sl:64-69`). `store-write` updates the overlay in place
+- slc's store already models a heap whose blocks can be overwritten at
+  a fixed address, with monotone addresses: `Store` keeps an erased
+  allocation history plus a `writes` overlay (`self/heap.sl:64-69`).
+  `store-write` returns a store whose overlay maps the same address to
+  the new body, a functional update of a `many` map, not a physical one
   (`self/heap.sl:204-207`), and `store-read` prefers the overlay
   (`self/heap.sl:191-202`). A unique `cell-write` calls `hwrite` on the
   same address (`self/elab-main.sl:251-266`); a `many` one allocates a
@@ -224,14 +279,18 @@ up to renaming addresses, does not depend on evaluation order.
   two separately computed equal `Nat`s answer `ENone`. The reference
   interpreter uses OCaml `==` (`lib/eval.ml:61`).
 - [compiled] `imm_eq.sl`: `slot-eq` of `(add 1 2)` and `3` answers
-  `ENone` in the reference interpreter and `ESome` in the compiled
-  binary (`--build`). Both are allowed by §67.
+  `ENone` in the reference interpreter (with or without externs) and
+  `ESome` in the compiled binary (`--build`) with externs; under
+  `--no-extern --build` it answers `ENone`. All are allowed by §67.
 - `tests/slot_eq.sl` expects `ESome` (`1`) for a slot taken before an
   in-place `grow` and compared after it. The tests fix behaviour that
   §67 leaves free.
 - mini/eval.sl is a pure, environment-based big-step relation `Eval`
-  with no heap. Its arguments run left to right (`EvLCons`) after the
-  head (`EvApp`, `EvCall`). Only its deriving function takes fuel.
+  with no heap. As a relation it fixes no order: `EvApp` and `EvCall`
+  just take a derivation for the head and an `EvalList` for the
+  arguments (`mini/eval.sl:10-14`, `:28-29`). Its deriving function
+  `eval` computes the head first, then the arguments left to right
+  (`mini/eval.sl:60-74`, `:104-110`). Only that function takes fuel.
 
 ### 2.5 Externs and representation
 
@@ -242,14 +301,19 @@ c 3)`:
   slot 3 (§35), so `n` is not passed: it is read back from `c`'s word.
 - Under `--no-extern` it is refused ("does not satisfy `at`").
 
-So static facts and acceptance depend on the extern mode. A spec that
-ran the `Nat` model (a chain of `Succ` blocks) would have no single
-"word of the `Nat` 3" for §33 to name.
+So static facts and acceptance depend on the extern mode, as DESIGN.md
+says: §35 gives `(slot-of k)` = tag slot `k` only "with externs too",
+and §33 refuses `coercible-tag` "under `--no-extern`". (reading) A spec
+that ran the `Nat` model (a chain of `Succ` blocks) would have no single
+"word of the `Nat` 3" for §33 to name unless it chose one, for example
+the interned literal's block; DESIGN.md does not say, and I did not
+check whether such a choice is consistent.
 
 ### 2.6 The prototype
 
-`proto/dyn/machine.sl` (163 lines) is checked with the reference and
-prints `imm 1`, or `imm 0` with an all-false oracle. It has:
+`proto/dyn/machine.sl` (163 lines) is checked with the reference, with
+and without `--no-extern`, and prints `imm 1`, or `imm 0` with an
+all-false oracle. It has:
 - `Word` (`WImm n | WPtr a`), mutable `Block`s in a heap, and ANF code:
   variables, constructor allocation, `cell-alloc`, unique invocation
   (an in-place write), `slot-eq` reading an oracle bit, a closure, an
@@ -260,9 +324,12 @@ prints `imm 1`, or `imm 0` with an all-false oracle. It has:
 - A fuel-free run: each `Program` continuation performs one step
   (`drive`, `def-unique`), so the driver's loop (§42) is the only
   unbounded iteration.
-- The oracle is a finite tape, and the run stops when the tape runs out.
-  A real spec would take the oracle as a function of the step count, or
-  as an input.
+- The oracle is a finite tape, and the run stops when the tape runs out,
+  so as written the tape bounds the run as fuel would. A variant (made
+  during review, not committed) in which `drive` takes the oracle as an
+  `(Fn O (many (Nat) i) -> (many (Bool) b))` and a step counter, with no
+  tape, also checks and prints `imm 1` [compiled], so the driver loop
+  alone needs no bound.
 
 ## 3. Options
 
@@ -272,10 +339,12 @@ prints `imm 1`, or `imm 0` with an all-false oracle. It has:
   machine code is the output of elaboration: erased positions gone,
   `at` entries replaced by the renames the elaborator supplies (§36),
   skipped calls, skipped stores, at-matches, coerces and placings as
-  renames. Pros: matches §27 and §29, is what slc already interprets,
-  and no erased value ever needs a word. Cons: reading an `at` back
-  needs the elaborator's slot facts, so stripping is part of the
-  elaboration spec's output, not a syntactic function. A type-soundness
+  renames. Pros: matches §27 and §29, is close to what slc interprets
+  (slc keeps `CErased` placeholders that evaluate to a token block), and
+  no erased value needs a word. Cons: which calls are skipped is decided
+  by the fact table ("skipped exactly when an opened `AtFn` proof names
+  the callee's canonical atom", §39), so stripping is part of the
+  elaboration spec's output, not a syntactic function of the source. A type-soundness
   theorem over stripped code needs a heap typing (cell slot contents,
   §13 uniqueness, `at` targets). Cost: the soundness proof is where most
   of the effort goes.
@@ -285,7 +354,9 @@ prints `imm 1`, or `imm 0` with an all-false oracle. It has:
   into every step; nothing gained.
 - **R3: R1, but performing every skipped store and skipped call.**
   Pros: the run does not rely on `(at)` assertions being true. Cons:
-  differs from §27's "stripped". Skipping is then a compiler
+  differs from §37 ("the store is skipped") and §39 ("Calling an
+  at-function skips its runtime"); skipping is not part of §27's
+  stripping of erased positions. Skipping is then a compiler
   optimization needing the heap invariant anyway.
 
 ### Q2. Machine state
@@ -311,19 +382,19 @@ Values as words:
 | newtype, `Placed`, `share`, `coerce` result | the word of its field, value, or source |
 | function (`def-fns` member) | `Ptr` to a closure |
 | `delegate`-bodied function | its callee's word |
-| at-function | `Ptr` to a no-op closure |
-| absurd function | an unspecified word |
-| unapplied constructor | a word for its constructor function |
-| cell | `Ptr` to the block it will become |
+| at-function | `Ptr` to a no-op closure (§39: "a function that does nothing and returns no word") |
+| absurd function | an unspecified word; §59: "the pointer is never followed" |
+| unapplied constructor | a word for its constructor function (DESIGN.md does not say) |
+| cell | `Ptr` to the block it will become; but at a tag slot's word when `C` has one or its type is hollow (§37), and at the scrutinee's word when bound by a destructure (§23) |
 | slot | the word of its entry |
-| `World`, `MacroWorld` | `Imm 0` (taken `at vacant-slot`); their state is the driver's or the elaborator's, outside the heap |
-| `Matchable` under models | `Imm 0` ("nothing otherwise", §29) |
-| `Matchable` under the FFI | the wrapper |
-| `Settled` handle | compile-time only, a block naming an entry id |
+| `World`, `MacroWorld` | (reading) `Imm 0`, since each is taken `at vacant-slot` and "the driver passes it no word" (§42); their state is the driver's or the elaborator's, outside the heap |
+| `Matchable` of a non-extern type | nothing (§29: "the FFI's wrapper for an `extern` type and nothing otherwise"); `Imm 0` is my choice |
+| `Matchable` of an extern type | the FFI's wrapper (§29); under `--no-extern` DESIGN.md does not say |
+| `Settled` handle | a block naming an entry; not compile-time only: "an `MMany` handle carries its value into an extracted program" (§64) |
 | erased entries | no word |
 
 - **A1 (recommended): this state, Proposal B's addresses plus `Imm n`.**
-  Pros: every DESIGN.md requirement found is met (2.1). §38's "Nothing
+  Pros: (reading) every DESIGN.md requirement I found is met (2.1). §38's "Nothing
   relies on two slots being distinct" is consistent with addresses that
   are never reused, which memory safety needs anyway. GC reuse cannot be
   observed, since a slot word keeps its block alive (reading). Cons:

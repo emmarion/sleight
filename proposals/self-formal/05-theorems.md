@@ -7,8 +7,11 @@ approved, and nothing here is a design decision (CLAUDE.md rules 1 and 11).
 Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
 **[proto]** is a test under `proto/theorems/`, compiled with the
 reference (`_build/default/bin/main.exe`) at commit 164fcf1;
-**[owner n]** is item n of the brief's "Owner decisions"; everything
-else is my own reading and is hedged as such.
+**[owner n]** is item n of the brief's "Owner decisions", which are an
+earlier session's paraphrases, not the owner's words; everything
+else is my own reading and is hedged as such. `bove_use.sl`, `fuel.sl`,
+`model.sl`, `fuel_run.sl` and `halts_reflect.sl` need `bove.sl` (and
+the last two `fuel.sl`) earlier on the same command line.
 
 ## 1. Summary
 
@@ -28,13 +31,20 @@ else is my own reading and is hedged as such.
   unconditional Sleight function if the compiler is faithful (T5): a
   diagonal (quine) argument rules out a total, sound, and complete
   run-function for Sleight source written in Sleight. Gödel's second
-  theorem gives a related limit on proving H. Three fuel-free shapes do
-  compile: recursion on an erased `Halts` derivation, a typed step
-  machine driven by `Program`, and "honest fuel", whose out-of-fuel
-  result carries a proof [proto, all three].
+  theorem, if Sleight meets its conditions (unchecked), gives a related
+  limit on proving H. Two fuel-free shapes compile: recursion on an
+  erased `Halts` derivation, and a typed step machine driven by
+  `Program` [proto]. A third shape, "honest fuel", whose out-of-fuel
+  result carries a proof, also compiles [proto], but it uses fuel. The
+  `Halts` shape is fuel-free but not callable in practice except under
+  a proof: its caller must supply an erased `(Halts …)`, which takes
+  either a termination proof for that input or a fuel run that has
+  already done the work (§4.3).
 - Parameterizing the semantics works through erased `TyCtor`
-  parameters and model records indexed by them [proto]. A relation
-  projected out of a record cannot be used in a later type.
+  parameters and model records indexed by them [proto]. A signature
+  cannot name a relation stored as a record's field, since a type has no
+  projection (§9); inside a body, after a `let-match`, the field can be
+  used in types [proto `project_in_body.sl`].
 - The theorems mean something only if Sleight's logic is sound in a
   sense stronger than consistency, because the derivations are erased.
   A proved compiler can take the elaborator, the compile-time evaluator,
@@ -53,8 +63,8 @@ else is my own reading and is hedged as such.
   contains a function call" (§9). Compiled: `(Eq (Nat) (f n) (Succ n))`
   is refused with "`f` … cannot be applied in a term, where only a type
   or value constructor can be applied (§9)"
-  [proto `call_in_type_bad.sl`]. So a theorem about a function's output
-  is stated in one of two ways. Either it is *intrinsic* (the function
+  [proto `call_in_type_bad.sl`]. So, as far as I can see, a theorem
+  about a function's output is stated in one of two ways. Either it is *intrinsic* (the function
   returns an erased proof about its result), or it is about an inductive
   *graph relation* written alongside the function, which duplicates it.
 - **F2. Intrinsic certified checker works.** [proto `t1_toy.sl`] declares
@@ -62,8 +72,9 @@ else is my own reading and is hedged as such.
   plus `Verdict s` with `Accepted (erased (Elab s))` and
   `Rejected (erased (Fails s))`. The function
   `compile : (subterm many (Src) s) -> (many (Verdict s) r)` and the erased
-  lemma `exclusive : … (Elab s) (Fails s) -> (False)` (by induction on
-  the `Fails` derivation) are accepted, and the program runs.
+  lemma `exclusive : … (Elab s) (Fails s) -> (False)` (it dispatches on
+  the `Fails` derivation and recurses on the `subterm` source `s`) are
+  accepted, and the program runs.
 - **F3. A theorem as a goal.** §71: "`(goal m T)` sets the goal of a unit
   … A goal is one type, not a telescope; an existential … is packaged by
   an ADT (§21)." [proto `spec.sl` + `proof.sl`] packages
@@ -81,7 +92,18 @@ else is my own reading and is hedged as such.
   sub-derivation. `R` is a relation parameter, and the step function and
   a determinism lemma are passed in through a §57-style factory. It is
   accepted. Instantiated with a toy step and a hand-built `Halts` at the
-  top level [proto `bove_use.sl`], it prints `2`.
+  top level [proto `bove_use.sl`], it prints `2`. The `Halts` there is a
+  constructor term written out for one input. §20 frees the top level
+  from decrease proofs only, not from supplying a typed erased argument,
+  so a caller of `run` needs a `(Halts R s)` from somewhere. I found
+  three sources: a term written out, an `erased` function that proves
+  halting for that input, or a `comptime-match` on the result of a
+  fuel-bounded run (F5) whose finished case carries the run's
+  derivation. The third compiles: [proto `halts_reflect.sl`] runs
+  `fuel_run.sl`'s runner with fuel 10, `comptime-match`es `FDone`,
+  turns its `RunsTo` into a `Halts`, and calls `run` with it (prints
+  `3`); with fuel 2 the `comptime-match` is refused. By then the fuel run
+  has computed the answer, so `run` adds nothing.
 - **F5. Honest fuel.** [proto `fuel.sl`] declares a fuel-result type
   whose out-of-fuel constructor carries
   `(erased (Prefix R s f (Succ t)))`: the spec run has a non-final state
@@ -91,6 +113,10 @@ else is my own reading and is hedged as such.
   calling a function parameter needs a `Predates` that only a level
   minted after the parameter can have (§18, §57). The first attempt was
   refused with "`M` was not in scope when level … was minted".
+  `fuel.sl` itself holds only the type and the lemma. The runner, a
+  `subterm` recursion on the fuel that returns `FDone` with a `RunsTo`
+  or `FOut` with a `Prefix`, is [proto `fuel_run.sl`] (added in review;
+  accepted).
 - **F6. A typed step machine driven by `Program`.** §27: "A `Program`
   value (§42) is run: the driver consumes it at `unique` and applies each
   step's continuation once." [proto `drive.sl`] defines a generic
@@ -102,7 +128,10 @@ else is my own reading and is hedged as such.
   machine runs and exits 0. The step's level must be minted before `P`
   (refused otherwise, as `tests/io_step.sl` also arranges). The
   unbounded iteration belongs to the driver, which SOUNDNESS.md part 5
-  leaves "outside the claim".
+  leaves "outside the claim". The driver consumes only a file's final
+  value, and only under `--goal none` (§27, §71), so no Sleight code,
+  compile-time or otherwise, can obtain the result of a driven run as a
+  value; a theorem can speak only about the step function.
 - **F7. Parameterization mechanisms.** A relation is an erased parameter
   of `TyCtor` type, as in the prelude's `Cmp` (`lib/prelude.sl:67`).
   [proto `model.sl`] defines `(Model R)`, an ADT indexed by the relation
@@ -110,9 +139,13 @@ else is my own reading and is hedged as such.
   erased determinism lemma. A function generic over `(many (Model R) md)`
   unpacks it and is accepted. [proto `record.sl`] shows that an ADT with
   relation-valued *erased fields* is accepted, and a projected field can
-  be applied in an erased expression. By F1, though, a relation obtained
-  by projection is only an opaque atom in later types, so the usable form
-  is "index the record by its relations". `(many Type T)` is accepted as a
+  be applied in an erased expression. Inside a body, after the
+  `let-match`, the field can also stand in a binder's type, and forcing
+  ties it to a relation the record's index names
+  [proto `project_in_body.sl`, added in review]. What F1 rules out is
+  naming the field in a signature, since a type has no projection, so
+  the form usable across signatures is "index the record by its
+  relations". `(many Type T)` is accepted as a
   parameter declaration, but no non-erased argument exists: `(f (Nat))`
   gives "type constructor `Nat` applied in a non-erased position"
   [proto `manytype_bad.sl`, `manytype2_bad.sl`], consistent with §21 "A
@@ -120,9 +153,13 @@ else is my own reading and is hedged as such.
   `Matchable` (§8), so generic code cannot take apart a derivation of a
   parameter relation. It can only use the lemmas the model supplies.
 - **F8. The logic is anticlassical.** README.md "Logic and strength":
-  "excluded middle at any level `L` … gives a function that returns
-  `False`" (`tests/anticlassical.sl`). So no theorem can begin "either
-  the spec run halts or it does not".
+  "excluded middle at any level `L`, with `¬P` read as a level-`L`
+  function, gives a function that returns `False`"
+  (`tests/anticlassical.sl`, which refutes the schema over every
+  `(erased Type P)`). So a proof cannot assume excluded middle in
+  general. Whether the one instance "the spec run of `src` halts or it
+  does not", for every `src`, is refutable or merely unprovable I have
+  not determined; either way it is not available as a lemma.
 - **F9. Claimed strength.** README.md: "the language as a whole computes
   exactly the multiply recursive functions, so its strength is about IΣ₂
   … with proof-theoretic ordinal ω^ω^ω". This is the author's assertion
@@ -152,14 +189,21 @@ else is my own reading and is hedged as such.
 
 ### 2.3 What SOUNDNESS.md already says about H
 
-SOUNDNESS.md part 1 claims "(C) Checking terminates" and "(T) Totality
-… every function activation returns, apart from a crash". Taken
-together, these are what [owner 4]'s hypothesis H asserts: every
-accepted compile-time form's run halts. So, by that note's (unproved,
-outside `lean/`) argument, H is *true* about Sleight. It is just not
-something Sleight can prove about itself (§4.3 below). Part 7 also
-records that "(E)" (the stripped run follows the full one) "fails"
-without (T). That matters for T7.
+SOUNDNESS.md part 1 lists "(C) Checking terminates" and "(T) Totality
+… In the *full semantics* …, every function activation returns, apart
+from a crash" among "what is claimed", relative to the shipped prelude.
+Part 6 adds "Run-position forms run total code by (T)". If (T) holds,
+and, for a spec whose run strips erased positions, (E) too, then
+[owner 4]'s hypothesis H (every accepted compile-time form's spec run
+halts) holds. These are claims with an argument, not proofs: the note
+calls itself "a sketch" outside `lean/`'s fragment, and says its
+argument "rests on lemmas … that are not proved", among them the
+preservation of (I1), which "this note does *not* prove". So H is
+*claimed and argued* by SOUNDNESS.md, not established. Even if true, it
+is not something Sleight can prove about itself, on my reading of §4.3
+below. Part 7 also says of its argument for "(E)" (the stripped run
+follows a run of the full semantics): "Without (T) this step fails".
+That matters for T7.
 
 ## 3. Candidate theorem statements
 
@@ -195,21 +239,33 @@ inside Sleight once the spec is deterministic given `o`. Across
 different oracles, T3 is false (§2.2).
 
 T3 matters for more than tidiness. A compiler that rejects everything
-satisfies T1 and T2. T3 plus T4 give completeness: if `Elab o src c`
-holds and `compile` halts, it cannot reject under `o`.
+satisfies T1 and T2. T3 plus T4 give a weak completeness: if
+`Elab o src c` holds and `compile` halts, it cannot reject *under `o`*.
+It can still reject under another oracle it chose. If the oracle
+records crash points, as §4.2 option 1 proposes, a compiler that always
+picks "crash at once" rejects everything and satisfies T1 to T3, so the
+guard against a vacuous compiler is lost. §31 says "The semantics is
+that of a machine with unlimited stack and heap" and treats a crash as
+something "A real run may" do, which I read as saying that a crash is
+not a behaviour of the spec. Completeness would then have to be stated
+for the crash-free oracle, or crashes kept out of the oracle. This is
+open (decision 3).
 
 **T4 (totality).** Four forms:
-- (a) meta-theorem only: it follows from SOUNDNESS.md (T) and (C) plus
-  the compiler proof;
+- (a) meta-theorem only: it would follow from SOUNDNESS.md's claimed
+  (T) and (C) (argued there, not proved; §2.3) plus the compiler proof;
 - (b) Bove–Capretta (F4):
   `compile-h : (many (String) src) (subterm erased (Halts o src) h) -> (many (Verdict src) v)`.
-  This *is* [owner 4(ii)] as a type;
+  This is one reading of [owner 4(ii)] as a type, per source: uniform H
+  would supply `Halts o src` for every `src`. Not callable in practice
+  except under a proof, or after a fuel run (F4);
 - (c) honest fuel (F5):
   `compile-fuel : (subterm many (Nat) f) (many (String) src) -> (many (FuelVerdict src f) v)`.
   Its `OutOfFuel` carries `(SpecPrefix o src f st)` and `(NotFinal st)`.
-  This is [owner 4(i)] as a type: running out of fuel proves that the
-  spec run is still going. Combined with the F5 lemma, `Halts-in o src k`
-  and `f ≥ k` rule out `OutOfFuel`;
+  This is one reading of [owner 4(i)] as a type: running out of fuel
+  proves that the spec run has not finished after `f` steps (not that
+  it diverges, which no single answer can show). Combined with the F5
+  lemma, `Halts-in o src k` and `f ≥ k` rule out `OutOfFuel`;
 - (d) step machine (F6): T1/T2 become "the step preserves `Inv`, and
   `Done` implies `Good`". Termination of the loop is meta, and under H
   it follows from a measure.
@@ -243,11 +299,15 @@ expressible as an oracle the spec can choose.
   typed state are an induction over finitely many steps. I expect them
   to be provable inside Sleight, because they need no termination.
   This is unverified.
-- *Stripped run* (erased code removed, which is [owner 6]'s reading):
+- *Stripped run* (erased code removed; an earlier session read
+  [owner 6] this way, and the brief marks that reading NOT confirmed):
   "never enters a refuted branch" needs every erased proof to *exist*
-  in the full semantics. That is SOUNDNESS.md (E), which needs (T), the
-  part blocked internally (§4.3). So, under [owner 1]'s "no `no_false`",
-  T7 for the stripped run stays a meta-theorem. T6 then either assumes
+  in the full semantics. That is SOUNDNESS.md (E), whose argument there
+  uses (T) ("Without (T) this step fails"). On my reading of §4.3,
+  uniform (T) and full-semantics safety cannot both be proved inside
+  Sleight if it is consistent and meets Gödel II's conditions
+  (unchecked). So, consistent with [owner 1]'s "no `no_false`", I expect
+  T7 for the stripped run to stay a meta-theorem. T6 then either assumes
   "the spec run of `src` does not go wrong", as CompCert assumes a safe
   source, or defines going wrong as a behaviour after which anything is
   allowed. Either way it is not vacuous for accepted programs only if
@@ -279,7 +339,9 @@ expressible as an oracle the spec can choose.
    contents, and so on. The compiler records the answers it actually
    used as an erased log, and the verdict exists-quantifies `o`. *Pro:*
    T3 per oracle, determinism lemmas provable. *Con:* the oracle's shape
-   must anticipate every source of choice.
+   must anticipate every source of choice, and an oracle that may choose
+   crashes, or `ENone` from every `slot-eq`, lets a compiler reject
+   more than it should while meeting T1 to T3 (§3 T3).
 2. **Relational spec** with nondeterminism inside the rules. *Pro:*
    closest to DESIGN.md's prose. *Con:* T3 is false outright, and
    completeness has to be stated with `∃`.
@@ -300,10 +362,14 @@ My reading of the limits, hedged:
   halts. Soundness and completeness then contradict each other. So,
   assuming soundness of the logic and the existence of quines (I have not
   written one), no internal total, sound, and complete compile-and-run
-  for Sleight source exists. This is the classical "no total
-  self-interpreter on source text" barrier. Brown and Palsberg's typed
-  self-interpreter for F_ω, cited by name, escapes it only because its
-  input is a typed representation, not text.
+  for Sleight source exists. The same argument applied to `compile`
+  needs T1, T2, T3, T4, and T5, since T5 makes `compile` compute the
+  values of the run-position forms. This is, as I understand it, the
+  classical "no total self-interpreter on source text" barrier. Brown
+  and Palsberg's typed self-interpreter for F_ω, cited by name, is to my
+  understanding not subject to it because its input is a typed
+  representation, not text. The argument is mine and has not been
+  checked by anyone else.
 - **Gödel.** In the form for effectively axiomatized theories that
   satisfy the Hilbert–Bernays–Löb derivability conditions (cited by
   name), a consistent theory cannot prove its own consistency. Intuitionistic
@@ -312,32 +378,51 @@ My reading of the limits, hedged:
   more than such results usually need. I have not checked that Sleight
   meets the conditions.
 
-  H, read uniformly over all programs, together with internal type
-  safety would imply internal consistency. Take an accepted program with
-  a run-position form of type `(False)`. H says its run halts with a
-  value, preservation says the value has type `(False)`, and canonical
-  forms say no such value exists. "Normalization implies consistency"
-  is the general form of this. So, if Sleight is consistent, it cannot
-  prove both uniform H and stripped-run safety.
-- **What remains provable inside Sleight.** H for one particular program
-  may be provable, for example by building `Halts` for slc's own
-  source. So are anything conditional on H, every safety property of
-  the full semantics, determinism, and exclusivity.
+  H, read uniformly over all programs, together with internal
+  stripped-run type safety would imply internal consistency. Take an
+  accepted program with a `many` run-position form of type `(False)`.
+  H says its run halts with a value, preservation says the value has
+  type `(False)`, and canonical forms say no such value exists.
+  "Normalization implies consistency" is the general form of this. The
+  same holds of uniform (T) and full-semantics safety. So, if Sleight is
+  consistent and meets the theorem's conditions, it cannot prove both
+  halves of either pair. Which half is the provable one is my guess, not
+  a result.
+- **What I expect remains provable inside Sleight.** H for one
+  particular program, either by an `erased` proof for that program or
+  by a fuel run in run position whose finished result is
+  `comptime-match`ed (F4, [proto `halts_reflect.sl`]); the latter is a
+  run of the compiler with fuel, so it gains nothing over (c) below.
+  Also anything conditional on H, safety properties of the full
+  semantics, determinism, and exclusivity. None of this is verified
+  beyond the toys.
 
 Options:
 
-1. **(b) Bove–Capretta.** *Pro:* no fuel at all, the hypothesis is
-   erased and so free at run time, and it states [owner 4(ii)] exactly.
-   *Con:* someone must supply `h`; the top level cannot do so without a
-   proof. If the logic were unsound, `h` could be fake and `compile-h`
-   could diverge. *Cost:* low (F4).
+1. **(b) Bove–Capretta.** *Pro:* no fuel inside `compile-h`, the
+   hypothesis is erased and so free at run time, and it is one reading
+   of [owner 4(ii)] as a type. *Con:* it is not callable in practice
+   except under a proof. Its caller must supply `h : (Halts o src)`,
+   and the only sources I found (F4) are a derivation written out, an
+   `erased` halting proof for that input, or a fuel run whose result
+   carries the derivation, which has then already computed the
+   verdict. The diagonal above is exactly why no Sleight code can supply
+   `h` for every `src`. So, as a way to *run* the compiler, it still
+   needs fuel or a proof; its use is as a statement. If the logic were
+   unsound, `h` could be fake and `compile-h` could diverge. *Cost:* low
+   (F4).
 2. **(c) Honest fuel.** *Pro:* runs anywhere; out-of-fuel is evidence,
-   not silence. *Con:* it is fuel, which [owner] wants minimized. A large
-   constant makes it practically unbounded. *Cost:* low (F5).
+   not silence; its finished result carries `RunsTo`, from which `Halts`
+   follows ([proto `halts_reflect.sl`]). *Con:* it is fuel, which the
+   brief lists among the owner's goals to minimize. A large constant
+   makes it practically unbounded. *Cost:* low (F5, `fuel_run.sl`).
 3. **(d) Step machine + `Program` loop** [owner 2]. *Pro:* no fuel; the
    divergence is the driver's, outside every function; T1/T2 as an
    invariant. *Con:* the whole compiler, including the compile-time
    evaluator, must be written as an explicit-state step (other tracks).
+   Its verdict reaches only the driver, never a Sleight value (F6), so
+   it cannot serve where Sleight code needs the verdict, such as a
+   `--goal proved` run.
    Internal T4 additionally needs (b) or (c) on the same step function,
    or a graph relation of it (F1). *Cost:* high, since this is the
    compiler's architecture.
@@ -371,7 +456,7 @@ Options:
 
 | Item | Source | Can a proved compiler remove it? |
 |---|---|---|
-| Sleight's logic is sound (OPEN.md 1–3), in a sense stronger than consistency: an erased derivation in `Verdict` must correspond to one that exists, which is SOUNDNESS.md (T)+(E) | §14, SOUNDNESS.md 1 | No. §4.3 bars proving it internally. `lean/` covers a fragment. Option 4.1.3 moves it onto a certificate checker. |
+| Sleight's logic is sound (OPEN.md 1–3), in a sense stronger than consistency: an erased derivation in `Verdict` must correspond to one that exists, which is SOUNDNESS.md (T)+(E) | §14, SOUNDNESS.md 1 | No. On my reading of §4.3, it cannot be proved internally if Gödel II applies (unchecked). `lean/` covers a fragment. Option 4.1.3 moves it onto a certificate checker. |
 | The checker that checks the proof: `lib/` (OCaml), or slc compiled to OCaml | MANUAL.md `--goal` | No. It can be mitigated by checking with both, or by a proved slc checking its own proof. That is a consistency check, not a proof; CakeML's in-logic bootstrap, cited by name, is the known pattern. |
 | Axioms `predates-trans`, `subterm-trans`, `predates-subterm` (§18), `gensym-unique` (§65), `placed-slot`, `placed-eq` (§66) | §18, §65, §66 | Not from the logic. Their truth *in the spec* (SOUNDNESS.md (I2), (I3), and the gensym counter) are safety invariants that I expect to be provable inside Sleight. Using them for the stripped run still needs (E). |
 | Character literal bounds "asserted rather than decided" | §45 | Yes in principle: a lemma over the 256 codes, decided rather than asserted. |
@@ -388,8 +473,9 @@ Options:
 §13: "Where a value can be mutated in place … a `unique` binder on that
 value is the only reference to it." My reading of its role:
 
-- **For compiler correctness (T6) against a mutating heap-machine spec
-  [owner 6], it is not needed.** If the spec stores into the same block
+- **For compiler correctness (T6) against a mutating heap-machine spec,
+  which [owner 6] suspects the spec should be, I do not think it is
+  needed.** If the spec stores into the same block
   the compiled code stores into, any aliasing is reproduced step for
   step. The simulation relates heaps, not trees.
 - **It is what makes the heap machine agree with the tree reading** that
@@ -419,15 +505,21 @@ value is the only reference to it." My reading of its role:
    on it.
 3. **How should nondeterminism enter the spec?** Recommended: an oracle
    parameter, and the verdict exists-quantifies it (§4.2.1). Needs:
-   the list of choice sources (§2.2).
+   the list of choice sources (§2.2), and a rule that keeps a
+   rejection-favouring oracle from making completeness vacuous (§3 T3),
+   for example crashes outside the oracle.
 4. **Is a crash during a compile-time run a rejection, or a third
    outcome?** §72 makes it an error for `native-compute`. DESIGN.md
-   does not say for an evaluator crash at compile time. This is needed
+   does not say for an evaluator crash at compile time. §31 puts crashes
+   outside "the semantics", so the question is whether [owner 3]'s
+   theorem is about the spec, where on that reading no crash occurs, or
+   also about an implementation, which "may crash". This is needed
    before [owner 3] can be stated.
 5. **What form does T4 take?** I recommend a step machine (§4.3.3) for
    the running compiler, plus a Bove–Capretta or honest-fuel statement
    on the same step for internal "total under H", with uniform totality
-   left as a meta-theorem. The alternative is a compile-time budget in
+   left as a meta-theorem. The Bove–Capretta statement is not a way to
+   run anything without fuel or a proof (§4.3 option 1). The alternative is a compile-time budget in
    the language (§4.3.4). Depends on: decision 4 and the compiler
    architecture tracks.
 6. **What does "parameterized" mean?** I recommend a model record
@@ -463,8 +555,10 @@ value is the only reference to it." My reading of its role:
 5. §65, `gensym` "counting from 1 over the whole run": the numbers
    depend on expansion order. I could not find where DESIGN.md fixes the
    order of expansions within one form.
-6. §62's expansion limit is the only resource bound in the spec. Is it
-   a precedent for a compile-time evaluation budget, or a one-off?
+6. §62's "At most 10000 expansions run in one run" and §49's `unary`
+   limit ("at most 1024") are the resource bounds in the spec that I
+   found. Is either a precedent for a compile-time evaluation budget, or
+   are they one-offs?
 
 ## 9. Unverified claims
 
@@ -480,9 +574,88 @@ value is the only reference to it." My reading of its role:
   compiled.
 - That forward simulation plus a deterministic target gives refinement
   here, given `slot-eq` and the crash allowances.
-- SOUNDNESS.md's (T), (C), and (E) themselves, on which "H is true"
-  rests.
+- SOUNDNESS.md's (T), (C), and (E) themselves, on which H rests (§2.3).
+- That the three sources of a `Halts` argument in F4 are the only ones.
+- That full-semantics safety, rather than uniform (T), is the half of
+  §4.3's Gödel pair that Sleight can prove.
 - Whether a `many` function recursing on an erased `subterm` derivation
   (F4) is intended by DESIGN.md. §17 and §21 do not forbid it, and the
   reference accepts it, but I found no test or section that names the
   pattern.
+
+## Review notes
+
+Added by an adversarial review agent. Every prototype was re-run with
+`_build/default/bin/main.exe` (reference unchanged since 164fcf1); each
+accepts or refuses as the text says, including `--goal proved: PASS`
+for `spec.sl proof.sl`, `2` for `bove_use.sl`, `(ESome _ _)` for
+`sloteq_ct.sl` with and without `--no-extern`, exit 0 for `drive.sl`,
+and the refusal when `drive.sl`'s step level is minted after `P`.
+
+Errors found and changed:
+
+1. Summary called honest fuel one of "three fuel-free shapes" and
+   "[proto, all three]". It uses fuel, and `fuel.sl` held only the
+   result type and the bound lemma, not a runner. Reworded; added
+   `proto/theorems/fuel_run.sl`, a runner that is accepted.
+2. Bove–Capretta was presented as fuel-free and recommended without
+   saying plainly that no one can call it without a proof. Added to the
+   summary, F4, §3 T4(b), §4.3 option 1, and decision 5: a caller needs
+   a `Halts`, which comes from a written-out derivation, a per-input
+   halting proof, or a fuel run plus `comptime-match`
+   (`proto/theorems/halts_reflect.sl`, added; prints `3` with fuel 10
+   and is refused with fuel 2). In the last case the fuel run has
+   already done the work.
+3. §2.3 said that, by SOUNDNESS.md's argument, "H is *true*". SOUNDNESS.md
+   lists (T) and (C) as "what is claimed", calls itself "a sketch"
+   outside `lean/`'s fragment, and does not prove preservation of (I1).
+   Reworded to "claimed and argued, not established". It also noted
+   that a stripped-run H needs (E) as well as (T).
+4. §2.3 and T7 said SOUNDNESS.md records that (E) "fails" without (T).
+   The text is "Without (T) this step fails", about its argument.
+   Quoted it exactly.
+5. T7 called the stripped run "[owner 6]'s reading". The brief marks it
+   an earlier session's reading, "NOT confirmed". Fixed, also in §6.
+6. "This *is* [owner 4(ii)]" and "This is [owner 4(i)]" overclaimed:
+   the brief says the owner agreed only in general, not to exact
+   statements. Also `Halts o src` is per source, H is uniform, and
+   out-of-fuel shows non-termination within `f` steps, not divergence.
+   Reworded to "one reading of".
+7. "Stripped run … needs (T), the part blocked internally" read as
+   established. Hedged: on the Gödel reading only one half of each
+   pair, uniform (T) or full safety, can be proved, and which half is a
+   guess. §4.3's "every safety property … provable" and the trust table's
+   "§4.3 bars proving it" were hedged the same way.
+8. The summary and F7 said a relation projected from a record "cannot
+   be used in a later type" / "is only an opaque atom". Inside a body,
+   after `let-match`, it can stand in a binder's type and is tied to
+   the index by forcing (`proto/theorems/project_in_body.sl`, added,
+   accepted). What is ruled out is naming it in a signature.
+9. F8 dropped README.md's qualifier "with `¬P` read as a level-`L`
+   function" and concluded that "no theorem can begin 'either the spec
+   run halts or it does not'". The test refutes the uniform schema;
+   whether that one instance is refutable is not shown. Fixed.
+10. F2 said `exclusive` is "by induction on the `Fails` derivation"; its
+    `subterm` parameter is the source `s`. Fixed.
+11. §3 T3 claimed that T3 plus T4 give completeness. With an oracle that
+    can choose crashes (§4.2 option 1 includes "crash points"), a
+    reject-everything compiler satisfies T1 to T3. Added this, with
+    §31's "The semantics is that of a machine with unlimited stack and
+    heap", to T3, §4.2, and decisions 3 and 4.
+12. §8 item 6 said §62's limit is "the only resource bound in the spec";
+    §49 bounds `unary` at "at most 1024". Fixed.
+13. Added to F6 that the driver consumes only a final value under
+    `--goal none` (§27, §71), so a driven compiler's verdict never
+    becomes a Sleight value; and to the header that `bove.sl` must
+    precede its dependents on the command line.
+
+Uncertain points, not changed:
+
+- The diagonal argument (§4.3) looks right to me, given (T), quines,
+  and the logic's soundness, but I did not write a quine either.
+- Whether Gödel II's conditions hold for Sleight's spec relation as an
+  internal provability predicate is unchecked by author and reviewer.
+- Whether the brief's owner items are faithful is outside this review;
+  they are a session's paraphrases.
+- I did not re-check the "first attempt was refused" claims in F3 and
+  F5, only that the final versions behave as described.
