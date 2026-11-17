@@ -272,13 +272,21 @@ direct-style structural recursion on the program, like `t1_toy.sl`.
 ### F7. What the statement does not say [C]
 
 `spin_vacuous.sl` is a stepper whose `step` always returns `More`. It
-passes the same goal. So the theorem is: whatever verdict the loop
-reaches is a correct one, and accept and reject cannot both hold. It
-does not say that the loop reaches a verdict when the spec has one.
-Program 6 shows a diverging run that has neither derivation, and the
-loop runs at constant memory. That is consistent with
-"no verdict ⇔ some run diverges", but only the ⇐ direction is evident
-from the code. Neither direction is proved.
+passes the same goal. So the theorem is: whatever verdict `step`
+returns, from any state, is a correct one, and accept and reject cannot
+both hold. It does not say that the loop reaches a verdict when the
+spec has one. Nor does it cover `drive.sl`: the driver, and the text it
+prints for each verdict, are outside the proved statement. Program 6
+has a diverging run, so (by my reading, not proved) it has neither
+derivation, since `Evals` and `Sticks` both need a finite `Runs`; the
+loop runs at constant memory. That is consistent with "no verdict if
+and only if some run diverges". Of the two directions, "a diverging
+run gives no verdict" is evident from the code (a `Waiting` state
+leaves only on `Halt`); the converse is not. Neither direction is
+proved. [A] The divergence comes from the toy's untyped object
+language, which has no levels; whether a run-position form of full
+Sleight can diverge at all bears on §17 ("Termination rests on
+levels"), see §5 below.
 
 ## 3. Options
 
@@ -289,39 +297,42 @@ from the code. Neither direction is proved.
     while waiting, the evaluation context (`Reach`), both erased. It
     advances by one total step per `Program` step.
   - Pros:
-    - No fuel, no replay, and linear work.
+    - No fuel and no replay: each statement is checked once (the toy's
+      list lookups still cost O(entries) per statement).
     - One frame type covers acceptance and rejection.
     - The derivation is assembled once, at the end.
     - Compiled here.
   - Cons:
     - Every elaborator function that can reach a round trip becomes
-      frames. In full Sleight that is most of elaboration (nested run
-      positions, §15's hoisted arguments, and macro expansion, which
-      also runs code, §62).
-  - Risk: frame count. It grows with (rules × recursive premises).
-  - Cost: high for slc; natural for a new kernel written this way.
+      frames. [A] In full Sleight I expect that to be most of
+      elaboration (nested run positions, §15's hoisted arguments, and
+      macro expansion, which also runs code, §62).
+  - Risk: frame count. There is one frame per (rule, recursive premise)
+    pair, so it grows with the total number of recursive premises.
+  - Cost [A]: high for slc; natural for a new kernel written this way.
 - **(b) Direct style plus replay with a proof-carrying oracle.**
   - Design: as in F6.
   - Pros:
-    - The elaborator stays recursive, which is how slc's block is
-      written. Its compile-time runs are inline calls to
+    - The elaborator stays recursive, which is how I read slc's main
+      block to be written. Its compile-time runs are inline calls to
       `run-code`/`eval` with fuel (`self/elab-main.sl:159`, `443-462`).
     - Compiled here.
   - Cons:
-    - It needs decidable equality with proofs on requests, which means
-      heaps in full Sleight.
-    - Work is quadratic in the number of runs.
+    - It needs decidable equality with proofs on requests, which [A] I
+      expect to cover heaps in full Sleight.
+    - Work is about quadratic in the number of runs (F6, an estimate).
     - Σ effects (gensym, expansion count, macro-world updates) must
       come back from the oracle, or be replayed identically (03 Q1(e)).
     - Every call site re-wraps a third outcome.
-  - Cost: medium to high. Most of the cost is intrinsic derivations
-    everywhere, which (a) needs too.
+  - Cost [A]: medium to high. My reading of the toy is that most of
+    the cost would be intrinsic derivations everywhere, which (a)
+    would need too. The toy is too small to establish this.
 - **(c) Inline bursts with replay only on overflow (03's hybrid).**
   - Design: (b), but the machine runs inline for B steps, and only a
     run longer than B triggers `RAsk`.
   - Pros: replay is rare.
-  - Cons: inline bursts are bounded iteration. A burst that runs out
-    must yield `RAsk`, so the proof is (b)'s.
+  - Cons [A]: inline bursts are bounded iteration. A burst that runs
+    out must yield `RAsk`, so I expect the proof to be (b)'s.
   - Untested.
 
 ### Q2. What the spec's evaluation relation is
@@ -334,7 +345,7 @@ from the code. Neither direction is proved.
 - **(b) Big-step, or a different machine.**
   - Pros: it reads closer to DESIGN.md's prose.
   - Cons: it needs a simulation proof from the implementation's
-    machine. That proof would dominate the effort.
+    machine. [A] I expect that proof to dominate the effort.
 
 ### Q3. Completeness (the missing piece)
 
@@ -357,8 +368,10 @@ from the code. Neither direction is proved.
    - Recommended: zipper for a new certified kernel, and replay only if
      slc itself is retrofitted.
    - Why: both compile. Replay keeps slc's direct style, but it adds
-     request equality on heaps and quadratic work. The zipper removes
-     both, at the cost of rewriting the elaborator into frames.
+     request equality (on terms and environments in the toy, and [A]
+     probably on heaps in full Sleight) and about quadratic work. The
+     zipper removes both, at the cost of rewriting the elaborator into
+     frames.
    - Depends on it: 04's compiler-route choice, and 03 decision 3.
 2. **Is the spec's compile-time run a small-step relation over the same
    machine the compiler steps (Q2a)?**
@@ -375,30 +388,44 @@ from the code. Neither direction is proved.
 4. **Must the packaged theorem include completeness?**
    - Recommended: yes, relative to per-source evidence (Q3a). Without
      it, a stepper that never answers satisfies the statement (F7).
+   - Context: the brief's owner statement 3 (an earlier session's
+     paraphrase) is that every source should provably be accepted or
+     rejected; the packaged statement here does not give that.
    - Depends on it: 05 decision 5.
 5. **Is a compile-time run that goes wrong a rejection?** The toy has
    `FLetStuck`.
-   - [A] In typed Sleight, a run that goes wrong should not happen if
-     the language is sound. So this is 05 decision 4 (crashes) in
-     another form, and the toy's rule is a stand-in, not a proposal for
-     the full spec.
+   - [A] In typed Sleight, a run that gets stuck should not happen if
+     the language is sound, so the toy's rule is a stand-in, not a
+     proposal for the full spec. The nearest question for full Sleight
+     is 05 decision 4, about crashes (§31: "A real run may crash where
+     the host cannot represent what is asked of it"), which is a
+     different kind of failure from a stuck term.
 
 ## 5. Rough edges in DESIGN.md (questions, not resolved)
 
-- §29 says the round trip "nest[s]" but does not say in what order the
-  inner runs happen relative to the elaboration of their siblings. A
-  zipper or a positive `Fails` needs that order (F3). This adds to the
-  evidence for 01's decision 5.
+- §29 says "Round trips nest: a form in run position runs before the
+  form that contains it", and §27 says such a form "runs as soon as it
+  has been elaborated, before the code after it is checked", and "the
+  forms inside a form run before it does". So an inner run comes after
+  its own elaboration and before whatever is "after it". What I could
+  not find is which sibling items of one form count as "after it",
+  that is, the order in which a form's items are elaborated. [A] A
+  zipper or a positive `Fails` in the mirror shape needs that order
+  (F3). This adds to the evidence for 01's decision 5.
 - §28: "On a mismatch, the error prints the expected constructor and
   the actual value". If rejections carry their reason (01 decision 4),
   the `Fails` rule for a mismatch must carry the value. The toy's
   `FAssertHead` carries `v` and its head. Whether the printed text is
   part of the spec is open.
-- §27 and §29 describe a diverging run-position form only implicitly:
+- DESIGN.md does not mention a diverging run-position form. §27 says
   the form "runs as soon as it has been elaborated, before the code
-  after it is checked". DESIGN.md does not say what a checker that
-  never returns means for acceptance. With no fuel, the toy simply never
-  finishes. This is the gap that F7 and 05's T4 discuss.
+  after it is checked", and §17 says "Termination rests on levels"
+  ("Every call decreases a lexicographic order"); §62 caps expansions
+  ("At most 10000 expansions run in one run"). I could not find text
+  saying whether every compile-time run halts, or what a checker that
+  never returns means for acceptance. With no fuel, the toy simply
+  never finishes, but its object language has no levels (F7). This is
+  the gap that F7 and 05's T4 discuss.
 
 ## 6. Unverified claims
 
@@ -410,7 +437,91 @@ from the code. Neither direction is proved.
 - That a simulation proof would dominate under Q2(b).
 - That Q3(a) is writable for this toy: plausible from 05's `bove.sl`,
   but not written.
-- The timings and memory figures are single runs on one machine.
+- The timings and memory figures are single runs on one machine (the
+  review re-measured about 22 MB resident at 4, 8, and 12 s for both
+  variants).
+- That program 6 has neither derivation, and that "most of
+  elaboration" in full Sleight would become frames.
+- The work estimates (no re-elaboration for the zipper, about
+  quadratic for replay) are read off the code, not measured.
 - That slc's elaborator is "direct-style" throughout. I read only
   `self/elab-main.sl:159` and `443-462`, and 03's description of the
   block.
+
+## Review notes
+
+An adversarial review re-ran every acceptance, refusal, and goal claim
+with `_build/default/bin/main.exe` and `_build/release/slc`, read
+DESIGN.md in full, read every file in `proto/roundtrip/`, and checked
+the cited slc lines. Errors found and changes made:
+
+1. Header: named the slc binary used and noted that HEAD (ad07c35)
+   has no code change since 669b328. "No owner decision is cited" was
+   replaced, since decision 4 now mentions the brief's statement 3.
+2. §1, F5: the four `*_bad.sl` files are standalone wrong versions of
+   one component each, not wrong whole checkers; said so. All four are
+   refused at the stated proof term, with the quoted messages, by both
+   checkers (re-checked).
+3. §1: added that the `excl` field is a spec-only lemma (any `S`
+   discharges it with `exclusive`), and that a `step` that itself
+   loops is refused (compiled: "same-level call to `step-top`
+   decreases no subterm argument"). So the only vacuity found is a
+   `step` that returns `More` forever, on some or all programs.
+4. §1, F6: the replay variant is not quite 03's option (e): it has no
+   inline bursts and replays the whole program, not one form.
+5. F2: slc agrees on programs 0 to 5 in both variants, not only 0, 1,
+   2, 3, and 5. Gave the exact file sets; the replay set needs
+   `impl.sl` (without it: "unbound name `vals`").
+6. F3: `CTop` is the root, not a (rule, premise) frame; "the root rule
+   is applied only when the checker finishes" was ambiguous and was
+   reworded. The nesting paragraph is now hedged as an expectation.
+7. F4: "exclusivity fails" without determinism was reasoning, not a
+   compiled result; hedged. The 05 citation now quotes 05's words.
+   "Accepted on the first compile" is marked as unre-checked history.
+8. F5: re-running the `ne` refusal gives `(CNe c2 c2)`, not
+   `(CNe c c)`. The citation §51 was replaced by §25 and §21: §51
+   covers absurd bodies, and `exclusive` is not `absurd` (my reading).
+   The `predates` warning was re-checked, and an explicit correct
+   `(predates p)` draws it too.
+9. F6, Q1(a), Q1(b), decision 1: "linear work" was wrong for the toy
+   (each statement's list lookups and `vals` are O(entries)); replaced
+   by "no re-elaboration". "Quadratic" for replay is marked as an
+   estimate. "Equality on heaps", "most of elaboration becomes
+   frames", "most of the cost is intrinsic derivations either way",
+   and "the simulation would dominate" are now marked [A] readings.
+10. Q1(a): "frame count grows with (rules × recursive premises)" read
+    as a product; it is one frame per (rule, premise) pair, a sum.
+11. F7: added that the driver and its printed text are outside the
+    proved statement; spelled out which direction of "no verdict iff
+    some run diverges" is evident; marked "program 6 has neither
+    derivation" as reasoning; noted that the divergence comes from the
+    toy's level-free object language.
+12. Decision 5: a stuck run is not 05 decision 4's crash (§31); reworded.
+13. §5, first rough edge: §27 does say an inner form "runs as soon as
+    it has been elaborated, before the code after it is checked", and
+    that "the forms inside a form run before it does". The gap is
+    narrower: the order of a form's items. Quoted both.
+14. §5, last rough edge: added §17's "Termination rests on levels" and
+    §62's cap, and that DESIGN.md never mentions divergence (searched).
+
+Checked and found accurate: the six programs' outputs and step counts
+(reference and slc); the three `--goal proved: PASS` sets; constant
+memory on program 6; line counts; rule counts (`Step` 9, `Elab` 4,
+`Fails` 8); the `goal.sl` and `Waiting` excerpts; that `det.sl` needs
+only `spec.sl`, so exclusivity is over spec relations; that `goal.sl`
+mentions only spec types; the DESIGN.md quotes in F1 and §5; and
+`self/elab-main.sl:159` (`eval` with a `subterm many (Nat) fuel`) and
+`443-462` (`run-code` and the `env-run-*` functions passing
+`(env-fuel e)`).
+
+Uncertain points:
+
+- Whether §17's levels, with §10's `Type : Type` and no positivity,
+  really keep every run-position form from diverging. If they do, the
+  toy's divergent program 6 has no full-Sleight counterpart, and the
+  completeness gap becomes "the checker answers whenever the spec
+  does", not "diverging runs". Not settled here.
+- Whether the mirror-shaped `Fails` fixes more of the order of
+  premises than 01 decision 5 would choose; not examined.
+- Which slc binary the original author used; the review used
+  `_build/release/slc`.
