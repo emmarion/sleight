@@ -1746,3 +1746,85 @@ Unsure, not changed:
 - Why `slc --interpret` overflows on the oversized `array-new` (FFI or model run) is untraced.
 - Key finding 4's "per input or, for a terminating toy step, for every input" compresses 05 F4's
   three sources; 05 itself lists a uniform `erased` proof only as the second source's variant.
+
+## Fourth review propagation
+
+Each track and spike file now ends with "Fourth review notes". This pass read all seven of those
+sections and the corrected body text they point to, and changed 00-summary.md and 00-glance.md to
+match. 00-summary.md's header now defines `r4.N`. New citations are to `proto/review4/`; this pass
+re-ran `01_head_name_err.sl` and `02_share_pair.sl` on both implementations, `05_stripped_absurd.sl`
+(`--no-prelude`) and `06_packed_counter.sl` (after `std/list.sl spec.sl machine.sl`) on the
+reference, and `07_loop_step_bad.sl` under `--goal proved` on the reference; each behaved as its
+file says. Nothing below is a decision.
+
+1. Key finding 15 and section 6 (01 r4.1): slc skips every run-position run after an error
+   (`self/elab-main.sl:539`, `:545`, `:739`, `:2152`); a call and `(Succ (Zero))` get no `Settled`
+   value, and only a nullary `(Zero)` does, by an untraced path. The earlier "still runs some
+   run-position code" is gone; section 6 lists only that path.
+2. Key finding 6, decision 3, 00-glance's order bullet and row 3 (01 r4.2): only a head that is a
+   form is elaborated first; a name head is elaborated after the arguments' macro calls expand
+   (`proto/review4/01_head_name_err.sl`). New rough edge 30 on §6's "The head is elaborated first";
+   rough edge 1 points to it.
+3. Decision 15, 00-glance row 15, and cross-file 4 (01 r4.3): §62 fixes 10000 and 01, 03, and 04
+   all keep it; only making it a parameter `N` is open. The limit is removed from 01's flag list;
+   the wording mark adds `N`. Cross-file 4 is resolved and deleted, its number left as a gap.
+4. Decision 14 (01 r4.4): (a) from (b) needs a second lemma, that a halting spec run is reached at
+   some finite fuel, besides monotonicity.
+5. Decision 6, 02 (C4) (02 r4.1, r4.2): the depth bound bounds steps only if it counts activations,
+   tail calls included, as `--eval-fuel` does; acceptance is a function of (source, bound, flags,
+   `read-file` oracle). Section 6 adds C4's count for a function called through data (02's unsure
+   point).
+6. Decision 12, 00-glance row 12, and decision 5 (02 Q8, r4.6): 02's "some oracle exists" needs the
+   spec's store to keep one block per `Settled` value (`proto/review4/02_share_pair.sl`); V1 is for
+   the theorem, V2 an option, the store a heap.
+7. Section 6 OCaml item (02 r4.3): the manual is quoted for 4.14; only other versions are unchecked.
+   Constant sharing beyond immutable tuples added (04's unsure point).
+8. Key finding 5 and 00-glance's `slot-eq` bullet (02 r4.4; 04 r4.8): answers vary between
+   implementations and modes, not between runs as seen; ocamlopt "can" share equal constants.
+9. Decision 8 and rough edge 7 (02 r4.5; 04 r4.3): §33 fixes one word for every value with no
+   non-erased field, "however the value was built"; the open sharing question is narrowed to values
+   with a non-erased field and extern values.
+10. Key finding 2, section 6, and 00-glance's diagonal bullet (03 r4.1): carrying (T), (C), and (E)
+    over to a rejected Q rests on part 5's per-activation measure and part 6's argument, as a
+    reading; the circular detour is dropped; the step takes `compile`'s answer on Q to be determined
+    by Q.
+11. Key finding 2 (03 r4.2): "H for all sources" is qualified to a form a function can recurse on.
+12. Decision 14, 03 (03 r4.3): 18's (a), (b), and (e) give form (i); only (c) gives three outcomes.
+13. Key finding 8 (04 r4.1): slc's per-top-level-form expansion bound is separate from §62's per-run
+    count.
+14. Rough edge 11 (04 r4.4): DESIGN.md describes runs of both the implementations and the models;
+    open is which is the meaning.
+15. Key finding 10 (04 r4.5): the README's "1000000" matches no fuel in `self/`, and exhausted
+    printer generation emits `?`.
+16. Decision 18, 04 (04 r4.2): failed doubling attempts cost less than twice the last.
+17. Key finding 12 (04 r4.7): MINIMAL.md's full list of what `mini/` lacks.
+18. Key finding 2 and 00-glance's diagonal bullet (05 r4.2, r4.3): 05's version also needs soundness
+    of the logic, and with `slot-eq` it goes through the `ENone` copy.
+19. Picture "Theorems" and section 6 Gödel item (05 r4.4, r4.5): uniform stripped-run safety alone
+    would give internal consistency (`proto/review4/05_stripped_absurd.sl`), by 05's reasoning.
+20. Decision 22 (05 r4.7): the trust premise is SOUNDNESS.md's (T), (S), and (E).
+21. Key finding 4, decision 18c, rough edge 27, section 6, section 7, and 00-glance row 18c (06 r4.1,
+    r4.2): a packed-level closure is applied with a packed `Predates`, and with a second one and the
+    counter is extended at its packed level (`proto/review4/06_packed_counter.sl`); what fails is
+    extending at a newly minted level, by §18's introduction-order rule for `prove-predates`.
+22. Key finding 17, section 7, and 00-glance's spikes bullet (06 r4.3): `run-total`'s halting within
+    its count is read from its code, not its type; `finish` stopping rests on the erased `Star`.
+    Section 7's timings give the range across reviews (06 r4.8).
+23. Key finding 17 (07 r4.2): only a self-calling `step` is tested as refused
+    (`proto/review4/07_loop_step_bad.sl`).
+24. Decision 13 (07 r4.3): the mirror-shaped `Fails`'s reason is the shared context; exclusivity is a
+    plain induction either way. Section 6 adds 07's unsure point on whether that order can decide a
+    verdict.
+25. Section 7, 07 (07 r4.1, r4.4): program 0's 26 steps are 6 statements, 19 machine steps, and the
+    final `cstep`.
+26. Rough edge 17 (01 r4.6) quotes §29's "So any `Special` or `Macro` ...". Rough edge 28 adds §20
+    and §33 (07 r4.5).
+27. To stay near 620 lines, several passages were condensed without changing their claims; a few
+    details were left to the track files: rough edge 12's closing clause on §42's "the same values",
+    decision 9's E1 alternative, and decision 10's reason for "up to crash" (all still in 02 and
+    04). The rewrap also reflowed untouched paragraphs.
+
+Unsure, not changed:
+- Whether 01's rough edge 13 (here 30) is a deviation from §6 or only a matter of which error is
+  reported; listed as a question.
+- 00-summary is 622 lines, slightly above the target.

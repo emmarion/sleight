@@ -19,24 +19,28 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
   not proved), no non-erased `compile : Src -> Verdict` with no further evidence can be faithful on every source;
   only the mechanism is tested. It does not refute owner statement 4(ii) as mathematics, nor a `compile` taking
   erased evidence of H for its one source, though, if Sleight is sound, the diagonal source cannot produce that
-  evidence for itself, while code outside it may (03's reasoning). slc does not escape it: its compile is one
-  `Program` step bounded by fuel, and its `World` blocks only the literal construction (03's reading). 05's version
-  needs T1–T4 and determinism through T3, not T5, and no quine in its `read-file` macro form (00-summary §2 item 2).
+  evidence for itself, while code outside it may (03's reasoning). That SOUNDNESS.md's claims, stated for accepted
+  programs, cover the diagonal source's run is 03's reading. slc does not escape it: its compile is one `Program`
+  step bounded by fuel, and its `World` blocks only the literal construction (03's reading). 05's version needs
+  T1–T4, determinism through T3 (not T5), and soundness of the logic; its `read-file` macro form needs no quine,
+  and with `slot-eq` it applies to the all-`ENone` copy (00-summary §2 item 2).
 - **Spikes.** The intrinsic-derivation plus `Program`-driver pattern compiles and runs at toy scale, fuel-free, on both
   implementations, but proves partial correctness only: an always-"stuck" `step`, `advance`, or `run-total` (06)
   or a never-answering `step` (07) passes, and 07's `Rejected` reason text is unconstrained. 06's first teeth check
-  tests `step` only against `Step`, not the spec. For one variant with a nondeterministic rule added, both
-  derivations exist (compiled). Neither models Sleight's own machine (00-summary §2 items 16, 17).
+  tests `step` only against `Step`, not the spec, and that 06's `run-total` halts within its count is read from its
+  code, not its type. For one variant with a nondeterministic rule added, both derivations exist (compiled).
+  Neither models Sleight's own machine (00-summary §2 items 16, 17).
 - **`slot-eq`.** §67 lets answers differ between runs, so acceptance can depend on the implementation; answers already
-  differ (interpreters vs `--build` binaries with externs on `imm_eq.sl`; slc's native build vs `--byte`,
-  `--interpret`, and the reference on `slot_eq_share.sl`). That an `ENone` answer rejects is inferred. The output
+  differ between implementations and modes, though not between runs as far as seen (interpreters vs `--build`
+  binaries with externs on `imm_eq.sl`; slc's native build vs `--byte`, `--interpret`, and the reference on
+  `slot_eq_share.sl`). That an `ENone` answer rejects is inferred. The output
   theorem therefore cannot be "the same values, up to crash"; 04 makes `slot-eq` an oracle beside the host's
   answers to `world-do` and `read-file` (00-summary §2 items 5, 18).
 - **Evaluation order.** DESIGN.md fixes eagerness and some run-position order, but not body statements, sibling arguments,
   `values` entries, or several §15 bindings in general. Elaboration order is visible through gensyms; both
-  implementations elaborate the head, then expand an application's argument macro calls, then elaborate its
-  arguments, left to right. At runtime the reference and `slc --interpret` run a head form before an argument;
-  slc's compiled order is untested (00-summary §2 item 6).
+  implementations elaborate a head that is a form, then expand an application's argument macro calls, then elaborate
+  a head that is a name, then the arguments, left to right. At runtime the reference and `slc --interpret` run a
+  head form before an argument; slc's compiled order is untested (00-summary §2 item 6).
 - **slc printer defect.** `slc --interpret` on a 100003-element list prints 49,999 `Cons _ 0` then `Cons _ _ _)`:
   a wrong value, not a §31 crash. It lies in `show-at`, which feeds `--interpret`'s final printer, `comptime-match`
   mismatch messages, `entry-value`, and `dump-context` reports; compiled slc output and the reference print all
@@ -52,7 +56,7 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 |---|---|---|---|---|
 | 1 | Where does the spec start? | (a) source bytes, small reader before a `Raw` relation (01, 04) | 14, 17 | no |
 | 2 | What does "parameterized the semantics" mean? | (b) generic over a model record (05); 04: extern table | 9, 16 | no |
-| 3 | Is the order of elaboration part of the language? | (a) fix it: head, then argument macro calls, then arguments, left to right (01) | 5, 13 | part |
+| 3 | Is the order of elaboration part of the language? | (a) fix it: form head, argument macro calls, name head, then arguments, left to right (01) | 5, 13 | part |
 | 4 | Is the runtime evaluation order fixed? | fix it, O1/O3 (02); 04 asks if order is unobservable | — | part |
 | 5 | How is `slot-eq`'s nondeterminism handled? | (a) oracle parameter (01, 02, 05; 04 treats it as one); shapes differ | 8 | part |
 | 6 | What is a compile-time crash or fuel exhaustion? | tracks disagree; 01 and 02 opposite, cross-referenced | 5, 14 | part |
@@ -63,16 +67,16 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 | 9 | Externs in the spec? | tracks disagree (02: E2; 04, 05: parameterize) | 2 | no |
 | 10 | Where may a compiled run crash? | C2, named resource events; C3 later (02); 04 asks if "a value some spec run gives, or a crash" | — | no (unsure) |
 | 11 | What happens when the spec goes wrong? | 02: S1 defined `abort`; 05: no recommendation | — | no (unsure) |
-| 12 | Compile-time values in output: trees or heap graphs? | V1 trees, unless a reason for V2 (02) | — | no |
+| 12 | Compile-time values in output: trees or heap graphs? | V1 trees for the theorem, V2 an option, the spec's store a heap (02) | — | no |
 | 13 | Intrinsic theorems, positive `Fails`, rejection contents? | intrinsic, positive `Fails`; tracks disagree on its shape | 3 | no |
 | 14 | Form of theorem 3 and hypothesis H? | tracks disagree | 6, 18 | part (budget option) |
-| 15 | Which flags are spec parameters; is expansion limit one? | 01's flag list; tracks disagree on the limit | — | part (10001st expansion) |
+| 15 | Which flags are spec parameters; is expansion limit one? | 01's flag list; §62's 10000 kept (01, 03, 04), only a parameter `N` open | — | part (10001st expansion, or `N`) |
 | 16 | What is the prelude to the spec? | tracks disagree (01: any prelude text, `--no-prelude` qualified; 05: too wide) | — | no |
 | 17 | Which compiler route? | R3, new spec-first compiler; slc for differential tests (04) | 18–23 | no |
 | 18 | How is fuel kept out of results and theorems? | tracks disagree | 17 | no |
 | 18a | Resumable checker: derivation zipper or replay? | zipper for a new kernel; replay only retrofitting slc (07) | 17, 18 | no |
 | 18b | Certified stepper invariant: erased trace or counter closure? | erased trace, as a working hypothesis (06) | — | no |
-| 18c | Apply a closure whose level is packed beside it? | no change proposed (06) | — | only if changed |
+| 18c | Apply a closure whose level is packed beside it? | no change proposed; it works with packed `Predates`, except extending at a newly minted level (06) | — | only if changed |
 | 19 | Judgment shape and staging? | 01 §4.2 layers (Γ/Σ home of run-position facts open); run relation as a parameter (01) | — | no |
 | 20 | Where does the proof stop at the output end? | O1 now, O2 + O4 later (04) | — | no |
 | 21 | `native-compute`? | N3, same trust as the output end (04) | — | no, unless 6 changes §72 |
