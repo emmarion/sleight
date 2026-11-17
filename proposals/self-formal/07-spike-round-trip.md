@@ -496,8 +496,9 @@ the cited slc lines. Errors found and changes made:
 7. F4: "exclusivity fails" without determinism was reasoning, not a
    compiled result; hedged. The 05 citation now quotes 05's words.
    "Accepted on the first compile" is marked as unre-checked history.
-8. F5: re-running the `ne` refusal gives `(CNe c2 c2)`, not
-   `(CNe c c)`. The citation §51 was replaced by §25 and §21: §51
+8. F5: re-running the `ne` refusal at `FAssertHead` gives
+   `(CNe c2 c2)`, not `(CNe c c)` (the second review found that
+   `(CNe c c)` is what the `FNeedFact` site gives). The citation §51 was replaced by §25 and §21: §51
    covers absurd bodies, and `exclusive` is not `absurd` (my reading).
    The `predates` warning was re-checked, and an explicit correct
    `(predates p)` draws it too.
@@ -543,3 +544,60 @@ Uncertain points:
   premises than 01 decision 5 would choose; not examined.
 - Which slc binary the original author used; the review used
   `_build/release/slc`.
+
+## Second review notes
+
+A second adversarial review read DESIGN.md in full and every file in
+`proto/roundtrip/`, and re-ran at 07692f2 (no code change since
+669b328) all six programs in both variants under the reference and
+`slc --interpret`, the three `--goal proved` sets under both checkers,
+program 6's memory (22 MB, flat, both variants), the four refusals, the
+looping-`step` refusal, the two `ne` refusals, the `p0` refusal, and
+the three `predates` variants of `drive.sl`. All matched except as
+below. Errors found and changes made:
+
+1. §1 said each `Program` step "runs one machine step and the checker
+   resumes". A `Program` step is one `cstep`: a machine step while
+   `Waiting`, otherwise one statement or the resumption after a halt.
+   Reworded.
+2. §1 said the four wrong components each have "the correct
+   component's signature". Only `assert_bad.sl` and `need_bad.sl` match
+   an existing function's signature (`check-assert`, `check-need`);
+   `eval_bad.sl` is one case of `mstep` and `settle_bad.sl` one
+   transition of `cstep`. Reworded.
+3. §1 said exclusivity "needs" determinism (a [C] bullet stating a
+   reading). Now "its proof uses", plus a compiled counterexample: F4's
+   [A] "I expect exclusivity could then be false" is now [C].
+   `proto/review2/07_nondet_spec.sl` (`spec.sl` plus a rule `SNumUp`)
+   with `proto/review2/07_nondet_both.sl` builds both derivations for
+   `Let (Num 0); Assert 0 CSucc`, and prints `(MkBoth _ _ _)`;
+   `det.sl` against that spec is refused at `step-det` (`det.sl:48`,
+   missing branch for `SNumUp`).
+4. Vacuity, §1 and F7: besides a `step` that returns `More` forever,
+   the `why` string of `Rejected` is unconstrained, so a correct `Fails`
+   can come with any reason text. Added. F7 also now says that
+   `drive.sl` calls `cstep` and `rstep` directly, not through a
+   `Certified` value.
+5. F5: the bare-`ne` message depends on the site; `(CNe c c)` is the
+   `FNeedFact` one. Added, and first-review note 8 qualified.
+6. §5, first rough edge: §6 ("The head is elaborated first") and §15
+   (hoisted argument bindings placed "just before the statement or
+   final form that contains the call") fix part of the order; added
+   that neither orders two arguments.
+7. §5, last rough edge: §42's "the driver's loop over total functions"
+   was missing; it, with §17, suggests that functions are meant to
+   halt. Added; the gap is now "not said outright".
+8. Header: Oxford comma; noted the second review's commit.
+
+Points I am unsure of:
+
+- Every "by construction" claim (F3) rests on Sleight's erased logic
+  having no closed proof of `False`; with §10's `Type : Type` and no
+  positivity, nothing in DESIGN.md or this spike shows that. Brief item
+  1 says no consistency theorem is expected.
+- F5's "first version" histories (the bare `ne`, the erased `p0`) were
+  reproduced by editing today's files, not from the original drafts.
+- That the replay variant cannot loop on a mismatched head answer: it
+  would ask again and append, never dropping the bad answer. I read
+  the answers as always produced in request order, so it does not
+  arise here; not proved.

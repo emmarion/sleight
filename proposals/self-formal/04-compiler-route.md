@@ -267,7 +267,8 @@ definition whose header is `(erased name :`.
   non-tail control overflowed (`proto/04-compiler-route/tc3.ml`, `tc4.ml`).
   [T] Re-run in review: the call in `tc3.ml` goes through
   `caml_apply20` and is emitted as a `jmp`; a direct 20-argument call to
-  a known function is also a `jmp` (no flambda).
+  a known function is also a `jmp` (no flambda;
+  `proto/review2/04-tc-direct.ml`, 10^7 iterations under a 1 MB stack).
   [P] I did not find a platform where OCaml drops a tail call with many
   arguments. Whether `tail` (§19: "A claim the compiler cannot honour is an
   error") holds on every OCaml target remains unverified.
@@ -749,7 +750,8 @@ Not DESIGN.md, but found:
 
 Evidence files: `proposals/self-formal/proto/04-compiler-route/`
 (`order.sl`, `ord2.sl`, `deep.sl`, `slot_eq_share.sl`, `tc3.ml`,
-`tc4.ml`, `share.ml`, `argorder.ml`). Compile them with
+`tc4.ml`, `share.ml`, `argorder.ml`), and `proto/review2/04-deep-fn.sl`
+and `proto/review2/04-tc-direct.ml` from the second review. Compile them with
 an slc built by `self/release.sh` and with `ocamlfind ocamlopt` (4.14.1).
 
 ## Review notes
