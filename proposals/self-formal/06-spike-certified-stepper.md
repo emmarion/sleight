@@ -6,19 +6,20 @@ Where it and DESIGN.md disagree, DESIGN.md is right.
 
 Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
 **[ran]** is a run tonight of the reference (`_build/default/bin/main.exe`,
-commit d6644d9; the review re-ran everything at ad07c35) and, where said,
-of `_build/release/slc`. The prototype is
-`proto/stepper/`. Every command line starts with `std/list.sl spec.sl
-machine.sl`.
+commit d6644d9; the first review re-ran everything at ad07c35, the
+second at 07692f2, with no change to `bin/`, `lib/`, `src/`, `self/`, or
+`std/` in between) and, where said, of `_build/release/slc`. The
+prototype is `proto/stepper/`. Every command line starts with the
+repository's `std/list.sl`, then `spec.sl machine.sl`.
 
 ## 1. Summary
 
 - A tiny language (registers, a heap of mutable blocks with allocate,
-  read and write-in-place, `if`, `while`) has a big-step spec `Runs m c
+  read, and write-in-place, `if`, and `while`) has a big-step spec `Runs m c
   m2` (`spec.sl`). A total, non-recursive `step` over an explicit command
   stack and memory, driven one `Program` continuation per step, runs it
   with no fuel. The reference accepts all of it and runs it [ran]; so do
-  `--no-extern`, `--build`, `slc --interpret` and `slc --build` [ran].
+  `--no-extern`, `--build`, `slc --interpret`, and `slc --build` [ran].
 - The theorem is the type of `advance`: its `Halted` result carries
   `(erased (Runs m0 c0 mf) d)`, for the `c0` and `m0` that the erased
   trace argument starts from, so a run started with `TNil` gets it for
@@ -49,15 +50,16 @@ machine.sl`.
 
 `Val` is `VNum n | VPtr a`; `Mem` is `MkMem env heap`, registers as a
 `(List (Val))` and the heap as a `(List (List (Val)))`, an address being
-a position. `Op` has `OSet`, `OMov`, `OPred`, `OAdd`, `OAlloc`, `ORead`
+a position. `Op` has `OSet`, `OMov`, `OPred`, `OAdd`, `OAlloc`, `ORead`,
 and `OWrite`; `Cmd` has `CSkip`, `COp`, `CSeq`, `CIf` (zero test) and
 `CWhile`. The atomic semantics `RunOp m o m2` is stated with the
-prelude's `Nth`, `SetNth`, `Repeat` and `Add` (`lib/prelude.sl:1281-1302`,
+prelude's `Nth`, `SetNth`, `Repeat`, and `Add` (`lib/prelude.sl:1281-1302`,
 `:33-36`) and one new relation, `Alloc` (append at the end, address =
 old length). A write is `SetNth` on the block, then `SetNth` on the heap
 at the same address, so an alias sees it: `run.sl` writes `100` through
-register 5 (a copy of the list's head pointer in register 1) and then
-sums the list from register 1 [ran: `114`].
+register 5 (a copy of register 1, the list's head pointer), then copies
+register 1 to register 2 and sums the list through register 2 [ran:
+`114`].
 
 `Runs` has five rules (`spec.sl:69-78`). `CIf` goes through a relation
 `Pick m x c1 c2 c`, and `CWhile` unfolds: `ExWhile` derives `Runs m
@@ -68,7 +70,7 @@ may go through an erased field.").
 
 Determinism, `runs-fn : (Runs m c m1) (Runs m c m2) -> (Eq (Mem) m1 m2)`,
 is accepted [ran]. It uses `runop-fn` and `pick-fn`, which use
-`nth-fn`, `setnth-fn` and `repeat-fn` from `std/list.sl` and `add-fn`
+`nth-fn`, `setnth-fn`, and `repeat-fn` from `std/list.sl` and `add-fn`
 from `lib/prelude.sl:407`. A wrong final step in it is refused [ran].
 
 ### F2. The stepper and the soundness theorem (`machine.sl`)
@@ -77,7 +79,7 @@ from `lib/prelude.sl:407`. A wrong final step in it is refused [ran].
   one rule per command, mirroring `Runs` (`machine.sl:11-21`).
 - `RunsAll m k m2` lifts `Runs` to stacks (`RANil`, `RACons`).
 - `step-back : (Step k m k2 m2) (RunsAll m2 k2 mf) -> (RunsAll m k mf)`
-  is non-recursive: one case per `Step` rule, each two or three lines
+  is non-recursive: one case per `Step` rule, each one to four lines
   (`machine.sl:30-44`). This is the "reverse accumulation" lemma.
 - `Trace k0 m0 k m`, with `TNil` and `TSnoc`, records the steps taken,
   newest outermost; `trace-back` folds `step-back` over it by `subterm`
@@ -91,17 +93,19 @@ from `lib/prelude.sl:407`. A wrong final step in it is refused [ran].
   apart, and returns `Halted mf (erased (Runs m0 c0 mf))`
   (`machine.sl:182-189`). So the type of `advance` is the soundness
   theorem: whatever the machine halts with, the spec relates the program
-  to it. `c0` and `m0` are pinned by the trace: the only trace a caller
-  can start with is `TNil (c0 :: nil) m0` at state `(c0 :: nil, m0)`
-  (`machine.sl:26`), and `Running` hands back a trace with the same
-  `c0` and `m0` (`machine.sl:178`). It says nothing about a run that
-  never halts or gets stuck.
+  to it. `c0` and `m0` are pinned by the trace's type: any trace a
+  caller supplies is a chain of `Step` derivations from
+  `(c0 :: nil, m0)` to the current state, the one for the start state
+  being `TNil (c0 :: nil) m0` (`machine.sl:26`), and `Running` hands
+  back a trace with the same `c0` and `m0` (`machine.sl:178`). It says
+  nothing about a run that never halts or gets stuck.
 - `run.sl`'s `drive` wraps `advance` in one `def-unique` continuation per
   step, as `proto/theorems/drive.sl` does. The driver is the only loop
   (§42: "It never recurses, so an unbounded interaction is the driver's
   loop over total functions."). Output [ran]: `halted after 151 steps;
   registers 0 #4 0 114 5 #4; heap [ 5 0 ] [ 4 #0 ] [ 3 #1 ] [ 2 #2 ] [
-  100 #3 ]`.
+  100 #3 ]`. `drive`'s own type says nothing about `advance`'s
+  outcome, so the driver and the text it prints are outside the theorem.
 
 Checks that the theorem has teeth [ran, files in the session
 scratchpad]: swapping `c1` and `c2` in `step`'s `CSeq` case is refused
@@ -119,8 +123,9 @@ machine is consistent with itself but not with the spec, is refused in
 - `finish` iterates `advance` by recursion on an erased
   `(Star k m nil mf)`: `step-det` equates the machine's step with the
   derivation's first step, so the rest of the derivation is a subterm.
-  On the empty stack the derivation's `StarRefl` case is refuted by the
-  step itself (`(absurd (StarRefl _ _) s)`). This is the Bove–Capretta
+  When `advance` returns `Running`, the derivation's `StarRefl` case,
+  which would make the stack empty, is refuted by the step `s` that
+  `Running` carries (`(absurd (StarRefl _ _) s)`). This is the Bove–Capretta
   shape of 05 F4, here over the same `advance` the driver uses.
 - `run-total : (many (Cmd) c0) (many (Mem) m0) (erased (Mem) mf)
   (erased (Runs m0 c0 mf) spec) -> (many (Agrees c0 m0 mf) a)`, where
@@ -130,7 +135,7 @@ machine is consistent with itself but not with the spec, is refused in
   $ Nil _)` [ran, also `--no-extern` and `slc --interpret`]. As 05 F4
   says of this shape, a caller needs a `Runs` derivation from somewhere.
 - `AgreeStuck` is still a possible result. Refuting it needs progress:
-  the helpers return `NthNo`, `SetNo`, `OpNo` and `PickNo` with no
+  the helpers return `NthNo`, `SetNo`, `OpNo`, and `PickNo` with no
   evidence, so nothing connects a failure to the derivation. I did not
   do this (§3 Q2). So as built, the completeness half proves only "if
   this machine halts, it halts with `mf`, and it halts or sticks within
@@ -214,12 +219,14 @@ fields) are the main readability cost; patterns are counted by hand.
 
 [ran, one machine, single runs]: the reference takes 0.44 s on a
 one-line file, 0.53 s on `std/list.sl spec.sl machine.sl complete.sl`;
-`slc --interpret` 0.26 s and 0.33 s. Running 7821 steps takes 1.5 s in
-the reference interpreter, 0.56 s under `slc --interpret`, and under
-0.01 s compiled (`--build`); 26021 steps take 11.9 s, 3.6 s and 0.05 s.
-The growth is probably the list heap, which every step walks. Peak
-memory stays 22–41 MB, consistent with the erased trace not being built
-at run time, which erasure (§14, §27) already implies.
+`slc --interpret` 0.26 s and 0.33 s. The long runs are `run.sl` with
+both loop bounds `5` replaced by `300` (7821 steps) and by `1000`
+(26021 steps). 7821 steps take 1.5 s in the reference interpreter,
+0.56 s under `slc --interpret`, and under 0.01 s compiled (`--build`);
+26021 steps take 11.9 s, 3.6 s, and 0.05 s. The growth is probably the
+list heap, which every allocation, read, and write walks. Peak memory
+of the interpreters stays 22–41 MB, consistent with the erased trace
+not being built at run time, which erasure (§14, §27) already implies.
 
 ## 3. Options
 
@@ -241,8 +248,9 @@ at run time, which erasure (§14, §27) already implies.
    `Runs`. *Pro:* soundness is immediate (the trace is the derivation).
    *Con:* determinism and composition are then lemmas about `Star`.
    For runs that end on the empty stack the two agree here (`runs-star`
-   one way; `trace-back` the other, `Trace` being `Star` read backwards),
-   so this looks like a presentation choice.
+   one way; `trace-back` the other, `Trace` being `Star` read backwards,
+   though no lemma converting a `Star` to a `Trace` is written), so this
+   looks like a presentation choice.
 5. **Closure invariant at a fixed level with an erased step counter**
    (F4.1, `ho_counter.sl`, added in review). *Pro:* no `Trace` type and
    no fold; the halt applies the closure to `RANil`. *Con:* a ghost
@@ -253,7 +261,8 @@ at run time, which erasure (§14, §27) already implies.
 
 1. **Positive failure evidence**: `NthNo` carries a `NoNth` derivation,
    and each failure site in `run-op` and `pick` refutes the given step
-   with `nth-fn`. I count 26 failure sites. *Cost:* perhaps 60–80 lines.
+   with `nth-fn` or a like lemma for the other relations. There are 26
+   failure sites (24 `OpNo` in `run-op`, 2 `PickNo` in `pick`). *Cost:* perhaps 60–80 lines.
 2. **A well-formedness invariant** (register count, pointer validity,
    value shapes) carried in the state, under which failure sites are
    unreachable. This is type soundness of the object language. *Cost:*
@@ -274,8 +283,8 @@ at run time, which erasure (§14, §27) already implies.
 
 1. **Is "spec as relation, stepper returns an erased derivation at halt,
    invariant as an erased trace" the pattern to scale up?** Recommended:
-   yes, as a working hypothesis: it is first order and compiled at first
-   attempt. A fixed-level closure with an erased counter (Q1.5) is an
+   yes, as a working hypothesis: it is first order, and by the author's
+   report (F4) it compiled at first attempt apart from F4's items. A fixed-level closure with an erased counter (Q1.5) is an
    accepted alternative, so the choice between them is one of
    presentation. Everything in the compiler-route proposals that relies
    on a certified stepper depends on one of the two.
@@ -312,11 +321,12 @@ at run time, which erasure (§14, §27) already implies.
 - That no other placement of levels lets a stepper apply a packed-level
   closure (F4.2); the two shapes above were tried, plus the fixed-level
   counter of F4.1, which avoids packing.
-- The `--build` timings of F6 were not re-run in review.
-- The Q2.1 line estimate and the count of 26 failure sites.
+- The `--build` timings of F6 were not re-run by the first review; the
+  second review got 0.00 s and 0.06 s.
+- The Q2.1 line estimate.
 - That the prelude's `Array` API would carry these proofs over (Q3.2).
 - That the technique scales to Sleight's own machine: rule count, frame
-  kinds, `at`/cell reading-back and the oracle of 02 were not modelled.
+  kinds, `at`/cell reading-back, and the oracle of 02 were not modelled.
 - Timings are single runs on one machine; `_build/release/slc` was used
   as found, without checking which commit it was built from.
 

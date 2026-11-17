@@ -3,16 +3,19 @@
 Written overnight by a Claude agent, as one track of the self-formalization
 exploration. It is a proposal and an agent's reading. Nothing in it is
 approved or decided, and where it and DESIGN.md disagree, DESIGN.md is right.
+"Owner item n" and "decision 3" refer to the brief's list of owner
+decisions, which is an earlier session's paraphrase, not the owner's words.
 
 ## 1. Summary
 
-- slc has one fuel that can change a verdict: the compile-time interpreter's
+- slc has one fuel known to change a verdict: the compile-time interpreter's
   depth bound (default 10⁹, fresh for each run-position form, each macro
   run, and each step of an interpreted `Program`). Running out is reported
   as a refusal of the form, which DESIGN.md does not obviously license. The
   other "fuels" are a language rule (§62's 10000 expansions), erased
   termination measures, and a handful of bounds that a measure proof could
-  replace.
+  replace. One of those, `merge-opens` (F3 row 6), would accept early if
+  its bound were too small; I believe it is not, but did not prove it.
 - The prototype (`proto/fuel/`) shows a CEK interpreter and a toy checker
   that suspends into it for compile-time splices. Every function in it is
   checked total. The only unbounded loop is the driver's loop over
@@ -32,9 +35,10 @@ approved or decided, and where it and DESIGN.md disagree, DESIGN.md is right.
   closures was compiled, not a CPS `bind`. I did not try level-indexed
   continuations.
 - A diagonal argument (F6; its mechanism is compiled in
-  `proto/fuel/diagonal.sl`, the rest is my reasoning) says that no
-  non-erased Sleight function `compile : Src -> Verdict` that takes no
-  further evidence can agree with the spec on every source. A source's
+  `proto/fuel/diagonal.sl`, the rest is my reasoning) says that, if
+  Sleight's functions terminate (SOUNDNESS.md's (T), argued there, not
+  proved), no non-erased Sleight function `compile : Src -> Verdict` that
+  takes no further evidence can agree with the spec on every source. A source's
   macro can `read-file` its own text, call `compile` on it, and expand to
   a `compile-error` exactly when the answer is "accept". So "every source
   is accepted or rejected" cannot be the type of such a function. It can
@@ -113,16 +117,16 @@ approved or decided, and where it and DESIGN.md disagree, DESIGN.md is right.
 
 | # | Where | What it bounds | On exhaustion | Removable? |
 |---|---|---|---|---|
-| 1 | interpreter `eval`/`apply`, `self/elab-main.sl:159-190, 405-430`. Default `1000000000` in `self/core.sl:3614` (`MkMacros ... 1000000000`), `--eval-fuel` in `self/main.sl:121-132` | Depth of application nesting. Two units per interpreted call, and tail calls spend too. Fresh per run-position form (`elab-main.sl:450-462, 550, 744`), per macro run (`:525`), and per interpreted `Program` step (`interp.sl:109,143`) | `BError "out of fuel"`. The form is refused like any runtime error (MANUAL.md:158-162) | Only by restructuring (options below). This is the fuel that matters. |
+| 1 | interpreter `eval`/`apply`, `self/elab-main.sl:159-190, 405-430`. Default `1000000000` in `self/core.sl:3614` (`MkMacros ... 1000000000`), `--eval-fuel` in `self/main.sl:121-132` | Depth of application nesting. Two units per interpreted call, and tail calls spend too. Fresh per run-position form (`elab-main.sl:450-462, 550, 744`), per macro run (`:525`), and per interpreted `Program` step (`interp.sl:109,143`) | `BError "out of fuel"`. The form is refused like any runtime error (MANUAL.md:163-165) | Only by restructuring (options below). This is the fuel that matters. |
 | 2 | Expansion budget: `expansion-limit` 10000 (`self/elab.sl:26`), checked globally at `elab-main.sl:559-560`. Also threaded as the structural `fuel` parameter of the elaborator block, reset to 10000 per top-level item (`elab-main.sl:3379, 3387, 3391`) | §62's language rule. The per-item parameter is also the block's first termination measure | Error "more than 10000 macro expansions" | The global count is the spec and stays. The per-item parameter looks like a measure the global count always hits first. I have not verified that. |
-| 3 | Termination measures: `xf`, `callbacks`, `hop-k` (`elab-main.sl:143-159`; erased in `eval`, though `expand` takes `xf` at `many`, `elab-main.sl:555`), `Steps` (`elab.sl:1242`, whose `SS` field is `many`), and the sugar budget | Termination evidence. I did not check that every zero case is refuted. The sugar budget's zero case is an internal error (README "Choices") | Refuted or internal error | Already not fuel in the sense of an extra outcome. |
+| 3 | Termination measures: `xf`, `callbacks`, `hop-k` (`elab-main.sl:147-159`; erased in `eval`, though `expand` takes `xf` at `many`, `elab-main.sl:555`), `Steps` (`elab.sl:1241-1244`, whose `SS` field is `many`), and the sugar budget | Termination evidence. I did not check that every zero case is refuted. The sugar budget's zero case is an internal error (README "Choices") | Refuted or internal error | Already not fuel in the sense of an extra outcome. |
 | 4 | Generated printer `show-fuel` 100000 (`self/emit.sl:4, 1379-1438`) | Recursion through types when emitting printers | Falls back to `"show_any"` or empty arms (`emit.sl:1380, 1417, 1438`). This changes emitted code, not a verdict | Possibly, by a measure on the memo. Unverified. |
 | 5 | Store walks: `list-refs` and `rope-walk` with fuel = heap size or twice it (`self/eval.sl:171-180, 455-473`), and `heap-strs`/`heap-pairs`/`heap-jobs` with 1000000 (`eval.sl:1018-1055`) | Walking lists in the mutable store | `None` or `Fail`, then an error block | Needs either an acyclicity measure (addresses pointing below) or a visited set. I could not determine whether `hwrite` can make cycles. |
 | 6 | Length-bounded loops: `str-split-fuel` (`self/base.sl:100-109`, fuel = string length), `parse-pieces` (`emit.sl:138-153`), `frame-chain` (`elab.sl:816-828`, fuel = the frame id itself), and `merge-opens` (`elab.sl:1987-2004`, fuel = count of opened objects + 1) | Loops whose real measure is a length or an id | Silent truncation or an early `UOk` | Yes: with a decrease proof, as `reader.sl` already does for `str-split` with an `Add` invariant (README "reader.sl"). |
 | 7 | Reference: `lib/eval.ml:4, 70-79`, `fuel : int option ref = ref None` | No bound unless `--eval-fuel` is given | `Runtime "out of fuel"` | The reference diverges on a diverging compile-time run. |
 
 Note: self/README.md says the interpreter's fuel is "1000000". The code
-(`core.sl:3614`) and MANUAL.md:163 say 1000000000. The README looks stale.
+(`core.sl:3614`) and MANUAL.md:162 say 1000000000. The README looks stale.
 
 ### F4. Compiled checks of the suspension patterns (rule 2)
 
@@ -168,7 +172,8 @@ The file behind 3 was not saved. Reproduce each from the text here.
    `drive`'s body and closing over `many` state, and it calls `drive`.
    The constraint I hit twice: **every function a step calls must be
    minted before `P`** ("`(level-of arg-nat)` was not in scope when level
-   `P` was minted"). The driver's level must come last in the file order.
+   `P` was minted"). So `P` must be minted after the level of every
+   function a step calls.
 
 ### F5. Prototype results
 
@@ -249,7 +254,12 @@ since `read-file` supplies the text. `Src` must carry every file the
 unit reads (§65) and the flags. Q can read each file of its unit, since
 each is a source file. Q's spec run consists of one macro run of a total
 function plus ordinary elaboration, so it ends. Q's spec verdict is the
-opposite of `compile(Q)`, which contradicts the assumption.
+opposite of `compile(Q)`, which contradicts the assumption. This takes
+`compile`'s answer on Q to be the same inside Q's run as outside it. If
+`compile` calls `slot-eq`, whose answer may differ between runs (§67),
+the argument applies instead to its copy with every `slot-eq` answered
+`ENone`, which §67 allows an implementation to do always, so that copy
+must be faithful too (my reasoning).
 
 So, if Sleight's functions do terminate, no such function is a faithful
 compiler for all sources. It is the halting-problem form of
@@ -271,11 +281,14 @@ that applies here.
   hypothesis-free Sleight `compile`.
 - A Sleight function `compile : (many Src s) (erased (H s) h) -> Verdict`.
   Q would have to produce erased evidence of H(Q) inside Q, and nothing
-  above says it can. My inference is that such a function can recurse
-  on an erased step count, as slc's `eval` recurses on `(subterm erased
-  (Nat) xf)` (`elab-main.sl:159`). For that, a step's result must be
-  related to its input by an erased relation returned with it, because
-  a type holds no call (§9). Untested.
+  above says it can. Such a function can recurse on an erased halting
+  derivation: `tests/erased_subterm.sl` recurses on an erased `subterm`
+  argument, and 05's `proto/theorems/bove.sl` does so on an erased
+  `Halts` derivation, with each step returning an erased relation
+  between its input and its output, since a type holds no call (§9).
+  Both are accepted. That this scales to a compiler is untested. (slc's
+  `eval` is not an instance: its `xf` stays fixed within an evaluation,
+  whose recursion is bounded by the `many` fuel of F3 row 1.)
 
 **H for all sources (inference, untested).** Suppose a Sleight
 function returned, for every source, erased evidence that the stepper
@@ -297,11 +310,15 @@ sources in this form.
   as it fixes. A faithful stepper then cannot finish on Q within that
   bound, which does not contradict anything (my reading). Within §62's
   cap, the expander gives user code only bounded iteration.
-- slc already takes this escape. Its elaborator threads `ElabWorld`, a
+- slc does not take this escape: its whole compile runs inside one
+  `Program` step (F2), and it is total because of its fuel (F3 row 1),
+  which already makes it unfaithful on sources whose compile-time runs
+  nest deeper than the bound. Its elaborator does thread `ElabWorld`, a
   newtype over a placed `World` (`self/eval.sl:1492-1494`, built in
-  `self/main.sl:133`). So a source cannot call slc's elaborator at
-  compile time, and F6 does not apply to slc as written. It applies to
-  a World-free `compile` that a formalization might extract.
+  `self/main.sl:133`), so a source cannot call slc's elaborator at
+  compile time. That alone is no escape, in my reading: a `compile` that
+  uses its `World` only to read files could take their contents from
+  `Src` instead and need no `World`, and F6 applies to that version.
 
 README.md's strength remark ("about IΣ₂ ... ordinal ω^ω^ω") is attributed
 there to "the author". I make no claim about it, and the argument above
@@ -319,14 +336,18 @@ happens at these places:
 - `unary`, at most 1024 successors, checked "with `nat-cmp`" (§49), and
   `prove-literal-lt`, which decides with `lt-dec` and "relies on the
   evaluator (§29)" (§45);
-- `native-compute`, which runs compiled code and an external toolchain
-  (§72);
+- `native-compute`, which runs compiled code (§72), through an external
+  compile in both implementations (MANUAL.md:195);
 - `read-file`, which is host I/O (§65).
 
 The top level cannot loop (§3, §20), apart from macro re-expansion,
 which §62 caps. So H would follow from two things:
 - SOUNDNESS.md's claims (T), totality, and (C), checking terminates,
-  applied to the code that is run;
+  applied to the code that is run, and (E) as well if the spec's run
+  strips erased positions. SOUNDNESS.md part 1 makes these claims
+  relative to the shipped prelude and says they "do not cover" a
+  `--no-prelude` program with its own extern models or `def-prim`
+  signatures, so H does not follow from them for such a program;
 - host assumptions. `read-file` must not block, for instance on a FIFO.
   DESIGN.md does not say whether that can happen. The external compile
   and run under `native-compute` must also halt.
@@ -347,7 +368,7 @@ count at `elab-main.sl:559-560`.
 
 **(a) The whole compiler as a state machine stepped by `Program`.**
 - Design: defunctionalize the elaborator's 95-function main block
-  (`elab-main.sl:158` onward, about 3240 lines) and the interpreter into
+  (`elab-main.sl:158-3234`, about 3080 lines) and the interpreter into
   one `MState` with explicit frames, as `machine.sl` does at toy scale.
   slc's `start` becomes `drive init`.
 - Pros:
@@ -529,7 +550,8 @@ source whose compile-time run diverges has no derivation.
 - F6 beyond its mechanism. `diagonal.sl` checks the mechanism with a toy
   `compile`, but no Q holds a faithful compiler. slc's elaborator cannot
   play that part (it needs a `World`). The steps marked as inference in
-  F6 (erased-step-count recursion, and H not provable) are untested.
+  F6 (that recursion on an erased halting derivation scales from 05's toy
+  to a compiler, and H not provable) are untested.
 - That the per-item expansion parameter (F3 row 2) never binds before
   the global count.
 - Whether the store can hold cycles (F3 row 5).

@@ -49,9 +49,9 @@ Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
   confluence proof needed), and leave order-independence as an optional
   later theorem.
 - `slot-eq` is nondeterministic by §67, and in practice too: the
-  reference interpreter answers `ENone` where compiled code with externs
-  answers `ESome` [compiled]; under `--no-extern` the compiled code also
-  answers `ENone`. Recommendation: make the spec a deterministic
+  reference interpreter and `slc --interpret` answer `ENone` where code
+  compiled by either with externs answers `ESome` [compiled]; under the
+  reference's `--no-extern` the compiled code also answers `ENone`. Recommendation: make the spec a deterministic
   function of the program, the world's answers, and an oracle tape of
   `slot-eq` bits; the compiler theorem says some oracle exists.
 - Crash: "agrees or crashes" has no teeth. Recommendation: allow a crash
@@ -158,9 +158,12 @@ Fixed by DESIGN.md:
    inside a form run before it does, and the statements of a `let`'s
    right-hand side complete before the enclosing `let` does".
    Run-position statements are sequential (§32: "since run-position
-   statements are sequential"). (reading) With §6 item 1, "The head is
-   elaborated first", a head that is a form runs, in run position, before
-   the argument forms are elaborated, so before they run.
+   statements are sequential"). §6 item 1: "The head is elaborated
+   first" and "A head that is a form is `Settled` in run position, since
+   it runs as soon as it is elaborated (§29)"; §28: in run position each
+   call, match, constructor application and `coerce` "runs as soon as it
+   is elaborated". (reading) So in run position a head that is a form
+   runs before the argument forms are elaborated, so before they run.
 4. Skipped calls and at-matches still evaluate their arguments and
    scrutinee (§39, §40).
 5. (reading) World requests are totally ordered by dataflow: `world-do`
@@ -181,7 +184,7 @@ Not fixed in general (DESIGN.md does not say, as far as I found):
 - Head against arguments outside run position. §15 names only
   arguments. §29 speaks of "the elaborator's own binders for its head,
   arguments and scrutinee (§15)", but §15 binds no head and no scrutinee
-  (§5 below).
+  (rough edge 2 in section 5 below).
 - The order of the entries of a `values`, and of the stores of one
   invocation.
 
@@ -235,14 +238,17 @@ both.
   elaboration spec, separate from runtime evaluation order.
   `native-compute` results are fieldless constructors (§72), so sharing
   plays no part.
-- `Measure` (`lib/prelude.sl:1386`) answers wall and CPU time and GC
-  counts "since the Program began", so a program can observe cost, and
+- `Measure` (`lib/prelude.sl:1386`) answers wall and CPU time, words
+  allocated, and GC counts (`MkUsage`, `lib/prelude.sl:1331-1335`),
+  "totals since the Program began", so a program can observe cost, and
   through it the order of work between two requests. In a spec where the
   world's answers are inputs, this is absorbed by quantifying over
   answers, not by order-independence.
-- Not covered: crashes, stuck states, and divergence. In `(f
-  (world-do w (WriteOut "x")) (array-new _ huge))`, the order decides
-  whether "x" is written before a crash. Within one `Program` step,
+- Not covered: crashes, stuck states, and divergence. In a body whose
+  statements are `(let ((unique w2) (many _)) (world-do _ w (WriteOut
+  "x")))` and `(let ((erased xs) (unique a) (erased p)) (array-new _
+  huge))`, with no dataflow between them, the order decides whether "x"
+  is written before a crash. Within one `Program` step,
   divergence and reaching absurd code look possible only if erased proofs
   can be forged or §17's termination argument fails (unproved); across
   steps, an unbounded run is allowed (§42). No consistency theorem is
@@ -280,8 +286,10 @@ quantified over `slot-eq` oracles, does not depend on evaluation order.
   interpreter uses OCaml `==` (`lib/eval.ml:61`).
 - [compiled] `imm_eq.sl`: `slot-eq` of `(add 1 2)` and `3` answers
   `ENone` in the reference interpreter (with or without externs) and
-  `ESome` in the compiled binary (`--build`) with externs; under
-  `--no-extern --build` it answers `ENone`. All are allowed by §67.
+  under `slc --interpret`, and `ESome` in the binary that either the
+  reference or slc compiles (`--build`) with externs; under the
+  reference's `--no-extern --build` it answers `ENone`. All are allowed
+  by §67.
 - `tests/slot_eq.sl` expects `ESome` (`1`) for a slot taken before an
   in-place `grow` and compared after it. The tests fix behaviour that
   §67 leaves free.
@@ -312,15 +320,15 @@ check whether such a choice is consistent.
 ### 2.6 The prototype
 
 `proto/dyn/machine.sl` (163 lines) is checked with the reference, with
-and without `--no-extern`, and prints `imm 1`, or `imm 0` with an
-all-false oracle. It has:
+and without `--no-extern`, and with `slc --interpret`, and prints `imm
+1`, or `imm 0` with an all-false oracle. It has:
 - `Word` (`WImm n | WPtr a`), mutable `Block`s in a heap, and ANF code:
   variables, constructor allocation, `cell-alloc`, unique invocation
   (an in-place write), `slot-eq` reading an oracle bit, a closure, an
   application, `let`, and a field read.
 - A total, non-recursive `step` (list helpers recurse structurally) over
-  `Eval | Ret` configurations with a `FLet` continuation stack. A call
-  in tail position pushes no frame.
+  `Eval | Ret` configurations with a `FLet` continuation stack. Only `KLet`
+  pushes a frame, so a call in tail position pushes none.
 - A fuel-free run: each `Program` continuation performs one step
   (`drive`, `def-unique`), so the driver's loop (§42) is the only
   unbounded iteration.
@@ -329,7 +337,9 @@ all-false oracle. It has:
   during review, not committed) in which `drive` takes the oracle as an
   `(Fn O (many (Nat) i) -> (many (Bool) b))` and a step counter, with no
   tape, also checks and prints `imm 1` [compiled], so the driver loop
-  alone needs no bound.
+  alone needs no bound. A like variant, with a fixed all-true oracle
+  function and a step counter, is kept as
+  `proto/review2/machine_fn_oracle.sl` and prints `imm 1`.
 
 ## 3. Options
 
@@ -338,7 +348,7 @@ all-false oracle. It has:
 - **R1 (recommended): post-erasure code, as DESIGN.md says.** The
   machine code is the output of elaboration: erased positions gone,
   `at` entries replaced by the renames the elaborator supplies (§36),
-  skipped calls, skipped stores, at-matches, coerces and placings as
+  skipped calls, skipped stores, at-matches, coerces, and placings as
   renames. Pros: matches §27 and §29, is close to what slc interprets
   (slc keeps `CErased` placeholders that evaluate to a token block), and
   no erased value needs a word. Cons: which calls are skipped is decided
@@ -404,8 +414,12 @@ Values as words:
   as in slc today. Cons: a spec that exposed order or arithmetic would
   need a theorem that nothing uses it. Choosing A1 removes the question.
 - **A3: everything boxed (slc's interpreter).** Pros: matches slc today.
-  Cons: loses §33's identities (`vacant-slot` = `Nat` 0, tag slots), so
-  `at` reading back through a tag slot (2.5) has no meaning.
+  Cons: §33's identities (`vacant-slot` = `Nat` 0, tag slots) then hold
+  only through a separate map from a block to its word, as slc's
+  `word-of-block` does (`self/eval.sl:43-52`); `slot-eq` must then say
+  whether it compares addresses (slc compares allocation positions) or
+  words. slc so built does read `at` back through a tag slot:
+  `slc --interpret tagslot.sl` prints `3` [compiled].
 
 ### Q3. Evaluation order
 
@@ -480,12 +494,19 @@ Values as words:
   compile-time run is the spec machine with an explicit depth bound
   taken as compiler input, as `--eval-fuel` already is (MANUAL.md: the
   reference has no bound without the flag; slc's default is 1000000000).
-  Accepting or rejecting is then a function of (source, bound), so owner
-  statement 3 ("accepted or rejected") holds per bound. This departs
-  from §31's "unlimited stack and heap" for compile time and needs
-  owner wording. A depth bound does not bound the heap, so a compile-time
-  heap exhaustion stays host-dependent unless C3's heap bound is added. `native-compute` (§72)
-  stays host-dependent: its answer is treated as an oracle, or excluded.
+  (reading) Accepting or rejecting would then be a function of (source,
+  bound), once the order and the `slot-eq` answers are fixed (Q3, Q4),
+  so owner statement 3 ("accepted or rejected") would hold per bound,
+  provided the rest of elaboration terminates (SOUNDNESS.md part 6
+  argues it does, from (T)). With no loop form, a depth bound seems to
+  bound the steps of each run even without (T); unproved. The bound
+  departs from §31's "unlimited stack and heap" for compile time and
+  needs owner wording. A depth bound does not bound the heap, so a
+  compile-time heap exhaustion stays host-dependent unless C3's heap
+  bound is added. `native-compute` (§72) stays host-dependent: its
+  answer is treated as an oracle, or excluded. 01 (decision 7)
+  recommends the alternative: a spec machine that never crashes, and a
+  third compiler outcome, `Crashed`.
 
 ### Q6. Externs
 
@@ -561,8 +582,9 @@ the `at` reading-back that follows, since both entries are `many`
    function, and "there is an oracle" covers every implementation seen
    tonight.
 5. **Crash: C2 at runtime, C4 at compile time?** Recommended: yes, with
-   C3 as a later strengthening. Depends on it: owner statement 3 holds
-   per compile-time bound, and `native-compute` needs its own clause.
+   C3 as a later strengthening; 01's decision 7 is the alternative.
+   Depends on it: whether owner statement 3 can be stated per
+   compile-time bound, and `native-compute` needs its own clause.
 6. **Externs: is `Nat` primitive (E2)?** Recommended: yes. Otherwise
    either the spec elaborates with `--no-extern` facts, and the compiler
    accepts programs (tagslot.sl) that the spec refuses, or the spec must
@@ -601,7 +623,9 @@ the `at` reading-back that follows, since both entries are `many`
    refused", and §72's "a run that crashes is an error at its
    argument", make acceptance depend on the host.
 6. **Reaching absurd code.** DESIGN.md does not say what happens when
-   absurd code is reached at runtime. Both implementations abort.
+   absurd code is reached at runtime. The reference interpreter
+   (`lib/eval.ml:66`) and slc's OCaml runtime (`self/runtime.ml:1`)
+   abort.
 7. **What "the only reference" means.** §13's "the only reference to
    it" needs "reference" defined to exclude slot words (§38, "inert")
    and the `Stale` word an array keeps (§44: "Until it is put back, the
@@ -646,8 +670,10 @@ the `at` reading-back that follows, since both entries are `many`
   exhaustion, and its later space-cost work, are from memory.
 - That V1 suffices for the soundness of slot facts derived at compile
   time (Q8).
-- I did not build or run slc (`_build/self/slc` is absent). The claims
-  about slc are from reading its source.
+- The first pass did not run slc. The second review ran
+  `_build/release/slc` on every file under `proto/dyn/` and on
+  `imm_eq.sl` under `--build`; the other claims about slc's internals
+  are from reading its source.
 
 ## Review notes
 
@@ -728,3 +754,63 @@ Uncertain points:
   under the `Nat` model is consistent (E1).
 - The summary is now longer than the brief's 15 lines.
 
+
+## Second review notes
+
+Added by a second, independent review. All five files under `proto/dyn/`
+were rerun on the reference (with and without `--no-extern`) and on
+`_build/release/slc --interpret`; `imm_eq.sl` under `--build` on both;
+`order2.sl` under `--extract`; and the OCaml order test on 4.14.1. The
+outputs quoted above reproduce. New tests are under `proto/review2/`.
+
+1. 2.3's example `(f (world-do w (WriteOut "x")) (array-new _ huge))`
+   could not be written: `world-do` takes its type first and returns two
+   values (§42), and `array-new` three (§44), and an argument has size
+   one (§27). Rewritten as two statements with no dataflow between
+   them.
+2. A3 claimed a boxed machine "loses §33's identities, so `at` reading
+   back through a tag slot (2.5) has no meaning". slc's interpreter is
+   boxed and runs `tagslot.sl`, printing `3`: it maps a block to its
+   word (`word-of-block`, `self/eval.sl:43-52`). Restated as a cost,
+   not an impossibility.
+3. C4 said statement 3 "holds per bound". That needs the order and the
+   `slot-eq` answers fixed and the rest of elaboration to terminate;
+   hedged, with the reasoning that a depth bound seems to bound steps
+   with no loop form (unproved). Decision 5 likewise.
+4. C4 and decision 5 did not mention that 01's decision 7 recommends
+   the opposite (a spec machine that never crashes, plus a `Crashed`
+   compiler outcome). Cross-referenced.
+5. slc was said not to have been run. `_build/release/slc` exists:
+   `slc --interpret imm_eq.sl` answers `ENone` twice, and slc's
+   `--build` binary answers `ESome` for the immediates, like the
+   reference's. Summary, 2.4, and section 6 updated.
+6. 2.2 item 3 rested head-first-in-run-position on §6's "The head is
+   elaborated first" alone; §6 item 1 also says "A head that is a form
+   is `Settled` in run position, since it runs as soon as it is
+   elaborated", and §28 that each form there "runs as soon as it is
+   elaborated". Quoted.
+7. `Measure` also answers words allocated (`MkUsage`,
+   `lib/prelude.sl:1331-1335`), not only time and GC counts. Added.
+8. 2.6: "A call in tail position pushes no frame" was true but
+   incomplete: no call pushes a frame; only `KLet` does. Reworded. The
+   uncommitted fuel-free variant is now reproduced as
+   `machine_fn_oracle.sl` (a fixed oracle function and a step counter),
+   which prints `imm 1`.
+9. "(§5 below)" in 2.2 read as DESIGN.md §5; now "rough edge 2 in
+   section 5 below".
+10. Rough edge 6's "Both implementations abort" had no citation; now
+    `lib/eval.ml:66` and `self/runtime.ml:1`.
+11. Oxford comma in R1.
+
+During this review, a mistyped command (`main.exe --build imm_eq.sl`,
+which takes `imm_eq.sl` as the output name) overwrote
+`proto/dyn/imm_eq.sl` with a binary. It was restored from git HEAD,
+whose text matches the file as printed just before.
+
+Unsure, not changed:
+- N1's "there is an oracle" holds only if a compiled `ESome` never
+  meets two words the abstract machine keeps apart; a host that shared
+  equal constant blocks would break it. `const_share.sl` (two
+  run-position `(MkBox 5)`) answers `ENone` in the reference and slc,
+  built and interpreted, so no such sharing was seen.
+- The summary is still longer than the brief's 15 lines.

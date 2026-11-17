@@ -32,16 +32,18 @@ proposal.
   fuel, so each step is total and fuel never appears in the statement. The
   other is an explicit-stack compiler stepped by the driver.
 - [P] Output end: first stop the proof at the post-erasure IR (slc's
-  `Code`, 17 constructors, `core.sl:604-623`). Later, model the small
+  `Code`, 17 constructors, `core.sl:604-622`). Later, model the small
   untyped OCaml subset that `emit.sl` actually writes, and check the printer
   per run by re-parsing.
 - [C/T] Concrete risks found: the emitter relies on call and constructor
   arguments being atoms, which nothing types. A printer depth budget makes
   `slc --interpret` print a wrong value (`... Cons _ _ _)`) for a list of
-  more than about 50,000 elements. The `-imm` FFI operations bypass
-  OCaml's write barrier. `slot-eq` compiles to OCaml `==`, and ocamlopt
-  shares equal immutable constants, so a compiled run can answer `ESome`
-  where `slc --interpret` answers `ENone` (2.5).
+  more than about 50,000 elements; the OCaml printer slc emits prints the
+  same list in full. The `-imm` FFI operations bypass OCaml's write
+  barrier, and the `Slots` implementation hashes raw heap addresses.
+  `slot-eq` compiles to OCaml `==`, and ocamlopt shares equal immutable
+  constants, so a native compiled run can answer `ESome` where
+  `slc --interpret` and the reference answer `ENone` (2.5).
 - [C] There are 103 FFI implementations and 7 extern types. Under §42 each
   one is an agreement axiom.
 
@@ -60,7 +62,7 @@ proposal.
   (`eval`, `apply`, `run-code`, `elab-main.sl:158-445`), the macro
   expander (`splice-go`, `elab-main.sl:577-586`, with the 10000-expansion
   limit at `:511` and `:560`), and the elaborator proper.
-- [C] Post-erasure IR: `Code ctx ms` (`core.sl:604-623`), indexed by its
+- [C] Post-erasure IR: `Code ctx ms` (`core.sl:604-622`), indexed by its
   frames and by the multiplicities of its results. Its constructors are
   `CVar`, `CConst`, `CValue`, `CErased`, `CValues`, `CApp`, `CLet`,
   `CLetRec`, `CMatch`, `CCellAlloc`, `CCellWrite`, `CCellCopy`,
@@ -79,9 +81,12 @@ proposal.
   more steps, since one total step cannot run an arbitrary evaluation to
   completion; the single step only means the driver loop is not used to
   spread the work.
-- [C] `self/README.md:463-465` says macros are "Not modelled". The macro
-  expander at `elab-main.sl:505-586` contradicts that. The README line
-  looks stale.
+- [C] `self/README.md:463-465` says macros are "Not modelled", "which the
+  reference does not implement either". The macro expander at
+  `elab-main.sl:505-586` contradicts the first half, and the reference
+  expands macros too: slc's own sources use the `and` and `or` macros of
+  `std/macro.sl` (`self/README.md:61-62`), which the reference elaborates
+  in `bootstrap.sh` step 1. The README line is stale.
 
 ### 2.2 What already carries proofs
 
@@ -126,8 +131,8 @@ definition whose header is `(erased name :`.
 | site | kind | zero case |
 |---|---|---|
 | interpreter `eval`/`apply` (`elab-main.sl:185-187, 424`) | fuel. MANUAL.md:154-162: "bounds how deeply applications nest, a tail call nesting inside the call it replaces"; slc's default 10^9 | error value "out of fuel", reported as an error. MANUAL calls it a §31 crash |
-| `show-at` depth 100000 (`elab.sl:4680-4682`, used at `elab.sl:4730`, `interp.sl:15`) | printer fuel | **prints `_` silently**. The budget is spent twice per nested field (`show-at` at `elab.sl:4682` and `shown-field` at `:4717`). [T] `slc --interpret deep.sl` (a 100003-element list, stack unlimited) prints 49,999 `Cons _ 0` and then `Cons _ _ _)`. [P] That is a wrong output under §45 ("Any other value prints by its type", and `_` is listed only for a union with more than one constructor, erased fields, cells, slots, functions, opaque proofs, and values with no readable `Matchable`), not a §31 crash ("A crash produces no value, never a different one") |
-| `show-fuel` 100000 (`emit.sl:4`, `:1473`, `:1478`) | fuel for generating type printers | not examined |
+| `show-at` depth 100000 (`elab.sl:4680-4682`, used by `show-typed` at `elab.sl:4730`, which the `comptime-match` mismatch message uses at `:4784`, and by `slc --interpret`'s final printer at `interp.sl:15`) | printer fuel | **prints `_` silently**. The budget is spent twice per nested field (`show-at` at `elab.sl:4682` and `shown-field` at `:4717`). [T] `slc --interpret deep.sl` (a 100003-element list, stack unlimited) prints 49,999 `Cons _ 0` and then `Cons _ _ _)`. [P] That is a wrong output under §45 ("Any other value prints by its type", and `_` is listed only for a union with more than one constructor, erased fields, cells, slots, functions, opaque proofs, and values with no readable `Matchable`), not a §31 crash ("A crash produces no value, never a different one"). It also contradicts `self/README.md:254-258` ("running out returns an error value, never a wrong answer silently") |
+| `show-fuel` 100000 (`emit.sl:4`, `:1473`, `:1478`) | fuel for *generating* the emitted OCaml printers, one per type, memoized (`emit.sl:1379-1386`) | [C] uses `show_any`, which prints `?` (`self/runtime.ml:18`). [P] It bounds the nesting of types met while generating, not of values, so it seems hard to reach. [T] The generated printer recurses on the value with no bound: `deep.sl` compiled by slc (the 22 MB output built with `ocamlc` under an unlimited stack) and `proto/review2/04-deep-fn.sl` (the same list, built at run time) compiled by `slc --build` both print all 100003 elements, where `slc --interpret` cuts them as above |
 | `heap-strs-fuel` 10^6 (`eval.sl:1018-1025`; also passed to `heap-pairs` and `heap-jobs`, `eval.sl:1055, 1146, 1159`) | fuel | truncates the list (returns `Nil`) |
 | `str-split-fuel` (`base.sl:100-109`) | fuel equal to the string's length | unreachable but not refuted |
 | sugar budget (`elab-main.sl:1871`, `README:385-394`) | budget sized by the form | "internal" error, not refuted |
@@ -135,7 +140,7 @@ definition whose header is `(erased name :`.
 | macro expansions ≤ 10000 (`elab-main.sl:511, 560`; the elaborator group's first `subterm` parameter, named `fuel`, is this budget and is checked again at `:586, 764, 779`) | **specified**: [D] §62 "At most 10000 expansions run in one run, every file on the command line included." | refusal, as §62 requires |
 
 - [P] So the only fuel a correctness theorem must face is the interpreter's
-  (and the printers', which look like plain bugs that could be fixed by
+  (and `show-at`'s, which looks like a plain bug that could be fixed by
   recursion on the value's structure). The expansion limit is part of the
   language.
 
@@ -175,13 +180,16 @@ definition whose header is `(erased name :`.
   (`emit.sl:909-919`, `build-rope` at `:452-459`). `CApp`'s arguments have
   type `List (Code ctx many-one)` (`core.sl:611`), so nothing in the types
   says that they are atoms.
-- [T] In practice the elaborator hoists every non-variable argument into a
-  `let`, as §15 describes. In `proto/04-compiler-route/order.sl` and
+- [T] In the two tests below, every call or constructor argument that is
+  not a variable is hoisted into a `let`, as §15 describes; two tests do not
+  show that this always holds. In `proto/04-compiler-route/order.sl` and
   `ord2.sl` each call or constructor argument that is not a variable is
   let-bound before the call that uses it. The bindings are in source
   order in `order.sl`, but not in `ord2.sl` (next item), so the emitted
   order is §15's placement, not source order in general. A multi-value result is sequenced by
-  `let tup_a0 = ... in let tup_a1 = ... in` (`emit.sl:365-369`). [P] So
+  `let tup_a0 = ... in let tup_a1 = ... in` (`emit.sl:365-369`); the
+  comment at `emit.sl:362-364` gives the reason as a workaround for an
+  ocamlopt failure (`Selection.size_expr`), not evaluation order. [P] So
   OCaml's unspecified (in practice right-to-left) argument order does not
   matter *today*, but only because of an untyped invariant of the
   elaborator. [T] A two-argument test (`proto/04-compiler-route/argorder.ml`)
@@ -189,7 +197,9 @@ definition whose header is `(erased name :`.
   templates use an argument several times, as the `Succ` fast path
   `if Obj.is_int {a0} && ... {a0} ...` does (`lib/ffi_templates.txt:10`;
   holes `HArg i`, `emit.sl:105, 333`). An argument that is not an atom
-  would be evaluated more than once.
+  would be evaluated more than once. The templates' header states the
+  assumption: "Every hole but a body is filled with a variable name"
+  (`lib/ffi_templates.txt:4`).
 - [D] §15: "Every argument to a constructor, a function or a cell behaves
   as if it were first bound to an anonymous variable. ... That binding is
   a statement (§27) placed just before the statement or final form that
@@ -202,21 +212,24 @@ definition whose header is `(erased name :`.
   rests on the elaborator's correctness, which is exactly what a proof
   would supply.
 - [C] `slot-eq` compiles to `(if h == b then some else none)`
-  (`emit.sl:966-968`). [P] [D] §67 allows `ENone` always, but `ESome`
+  (`emit.sl:964-969`). [P] [D] §67 allows `ENone` always, but `ESome`
   "proves that `a` and `b` hold one word". If OCaml or flambda shares two
   structurally equal *immutable* constants (slices, tuples), `==` says
   `ESome` for two values the spec allocated separately. [T] This
   happens without flambda: `proto/04-compiler-route/share.ml` finds two
   equal `("ab", 0, 2)` tuple constants `==` under ocamlopt 4.14.1 (not
   under ocamlc), and `slot_eq_share.sl`, two run-position
-  `(str-append "a" "b")`, prints `(BTrue)` compiled by slc and
-  `(BFalse)` under `slc --interpret`. [P] §67 allows both answers ("which
+  `(str-append "a" "b")`, prints `(BTrue)` compiled by `slc --build`
+  (ocamlopt) and `(BFalse)` under `slc --build --byte`, under
+  `slc --interpret`, and under the reference. `bootstrap.sh` builds the
+  tests it compares with `--byte` (`self/README.md:191`), so its
+  differential runs would not show this. [P] §67 allows both answers ("which
   one a call answers may differ between runs"), and in the compiled run
   the two do hold one word. It is a refinement mismatch only if the spec
   says that every allocation takes a never-used address (the earlier
   session's proposal B).
 - [C] The `-imm` operations write through `(cast a : int array)` with
-  `Array.unsafe_set` and `caml_blit_bytes` (`lib/ffi_core.ml:234-241,
+  `Array.unsafe_set` and `caml_blit_bytes` (`lib/ffi_core.ml:235-241,
   315-320`). [P] These skip `caml_modify`, which I believe is safe only
   when both the old and the new words are immediates, as `(imm o n)` and
   `Imm` require ([D] §37, §44). This is a dependency on OCaml runtime
@@ -224,11 +237,23 @@ definition whose header is `(erased name :`.
   concerns speed, not safety; I found no safety argument and did not
   check one.
 - [C] `Bytes.unsafe_to_string` without a copy (`lib/ffi_core.ml:148, 173,
-  260`). `bytes-str` takes its `Bytes` at `many` (`lib/prelude.sl:1738`).
+  260`). At 148 and 173 the buffer is a fresh local one. At 260
+  (`bytes_str`), and in the template that emitted programs use in its
+  place (`lib/ffi_templates.txt:80`), it is the argument: `bytes-str`
+  takes its `Bytes` at `many` (`lib/prelude.sl:1738`).
   [P] This is safe only if a `many` `Bytes` is never mutated afterwards.
   That follows from §13/§16 (only `unique` is mutated; `share` ends unique
   uses) if uniqueness checking is sound. I found no counterexample, and I
   did not search hard.
+- [C] The `Slots` implementation (`lib/ffi_core.ml:323-398`) does not
+  search with `slot-eq` as the models do (§69). It hashes raw block
+  addresses (`address`, `Obj.magic` at `:336`), and detects that the GC
+  has moved blocks by a sentinel block allocated young and by the
+  compaction count (`:345-360`). The comment at `:337-344` records an
+  earlier version that missed lookups after a compaction on 4.14.1.
+  [P] This is another dependency on OCaml runtime internals; §69's
+  "How an implementation finds a slot is left to it" allows it, but
+  nothing checks it except tests such as `tests/slots_compact.sl`.
 - [C] The runtime checks, once at start-up, that ints have 63 bits, that
   zarith holds small values unboxed, and that the host's maximum array and
   string lengths are below 2^54 and 2^57 (`lib/ffi_core.ml:27-28`). Element
@@ -266,7 +291,7 @@ definition whose header is `(erased name :`.
   | strings (pure, slices) | 12 | str-cmp, str-split, append, flatten, nat-str |
   | bytes (mutation at unique) | 24 | bytes-set, bytes-blit, bytes-str |
   | arrays (mutation at unique, `-imm` barrier-free) | 22 | array-swap, array-pluck, array-blit-imm |
-  | `Slots` (searches with `slot-eq`) | 4 | slots-find, slots-intern |
+  | `Slots` (models search with `slot-eq`; the implementation hashes addresses, 2.5) | 4 | slots-find, slots-intern |
 
 - [C] These are *not* in the FFI table but are implemented by the
   driver, the elaborator, or the runtime:
@@ -277,16 +302,23 @@ definition whose header is `(erased name :`.
   - `native-compute`.
 
   [P] These are specified by DESIGN.md directly, not by models. So they
-  are part of the spec semantics, not agreement axioms. The exception is
-  `world-do`: the world's answers would have to be a parameter of the
-  semantics (an oracle).
+  are part of the spec semantics, not agreement axioms. Two of them make
+  the semantics nondeterministic: `world-do`, whose answers would have to
+  be a parameter of the semantics (an oracle), and `slot-eq`, of which
+  §67 says "which one a call answers may differ between runs".
 - [D] §42: "An `extern` implementation must agree with its model: except
   through `slot-eq` (§67), running the models instead of the
   implementations must give a program the same values, though not the
   same cost, and either may crash where the other does not (§31)." [P] So
   each of the 103 implementations, and each extern type's view and wrap
-  pair, is one axiom of the form "agrees with the model up to crash". The
-  correctness theorem can only be "same values, up to crash".
+  pair, is one axiom of the form "agrees with the model up to crash and
+  up to what `slot-eq` answers"; §69 applies the `slot-eq` exception to
+  the `Slots` functions ("The models search with `slot-eq`, so §42's
+  exception for `slot-eq` covers what the implementations answer"). The
+  correctness theorem can then be at most "the compiled run's values are
+  values some spec run gives, for the same `slot-eq` and world answers,
+  up to crash", not "the same values" (2.5's `slot_eq_share.sl` gives
+  different values compiled and interpreted, which §67 allows).
 - [C] slc does not model `--no-extern`: its interpreter always runs the
   FFI (`README:463-464`). So even slc's *compile-time* results rely on the
   FFI agreement axioms.
@@ -330,8 +362,10 @@ the round trip, its effort, its risks, and how it parallelizes.
 
 **R1. Retrofit slc.** Change slc's functions to return erased derivations
 of the spec's relations, as `mini/` does.
-- *Proved:* everything slc does, if finished.
-- *Trusted:* only the spec, the checker, OCaml, and the FFI.
+- *Proved:* everything slc does down to its IR, if finished; the emitter
+  too only with a model of OCaml (Q3, O2).
+- *Trusted:* the spec, the checker, OCaml, the FFI, and the output end
+  unless it is modelled (Q3).
 - *Round trip:* natural, because slc's interpreter is already inside the
   elaborator's block. Its results must come with an evaluation derivation.
 - *Effort:* very high.
@@ -364,8 +398,9 @@ a checker, an evaluator, and a code generator.
   desugaring, macro expansion, or reading can produce a different core
   program that the kernel accepts, so the theorem relates the output to
   the front end's core program, not to the source.
-- *Round trip:* [D] §6 dispatch, §28 `comptime-match`, and §45 literals
-  depend on stored values. The kernel cannot trust the front end's values,
+- *Round trip:* [D] §6 dispatch, §28 `comptime-match`, §45
+  `prove-literal-lt`, and §49 `unary` depend on stored values or on the
+  evaluator (§45: "like a `comptime-match`, it relies on the evaluator"). The kernel cannot trust the front end's values,
   so it must **re-run every run-position form** with its own evaluator, or
   check an evaluation trace. Traces are as long as the run.
   - Macro expansion need not be re-run. [D] §62: "The forms are elaborated
@@ -458,7 +493,8 @@ the statement.
   of the successful run's work, so the overhead can grow with the number
   of doublings.
   Compile-time effects repeat (`native-compute`'s temporary files and
-  processes; `read-file` is idempotent). The step function still contains
+  processes; `read-file` gives the same answer only if the file has not
+  changed between attempts). The step function still contains
   fuel.
 
 **F2. Explicit-stack compiler.** The elaborator and the evaluator are one
@@ -498,8 +534,12 @@ embedded heap snapshot. Trust the emitter, `runtime.ml`, `ffi_core.ml`,
 - `let`, `let rec ... and`, `fun`, and full application;
 - a `match` on variants with inline mutable records, and `r.fi <- e`;
 - tuples;
-- the `%identity` casts, `Obj.is_int`, `==`, `failwith`, and `exit`;
-- calls into `Ffi_core` and `Driver_core`.
+- the `%identity` casts, `Obj.is_int`, `==`, `failwith`, `absurd ()`,
+  and `exit`;
+- calls into `Ffi_core` and `Driver_core`;
+- from the templates (`lib/ffi_templates.txt`): `if`, machine-integer
+  arithmetic and comparison, and direct Zarith and Stdlib calls such as
+  `Z.succ`, `String.make`, and `Char.code`.
 
 [P] Because of the casts, the honest model is an **untyped word-and-block
 heap machine**: blocks with tags and mutable fields, immediates, and
@@ -524,8 +564,9 @@ tiny trusted VM, or C.
   - it abandons what `README:212-215` reports as the owner's decision
     that `lib/extract.ml` is the specification of slc's emitter (not in
     the brief's list of owner decisions, so treat it as unconfirmed);
-  - [D] §1's fast-code aim is "an aim for the language, not for the
-    implementations", so O3 is allowed.
+  - [D] DESIGN.md's opening paragraphs, before §1, call fast code "an
+    aim for the language, not for the implementations". [P] So nothing
+    in DESIGN.md seems to rule O3 out.
 - *Cost:* high.
 
 **O4. Translation validation of the printer** (combined with O2). Emit
@@ -581,7 +622,10 @@ IR's call and constructor arguments syntactically atomic in either case.
     theorem is expected. `SOUNDNESS.md` argues relative soundness of
     `Type : Type` and is itself a session's argument;
   - the 103 + 7 extern agreement axioms;
-  - a world oracle for `world-do`;
+  - a world oracle for `world-do`, and the answers of `slot-eq`, which
+    §67 leaves free;
+  - the OCaml runtime internals the FFI relies on: the `-imm` barrier
+    bypass and the `Slots` address hashing (2.5);
   - the emitter plus about 830 lines of OCaml runtime plus the templates
     (dropped by O2 + O4);
   - OCaml 4.14 (with flambda if `-O3`) and zarith.
@@ -610,8 +654,11 @@ IR's call and constructor arguments syntactically atomic in either case.
    OCaml subset (O2 + O4), or a new target (O3)?** Recommended: O1 now, and
    O2 + O4 later. Whatever is chosen, the IR's call and constructor
    arguments should be atoms *by type*.
-5. **Is the outcome space of the theorem "same value, or one side
-   crashed"?** [D] §31 and §42 seem to force it. Two sub-questions:
+5. **Is the outcome space of the theorem "a value some spec run gives,
+   or a crash"?** [D] §31 and §42 seem to force "up to crash", and §67
+   (`slot-eq` "may differ between runs") with §42's `slot-eq` exception
+   makes the spec run nondeterministic, so "the same value" is too strong
+   (2.6). Two sub-questions:
    - does running out of an implementation's evaluator fuel count as a
      §31 crash (MANUAL.md:157-158 says so)?
    - what is a crash during a run-position form? An error, a third
@@ -641,7 +688,9 @@ IR's call and constructor arguments syntactically atomic in either case.
    it does" is said of run position, not of evaluation in general. DESIGN.md does not say whether
    order is meant to be *unobservable*. [P] It may be. `World` is unique,
    so effects are data-ordered, and a crash and divergence both produce
-   no value. Question for the owner: is order intended to be
+   no value, though the order still decides whether a form with one
+   crashing and one diverging argument crashes or runs forever. Question
+   for the owner: is order intended to be
    unobservable, so that any order is correct?
 2. **A crash at compile time.** §31: "A real run may crash where the host
    cannot represent what is asked of it." §72 makes a crashed native run
@@ -672,10 +721,11 @@ IR's call and constructor arguments syntactically atomic in either case.
    models are the meaning.
 
 Not DESIGN.md, but found:
-- `self/README.md:463-465` ("Not modelled: ... macros") looks stale
-  against `elab-main.sl:505-586`.
+- `self/README.md:463-465` ("Not modelled: ... macros") is stale
+  against `elab-main.sl:505-586` and the reference (2.1).
 - slc's `show-at` depth fuel prints a wrong value (2.3), reproduced in
-  review.
+  both reviews, against `self/README.md:254-258`. The emitted OCaml
+  printer does not have the defect.
 
 ## 6. Unverified claims
 

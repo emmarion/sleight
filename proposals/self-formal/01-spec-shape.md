@@ -16,8 +16,8 @@ statement from the brief; **[A]** this agent's reading or proposal.
 - [A] DESIGN.md's elaboration cannot, as far as this reading goes, be
   stated as a typing relation separate from evaluation. Head dispatch,
   `comptime-match`, macros, the literal lemmas, and `native-compute` all
-  read run results. The fact engine of §7 is the one part that is free
-  of evaluation. The proposal is three layers: a pure fact engine, then a
+  read run results. The fact engine of §7 is free of evaluation ("The
+  engine of §7 reads no stored value", §29). The proposal is three layers: a pure fact engine, then a
   run relation that reads the fact engine and the scope, then an
   elaboration relation that has run premises. A store Σ is threaded
   through all of elaboration, and the scope Γ is restored when a scope
@@ -30,7 +30,8 @@ statement from the brief; **[A]** this agent's reading or proposal.
 - [A] Owner statement 3, that every program's source code is either
   accepted or rejected as an error, looks
   provable only relative to a termination hypothesis H (statement 4),
-  or with fuel and a third outcome. Even under H, the 10000-expansion
+  or with fuel, an exhausted fuel being either a third outcome or a
+  rejection (02's C4 takes the latter). Even under H, the 10000-expansion
   limit of §62 is needed, because each macro run halts but nothing else
   bounds how many expansions happen.
 - [C/A] Three things DESIGN.md leaves free or unstated look able to
@@ -64,8 +65,8 @@ depends on it.
    reading. Everything after it is a relation over `Raw` with `Pos`.
    *Why:* statement 3 is about "source code". Positions can be observed
    by a program (§3.9 below). A core-level start would leave out head
-   dispatch and macros, which DESIGN.md's opening paragraph makes
-   central ("the constant-knownness of a head (§6) is what reconciles
+   dispatch and macros, which the paragraph of DESIGN.md on the
+   language's aims makes central ("the constant-knownness of a head (§6) is what reconciles
    the two"). *Depends on it:* the statement of theorem 3, and whether
    `Pos` is in the judgment.
 2. **What form does theorem 3 take?** [A] A Sleight proof with no fuel
@@ -76,7 +77,8 @@ depends on it.
    H as "every accepted compile-time form's spec run halts"; this file
    uses the broader "every compile-time run in the spec halts", and
    which one is meant is for the owner. (b) A fuel parameter, with a
-   third outcome `OutOfFuel`. (c) A coinductive "diverges" outcome.
+   third outcome `OutOfFuel`, or with exhausted fuel a rejection, as
+   02's C4 proposes for a depth bound. (c) A coinductive "diverges" outcome.
    *Recommended:* (a), stated so that (b) is a corollary. *Not analysed
    here:* whether statement 2's idea, a fuel-free deriving function run
    as steps of the driver's `Program` loop (§27, §42), changes this;
@@ -124,13 +126,16 @@ depends on it.
    never crashes (§31's "unlimited stack and heap"). The agreement
    theorem allows a third compiler outcome, `Crashed`, which proves
    nothing about the spec. DESIGN.md says a crash is an error only for
-   `native-compute` (§72); see §5. Two tensions for the owner: both
+   `native-compute` (§72); see section 5 below, item 3. Two tensions for the owner: both
    implementations refuse a run-position form whose run crashes
    (MANUAL.md, `--eval-fuel`), so `Crashed` would be a rejection the
    theorem says nothing about; and for `native-compute`, §72 makes a
    crash "an error at its argument", so treating it as `Crashed` departs
    from DESIGN.md unless the spec takes the compiled run's outcome as an
-   oracle input.
+   oracle input. A third: 02 (C4) recommends the opposite for compile
+   time, a spec run with an explicit depth bound whose exhaustion
+   rejects, which departs from §31's "unlimited stack and heap". The two
+   files' recommendations are alternatives, not one plan.
 8. **Which flags are spec parameters?** *Recommended:* in the spec are
    prelude on or off (§42), extern on or off (§33 item 9 and §35 depend
    on it), `--fn-same` (§70), the `--goal` mode (§71), the
@@ -146,7 +151,10 @@ depends on it.
    with the spec finding the names it needs (`Nat`, `String`, `Macro`,
    `Raw`, and so on) at the end of the prelude. *Recommended:* (c),
    with the shipped prelude as one instance. The compiler theorem would
-   quantify over it, and `--no-prelude` is the empty prelude. *Why:*
+   quantify over it, and `--no-prelude` would be the empty prelude,
+   except that §42 then allows `extern` anywhere ("only in the source
+   prelude, or anywhere in a program run with `--no-prelude`"), so an
+   empty prelude text and `--no-prelude` are not the same input. *Why:*
    [A] (a) needs a concrete elaboration of the prelude (2881 lines)
    proved inside Sleight. The only practical route this agent sees is
    reflection, which relies on the evaluator (§29), so the result would
@@ -198,9 +206,10 @@ depends on it.
   not form a cycle: fact engine, then Run, then Elab. Two points to
   check: `settled-ty-apply` requires that "`(t t1 ... tn)` must check as
   a term (§9)", which is term checking, assumed here to be fact-engine
-  work; and §45 allows a literal's entries to be "produced by
-  elaborating statements", so interning by `intern-*` must be specified
-  the other way, by creating them "directly to the same effect".
+  work; and §45 leaves to the implementation "whether a literal's
+  entries are produced by elaborating statements or created directly to
+  the same effect", so, for the layers to stay acyclic, the spec of
+  `intern-*` would take the second.
 
 ### 3.3 The macro world is the threaded store [D]
 
@@ -252,7 +261,9 @@ is the only reference to a mutable value (§13), has not been checked;
   10000 macro expansions").
 - [C] The reference never resets its counter (`lib/elab.ml:553`,
   `:683-684`), so in principle prelude expansions count. The prelude
-  defines macros (`lib/prelude.sl:2480`) but [A] seems to call none.
+  defines two macros, `unary` and `prove-literal-lt`, the only
+  `MkMacro` applications in it (`lib/prelude.sl:2480`, `:2571`), and
+  calls neither after `:2571` (grep), so it seems to expand none.
   `gensym_order.sl` [C] starts its numbering at 1.
 - [O] The owner was in general agreement, not agreement to exact
   statements, with framing compile-time termination as a hypothesis H
@@ -271,6 +282,10 @@ which places hoisted bindings "just before the statement or final form
 that contains the call" but does not order them among themselves.
 §65 says the macro world "is threaded sequentially through all of
 elaboration", so some sequential order exists, without saying which.
+In run position §6 item 1 adds that "A head that is a form is `Settled`
+in run position, since it runs as soon as it is elaborated (§29)", and
+§28 that each form there "runs as soon as it is elaborated", so a
+form's compile-time effects follow its elaboration order.
 §50's expectation for an argument is "its parameter, given the
 arguments before it", and §36 instantiates an `at` target "with the
 earlier arguments"; [A] these constrain what an argument's checking
@@ -287,18 +302,26 @@ the items.
   reporting more than one error. "whichever one the elaborator meets
   first" appears in §15.
 - [C] `two_errors.sl`: the reference reports only `one`, and slc reports
-  `one` and `two`. `error_then_effects.sl`: after the first error, slc
-  still prints a later `compile-warn`, but then refuses a later macro
-  call as not constant-known. [A] It seems slc stops running
-  compile-time code after an error, which fits statement 4(i). Not
-  checked in slc's source.
+  `one` and `two`; self/README.md:298-301 says slc records errors and
+  goes on, and slc's `--first-error` (MANUAL.md) stops at the first.
+  `error_then_effects.sl`: after the first error, slc still prints a
+  later `compile-warn`, but then refuses a later macro call as not
+  constant-known. After an error slc still runs some run-position code:
+  `proto/review2/after_error_run.sl` binds `(Zero)` after an error and a
+  `comptime-match` reads it ("expected `Succ`, got 0"). But a call of a
+  function, defined before or after the error, gives no `Settled` result
+  (`after_error_call.sl`, `after_error_call2.sl`), and a macro bound
+  after the error is not dispatched (`after_error_macro.sl`). Why, in
+  slc's source, was not traced.
 - [C] The reference reads a whole file before elaborating it.
   `reader_phase.sl` (a missing `)` on line 3) and `pragma_phase.sl` (an
   unknown pragma) print no earlier `compile-warn`. Reading is per file,
   though: with two files on the command line, where the second has a
   syntax error, the first file's `compile-warn` is still printed
-  (tested ad hoc on both implementations). [A] Acceptance is unaffected, since either way the
-  run is rejected. So reading can be a separate total function per file,
+  (`proto/review2/rf_a.sl` then `rf_b.sl`, on both implementations);
+  the reference even prints the first file's final value, `0`, on
+  standard output before the second file's syntax error, and exits 1.
+  [A] Acceptance is unaffected, since either way the run is rejected. So reading can be a separate total function per file,
   or for all files at once.
 - [C] mini/ makes each judgment total with "an [Ok] with what was
   derived or an [Err] with the first reason found" (`mini/elab.sl:3-4`).
@@ -331,7 +354,7 @@ the items.
 
 §1: atoms, `;` comments, string tokens, digit atoms, `#\c`, `#"..."` raw
 names, and the ban on `__` names (refused by both implementations,
-[C], tested ad hoc; no file under `proto/`). §2: `$`, and "the missing
+[C], `proto/review2/dunder.sl`). §2: `$`, and "the missing
 `)` is an error" (`dollar_top.sl` [C]). §4: `;! warn`, which "must be
 written between top-level forms"; `;! suppress` and `;! restore`, which
 "may appear at any nesting depth"; `;! file "name"`
@@ -342,8 +365,10 @@ literals are interned "just before" each top-level form is elaborated.
 elaboration step that changes Σ. Positions can be observed: [C]
 `pos_observable.sl` gives a macro its `here`, which prints as
 `(MkPos "pos_observable.sl" 7 13)` and `… 7 21` across a tab. Columns
-are 1-based byte counts, and a tab counts 1. DESIGN.md does not define
-the unit.
+are 1-based byte counts, and a tab counts 1; that the unit is bytes, not
+characters, is shown by `proto/review2/pos_bytes.sl`, where a
+two-byte `é` before the call gives column 41, the byte count, not 40.
+DESIGN.md does not define the unit.
 
 ### 3.10 mini/ as a starting point [C/A]
 
@@ -397,6 +422,11 @@ the unit.
     expansion count; the claimed extern names; the goal and qed state;
     the slot-eq oracle stream; and the emitted warnings. Uses of unique
     binders are threaded per path and joined at a match (§15).
+  - [A] §65 counts "the run-position entries with their values and
+    facts" as part of the macro world, which §3.3 identifies with Σ.
+    This split keeps those facts in Γ and only the words in Σ, so the
+    identification of §3.3 holds only in part; which side the
+    run-position facts belong on is open.
   - Run-position rule: `Elab … (Ok code)`, `Strip code c`, and
     `Run Γr Σ c (ws, Σ')`. The entries become `Settled` with words in
     `Σ'.heap`, a minted type, and a minted `is` (§29).
@@ -439,7 +469,7 @@ before one that only adds rules.
    `RawSettled`); special forms resolved through scope entries bound to
    `Special` values (§42), not `RKey`. [A] These entries must be
    `Settled` from the start for §6 to dispatch on them; §42 does not
-   say so (see §5 item 12).
+   say so (see section 5 below, item 12).
 3. S2, `Settled`, run position, the round trip, `comptime-match`, and
    forwarding `let`, with `Run` as a parameter (mini/'s `Eval`, or the
    heap machine of the run track). Stripping is the identity at this
@@ -498,9 +528,11 @@ before one that only adds rules.
     sites" and "Nothing else creates a `Settled`". [A] Possibly in tension
     with this: the built-in `Special` entries of §42, which §6 needs to
     be `Settled` to dispatch, exist "before any file is read"; and
-    `mint-settled`, `mint-settled-erased` and `settled-ty-apply` mint
-    "a fresh anonymous `Settled` entry" (§65) inside a macro's run, which
-    is not obviously one of the three sites. A question for the owner,
+    `mint-settled` and `mint-settled-erased` mint "a fresh anonymous
+    `Settled` entry", and `settled-ty-apply` and `settled-val-apply` give
+    a handle to one (§65), inside a macro's run, which is not obviously
+    one of the three sites. A literal's entries are "as if minted by
+    run-position forms" (§45), which ties them to site 1. A question for the owner,
     not a resolved contradiction.
 
 ## 6. Unverified claims
@@ -510,9 +542,9 @@ before one that only adds rules.
 - That a proof of theorem 3 without hypotheses would hit the diagonal
   obstacle of statement 1 (decision 2). This is an analogy, not an
   argument.
-- That slc stops running compile-time code after its first error (from
-  one test, not from its source).
-- That the prelude calls no macros at its own elaboration.
+- Why slc, after its first error, still runs a constructor application
+  in run position but gives no `Settled` result for a call (observed in
+  four tests, not traced in its source).
 - That §50's meta solving is independent of order within a boundary.
 - That the Run layer needs only the fact engine, scope lookup, and Σ,
   and never the full elaborator (§3.2). This comes from reading §65,
@@ -604,3 +636,68 @@ opening paragraph as making head dispatch "central" is fair (it is a
 reading, not a quote); and decision 8's exclusion of `--warn-unused`
 and `--no-native`, which can change acceptance under
 `--warnings-as-errors` and for `native-compute` crashes respectively.
+
+## Second review notes
+
+Added by a second, independent review. Every test under
+`proto/spec-shape/` was rerun on the reference and on `_build/release/slc
+--interpret`; the outputs quoted above reproduce. New tests are under
+`proto/review2/`.
+
+1. §3.7 said "[A] It seems slc stops running compile-time code after an
+   error". False as stated: `after_error_run.sl` binds `(Zero)` after an
+   error, and slc's `comptime-match` on it reports "expected `Succ`, got
+   0", so the value was computed. What does stop is narrower: a call of
+   a function gives no `Settled` result after an error, whether the
+   function was defined before (`after_error_call2.sl`) or after
+   (`after_error_call.sl`) it, and a macro bound after it is not
+   dispatched (`after_error_macro.sl`). The claim that this "fits
+   statement 4(i)" went with it. Rewritten, with self/README.md:298-301
+   ("Errors are values") and slc's `--first-error` cited.
+2. Decision 7 (spec machine never crashes, `Crashed` outcome) and 02's
+   C4 (compile-time depth bound whose exhaustion rejects) are opposite
+   recommendations; neither file said so. Cross-referenced in decision
+   2, decision 7, and the summary, which said theorem 3 needs "fuel and
+   a third outcome", omitting fuel-as-rejection.
+3. §4.2 put run-position facts in Γ, while §3.3 calls the threaded
+   store Σ the macro world, which §65 defines as including "the
+   run-position entries with their values and facts". Added as an open
+   point; not resolved.
+4. Decision 9: "`--no-prelude` is the empty prelude" ignored §42, under
+   which `--no-prelude` allows `extern` anywhere, while with a prelude
+   it is allowed only in the prelude. Qualified.
+5. §3.9: "Columns are 1-based byte counts" was tested only with a tab,
+   which cannot tell bytes from characters. `pos_bytes.sl` puts a
+   two-byte `é` before the call; both implementations give column 41,
+   the byte count (40 characters). Added.
+6. Decision 1 cited "DESIGN.md's opening paragraph"; the quote is from
+   the second paragraph, on the language's aims. Fixed.
+7. Summary: "The fact engine of §7 is the one part that is free of
+   evaluation" overclaimed (the reader, for one, is also free of it).
+   Replaced by §29's own words.
+8. §3.2: "interning by `intern-*` must be specified the other way" read
+   as a requirement of DESIGN.md; it is this file's condition for
+   acyclic layers. Reworded, quoting §45 in full.
+9. §3.5: "the prelude ... seems to call none" was [A]; checked by grep:
+   the only `MkMacro` applications are at `lib/prelude.sl:2571`, and
+   neither macro is called after it. Upgraded to [C]; removed from §6.
+10. §3.6 omitted the most direct run-position text, §6 item 1's "A head
+    that is a form is `Settled` in run position, since it runs as soon
+    as it is elaborated" and §28's "runs as soon as it is elaborated".
+    Added.
+11. §3.7: the two-file reading test had no file; it is now `rf_a.sl`
+    and `rf_b.sl`. Rerunning it showed the reference prints the first
+    file's final value, `0`, on standard output before the second
+    file's syntax error (exit 1). Noted.
+12. §5 item 12 omitted `settled-val-apply`, which also yields a handle
+    to a fresh `Settled` entry, and §45's "as if minted by run-position
+    forms" for literal entries. Added.
+13. "see §5" (decision 7, §4.6 S1) read as DESIGN.md §5 (the scope
+    environment). Now "section 5 below".
+
+Unsure, not changed:
+- The summary is still about 40 lines, against the brief's 15.
+- Why slc, after an error, still runs a constructor application but not
+  a call was not traced in its source.
+- Whether an empty prelude text should behave as `--no-prelude` is a
+  question for the owner (item 4).

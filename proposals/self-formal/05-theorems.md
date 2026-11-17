@@ -10,8 +10,9 @@ reference (`_build/default/bin/main.exe`) at commit 164fcf1;
 **[owner n]** is item n of the brief's "Owner decisions", which are an
 earlier session's paraphrases, not the owner's words; everything
 else is my own reading and is hedged as such. `bove_use.sl`, `fuel.sl`,
-`model.sl`, `fuel_run.sl` and `halts_reflect.sl` need `bove.sl` (and
-the last two `fuel.sl`) earlier on the same command line.
+`model.sl`, `fuel_run.sl` and `halts_reflect.sl` need `bove.sl` (the
+last two also `fuel.sl`, and `halts_reflect.sl` also `fuel_run.sl`)
+earlier on the same command line.
 
 ## 1. Summary
 
@@ -24,13 +25,16 @@ the last two `fuel.sl`) earlier on the same command line.
 - T1 (acceptance soundness) and T2 (rejection soundness) are then the
   type of `compile`. T3 (exclusivity) needs the spec to be deterministic.
   As DESIGN.md stands it is not: `slot-eq` may answer either way
-  (§67) and can decide acceptance at compile time [proto]. Crashes,
-  `native-compute` and `read-file` add more choice. My proposal is an
+  (§67) and can decide acceptance at compile time [proto]. Crashes and
+  `native-compute` add more choice, and `read-file` makes acceptance
+  depend on the file system. My proposal is an
   oracle parameter, with T3 stated per oracle.
 - In my reading, T4 (every source is accepted or rejected) cannot be an
-  unconditional Sleight function if the compiler is faithful (T5): a
-  diagonal (quine) argument rules out a total, sound, and complete
-  run-function for Sleight source written in Sleight. Gödel's second
+  unconditional Sleight function if the compiler is faithful (T1 to
+  T3): a diagonal argument rules out a total, sound, and complete
+  compiler or run-function for Sleight source written in Sleight. The
+  self-reference can come from `read-file` in a macro (03 F6, whose
+  mechanism `proto/fuel/diagonal.sl` compiles), so no quine is needed. Gödel's second
   theorem, if Sleight meets its conditions (unchecked), gives a related
   limit on proving H. Two fuel-free shapes compile: recursion on an
   erased `Halts` derivation, and a typed step machine driven by
@@ -83,6 +87,9 @@ the last two `fuel.sl`) earlier on the same command line.
   `--goal proved spec.sl proof.sl` prints `--goal proved: PASS`. Both
   functions had to be in one `def-fns` block, because the ADT fixes one
   level `L` for both fields. My first attempt, with two blocks, was refused.
+  An ADT with a level per field accepts two blocks
+  [`proto/review2/05_spec_two_levels.sl` with `05_tb_two_level.sl`,
+  PASS; the same blocks against `spec.sl`, `05_tb_one_level.sl`, FAIL].
 - **F4. Fuel-free recursion on an erased derivation (Bove–Capretta
   style).** §21: "Subterm recursion (§17) may go through an erased
   field." [proto `bove.sl`] defines
@@ -129,9 +136,10 @@ the last two `fuel.sl`) earlier on the same command line.
   (refused otherwise, as `tests/io_step.sl` also arranges). The
   unbounded iteration belongs to the driver, which SOUNDNESS.md part 5
   leaves "outside the claim". The driver consumes only a file's final
-  value, and only under `--goal none` (§27, §71), so no Sleight code,
-  compile-time or otherwise, can obtain the result of a driven run as a
-  value; a theorem can speak only about the step function.
+  value, and only under `--goal none` (§27, §71). So only the later steps
+  of the driven run itself hold its result as a value: no compile-time
+  code and no `qed` can obtain it, and a theorem can speak only about the
+  step function.
 - **F7. Parameterization mechanisms.** A relation is an erased parameter
   of `TyCtor` type, as in the prelude's `Cmp` (`lib/prelude.sl:67`).
   [proto `model.sl`] defines `(Model R)`, an ADT indexed by the relation
@@ -150,8 +158,12 @@ the last two `fuel.sl`) earlier on the same command line.
   gives "type constructor `Nat` applied in a non-erased position"
   [proto `manytype_bad.sl`, `manytype2_bad.sl`], consistent with §21 "A
   value of type `Type` is erased." A `TyCtor` parameter has no opened
-  `Matchable` (§8), so generic code cannot take apart a derivation of a
-  parameter relation. It can only use the lemmas the model supplies.
+  `Matchable` of its own (§8). Generic code can still take apart a
+  derivation of a parameter relation if it is also given the relation's
+  constructors and an erased `Matchable` listing them, which it opens
+  with `open-adt` [`proto/review2/05_generic_match.sl`, accepted]. That
+  fixes the number and telescopes of the constructors in the interface.
+  Without it, generic code can only use the lemmas the model supplies.
 - **F8. The logic is anticlassical.** README.md "Logic and strength":
   "excluded middle at any level `L`, with `¬P` read as a level-`L`
   function, gives a function that returns `False`"
@@ -195,7 +207,9 @@ from a crash" among "what is claimed", relative to the shipped prelude.
 Part 6 adds "Run-position forms run total code by (T)". If (T) holds,
 and, for a spec whose run strips erased positions, (E) too, then
 [owner 4]'s hypothesis H (every accepted compile-time form's spec run
-halts) holds. These are claims with an argument, not proofs: the note
+halts) holds, apart from host I/O (`read-file`, `native-compute`; 03
+F7) and except for `--no-prelude` programs with their own extern models
+or `def-prim` signatures, which part 1 says the claims "do not cover". These are claims with an argument, not proofs: the note
 calls itself "a sketch" outside `lean/`'s fragment, and says its
 argument "rests on lemmas … that are not proved", among them the
 preservation of (I1), which "this note does *not* prove". So H is
@@ -285,14 +299,16 @@ refines : (erased (Target) out) (erased (Trace) tr) (erased (TRuns out tr) r) ->
     (erased (Oracle) o) (erased (SpecAllows o c tr) a)
 ```
 
-DESIGN.md has no coinductive data (SOUNDNESS.md part 3: "Values are
-finite trees"), so behaviours are finite trace prefixes. `SpecAllows`
+DESIGN.md mentions no coinductive data, and SOUNDNESS.md part 3 reads
+"Values are finite trees", so I take behaviours to be finite trace
+prefixes. `SpecAllows`
 must admit "prefix then crash" (§31). It must also say what happens
 after the spec goes wrong; see T7. Forward simulation from the spec
 plus a deterministic target gives backward simulation in the usual way
-(the CompCert pattern, cited by name only). That route needs the spec
-to be deterministic given `o`, and the target's `slot-eq` answers to be
-expressible as an oracle the spec can choose.
+(the CompCert pattern, cited by name only and from memory). As I recall
+it, that route needs the target to be deterministic and the spec
+receptive, not the spec deterministic; here the target's `slot-eq`
+answers would have to be expressible as an oracle the spec can choose.
 
 **T7 (safety of the spec itself).** Two levels:
 - *Full semantics* (erased code runs): progress and preservation of a
@@ -362,9 +378,11 @@ My reading of the limits, hedged:
   halts. Soundness and completeness then contradict each other. So,
   assuming soundness of the logic and the existence of quines (I have not
   written one), no internal total, sound, and complete compile-and-run
-  for Sleight source exists. The same argument applied to `compile`
-  needs T1, T2, T3, T4, and T5, since T5 makes `compile` compute the
-  values of the run-position forms. This is, as I understand it, the
+  for Sleight source exists. Without a quine, Q can do the same in a
+  macro that reads its own file with `read-file` (03 F6). Applied to
+  `compile`, the argument needs T1 to T4 and the spec's determinism on
+  Q (through T3), not T5: as in 03 F6, Q's macro expands to a
+  `compile-error` exactly when `compile` accepts Q. This is, as I understand it, the
   classical "no total self-interpreter on source text" barrier. Brown
   and Palsberg's typed self-interpreter for F_ω, cited by name, is to my
   understanding not subject to it because its input is a typed
@@ -386,8 +404,12 @@ My reading of the limits, hedged:
   "Normalization implies consistency" is the general form of this. The
   same holds of uniform (T) and full-semantics safety. So, if Sleight is
   consistent and meets the theorem's conditions, it cannot prove both
-  halves of either pair. Which half is the provable one is my guess, not
-  a result.
+  halves of either pair. The diagonal above already rules out one half
+  without Gödel, if the logic is sound: uniform H, in a form a function
+  can recurse on (an erased `Halts` for every source, for a faithful
+  step), would give `compile-h` a hypothesis-free caller (option 1
+  below). Whether full-semantics safety is provable is my guess, not a
+  result.
 - **What I expect remains provable inside Sleight.** H for one
   particular program, either by an `erased` proof for that program or
   by a fuel run in run position whose finished result is
@@ -420,9 +442,9 @@ Options:
    divergence is the driver's, outside every function; T1/T2 as an
    invariant. *Con:* the whole compiler, including the compile-time
    evaluator, must be written as an explicit-state step (other tracks).
-   Its verdict reaches only the driver, never a Sleight value (F6), so
-   it cannot serve where Sleight code needs the verdict, such as a
-   `--goal proved` run.
+   Its verdict reaches only the driver and the run's own later steps,
+   never compile-time code (F6), so it cannot serve where Sleight code
+   needs the verdict, such as a `--goal proved` run.
    Internal T4 additionally needs (b) or (c) on the same step function,
    or a graph relation of it (F1). *Cost:* high, since this is the
    compiler's architecture.
@@ -442,8 +464,9 @@ Options:
    extern models or FFI behaviour, the oracle of §4.2, the file system,
    and possibly the budget of §4.3 option 4. One proof covers
    `--extern` and `--no-extern` and every `slot-eq`. *Con:* generic code
-   cannot match on parameter relations (F7), and every helper that calls
-   a parameter function needs a factory (F5).
+   can match on a parameter relation only if the record also carries its
+   constructors and `Matchable` (F7), and every helper that calls a
+   parameter function needs a factory (F5).
 3. **Also generic over the syntax**: the reader as a parameter
    satisfying a `Parses text raw` law, which would be [owner 1]'s "the
    syntax of the language, or both". *Pro:* separates reader correctness.
@@ -510,8 +533,8 @@ value is the only reference to it." My reading of its role:
    for example crashes outside the oracle.
 4. **Is a crash during a compile-time run a rejection, or a third
    outcome?** §72 makes it an error for `native-compute`. DESIGN.md
-   does not say for an evaluator crash at compile time. §31 puts crashes
-   outside "the semantics", so the question is whether [owner 3]'s
+   does not say for an evaluator crash at compile time. On my reading
+   (§3 T3), §31 puts crashes outside "the semantics", so the question is whether [owner 3]'s
    theorem is about the spec, where on that reading no crash occurs, or
    also about an implementation, which "may crash". This is needed
    before [owner 3] can be stated.
@@ -562,9 +585,10 @@ value is the only reference to it." My reading of its role:
 
 ## 9. Unverified claims
 
-- The diagonal argument (§4.3) assumes that quines are writable in
-  Sleight, and that the spec of a program whose run-position code is
-  total halts. I did not write a quine.
+- The diagonal argument (§4.3) assumes that the spec of a program whose
+  compile-time code is total halts. Its run-position form assumes that
+  quines are writable in Sleight; I did not write one. Its macro form
+  needs no quine (03 F6).
 - That Sleight meets the conditions of Gödel's second theorem (r.e.
   checker, enough arithmetic, derivability conditions), and README.md's
   IΣ₂ claim.
@@ -576,12 +600,14 @@ value is the only reference to it." My reading of its role:
   here, given `slot-eq` and the crash allowances.
 - SOUNDNESS.md's (T), (C), and (E) themselves, on which H rests (§2.3).
 - That the three sources of a `Halts` argument in F4 are the only ones.
-- That full-semantics safety, rather than uniform (T), is the half of
-  §4.3's Gödel pair that Sleight can prove.
+- That full-semantics safety is provable inside Sleight. (That uniform
+  H, in a form a function can recurse on, is not provable rests on the
+  diagonal and the logic's soundness, §4.3.)
 - Whether a `many` function recursing on an erased `subterm` derivation
-  (F4) is intended by DESIGN.md. §17 and §21 do not forbid it, and the
-  reference accepts it, but I found no test or section that names the
-  pattern.
+  (F4) is intended by DESIGN.md. §17 and §21 do not forbid it, the
+  reference accepts it, and `tests/erased_subterm.sl` ("Subterm
+  recursion through an erased argument (section 21)") is a `many`
+  function recursing on an erased `subterm` `Nat`.
 
 ## Review notes
 

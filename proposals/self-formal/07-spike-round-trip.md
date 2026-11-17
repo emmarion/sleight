@@ -7,7 +7,7 @@ and DESIGN.md disagree, DESIGN.md is right.
 Tags: **[D]** DESIGN.md, quoted; **[C]** compiled or run. Unless marked
 otherwise, files are under `proto/roundtrip/` and were run with
 `_build/default/bin/main.exe` at commit 669b328 (no change to `bin/`,
-`lib/`, `src/` or `self/` since, up to ad07c35), and also with slc
+`lib/`, `src/`, or `self/` since, up to ad07c35 and 07692f2), and also with slc
 (`_build/release/slc`; `slc --interpret`, `slc --goal`).
 **[A]** marks my own reading or proposal. The only owner item mentioned
 is the brief's statement 3, in decision 4, and it is an earlier
@@ -23,16 +23,19 @@ session's paraphrase.
   value). The spec has an inductive `Elab` with evaluation premises, a
   positive `Fails`, and a small-step `Step` relation. The checker emits
   "evaluate this" by moving into a `Waiting` state. Each `Program`
-  step runs one machine step and the checker resumes, all driven by
-  `Program`. The final `Verdict p` carries an erased `Elab [] p` or
-  `Fails [] p`. Exclusivity (`Elab ∧ Fails → False`) is proved. It
-  needs determinism of evaluation (`step-det`, `runs-det`,
-  `evals-det`) and of every lookup the rules use.
+  step is one checker step: one machine step while `Waiting`, and
+  otherwise one statement, or the resumption after a run halts. The
+  final `Verdict p` carries an erased `Elab [] p` or `Fails [] p`.
+  Exclusivity (`Elab ∧ Fails → False`) is proved. Its proof uses
+  determinism of evaluation (`step-det`, `runs-det`, `evals-det`) and
+  of every lookup the rules use; with one extra, nondeterministic
+  `Step` rule, exclusivity is false (F4).
 - [C] Both the reference and slc accept the whole thing, run it, and
   report `--goal proved: PASS` for the packaged statement. Four
-  deliberately wrong versions of single components (each a standalone
-  function with the correct component's signature, not wired into the
-  checker) are refused at the faulty proof term. Example: skipping the
+  deliberately wrong versions of single components are refused at the
+  faulty proof term. Each is a standalone function, not wired into the
+  checker: two have the signature of `check-assert` and `check-need`,
+  and two stand for one case of `mstep` and one transition of `cstep`. Example: skipping the
   fact check in `Need` gives "expected
   `(Nth (Ent) es i (MkEnt v (KIs ct)))`, got `(Nth (Ent) es i (MkEnt v k))`".
 - How the suspended state is represented (the spike's key question). A
@@ -58,7 +61,8 @@ session's paraphrase.
 - [C] The packaged statement is only partial correctness plus
   exclusivity, and the exclusivity field is a lemma about the spec
   alone: it mentions no part of the implementation. A stepper that
-  always returns `More` also passes the goal (`spin_vacuous.sl`). A
+  always returns `More` also passes the goal (`spin_vacuous.sl`), and
+  the `why` string a `Rejected` carries is unconstrained. A
   `step` that itself never returns is refused (a same-level self-call
   "decreases no subterm argument", §17, §48). Completeness, or
   termination under H, is the main missing piece.
@@ -191,11 +195,16 @@ uses `impl.sl`'s lookups and `mstep`, and fails without it), and for
     determinism lemma per premise that two derivations share.
   - Exclusivity of `Let` needs `evals-det`, which needs `vals-det`,
     `runs-det`, and `step-det`, which in turn needs `nth-det` and
-    `nth-nonth`. [A] Without determinism of the evaluation relation,
-    this proof does not go through at `FLetRest`/`ElLet`: two different
-    values would put the two derivations in different contexts, and I
-    expect exclusivity could then be false. This matches 05's
-    expectation that T3 "needs the spec to be deterministic".
+    `nth-nonth`. Without determinism of the evaluation relation, this
+    proof does not go through at `FLetRest`/`ElLet`: two different
+    values put the two derivations in different contexts. Exclusivity
+    is then false for at least one nondeterministic variant [C, second
+    review]: `proto/review2/07_nondet_spec.sl` is `spec.sl` plus a rule
+    `SNumUp` letting `Num n` also step to `n + 1`, and with it
+    `proto/review2/07_nondet_both.sl` builds both an `Elab` and a
+    `Fails` for `Let (Num 0); Assert 0 CSucc` (`det.sl` is then refused
+    at `step-det`). This matches 05's expectation that T3 "needs the
+    spec to be deterministic".
 - The proof-carrying checker. Each lookup returns its relation (`Find`
   carries `Nth` or `NoNth`, `head` returns `Head`, and `ctor-dec`
   returns `CSame` or `CNe`). The suspension machinery (`Ctx`, the two
@@ -216,7 +225,8 @@ uses `impl.sl`'s lookups and `mstep`, and fails without it), and for
 
 - `det.sl`, first version. A bare `ne` as a final expression is
   refused; with today's `det.sl` edited back that way, the message is
-  "expected `(False)`, got `(CNe c2 c2)`". The fix is
+  "expected `(False)`, got `(CNe c2 c2)`" at `FAssertHead` and
+  "... got `(CNe c c)`" at `FNeedFact`. The fix is
   `(match erased ne _)`, a match whose every constructor is refuted,
   which "produces its declared result" (§25, §21). As I read §51, its
   refutation rule covers absurd bodies only, and `exclusive` is not
@@ -275,8 +285,11 @@ direct-style structural recursion on the program, like `t1_toy.sl`.
 passes the same goal. So the theorem is: whatever verdict `step`
 returns, from any state, is a correct one, and accept and reject cannot
 both hold. It does not say that the loop reaches a verdict when the
-spec has one. Nor does it cover `drive.sl`: the driver, and the text it
-prints for each verdict, are outside the proved statement. Program 6
+spec has one. The reason string of `Rejected` is free text, so a
+`step` may give any reason with a correct `Fails`. Nor does it cover
+`drive.sl`: the driver, which calls `cstep` and `rstep` directly rather
+than through a `Certified` value, and the text it prints for each
+verdict, are outside the proved statement. Program 6
 has a diverging run, so (by my reading, not proved) it has neither
 derivation, since `Evals` and `Sticks` both need a finite `Runs`; the
 loop runs at constant memory. That is consistent with "no verdict if
@@ -409,7 +422,10 @@ levels"), see §5 below.
   forms inside a form run before it does". So an inner run comes after
   its own elaboration and before whatever is "after it". What I could
   not find is which sibling items of one form count as "after it",
-  that is, the order in which a form's items are elaborated. [A] A
+  that is, the order in which a form's items are elaborated. §6 says
+  "The head is elaborated first", and §15 places each argument's
+  hoisted binding "just before the statement or final form that
+  contains the call", but neither orders two arguments. [A] A
   zipper or a positive `Fails` in the mirror shape needs that order
   (F3). This adds to the evidence for 01's decision 5.
 - §28: "On a mismatch, the error prints the expected constructor and
@@ -420,10 +436,12 @@ levels"), see §5 below.
 - DESIGN.md does not mention a diverging run-position form. §27 says
   the form "runs as soon as it has been elaborated, before the code
   after it is checked", and §17 says "Termination rests on levels"
-  ("Every call decreases a lexicographic order"); §62 caps expansions
-  ("At most 10000 expansions run in one run"). I could not find text
-  saying whether every compile-time run halts, or what a checker that
-  never returns means for acceptance. With no fuel, the toy simply
+  ("Every call decreases a lexicographic order"); §42 calls an
+  unbounded interaction "the driver's loop over total functions"; §62
+  caps expansions ("At most 10000 expansions run in one run"). These
+  suggest that functions are meant to halt, but I could not find text
+  saying outright that every compile-time run halts, or what a checker
+  that never returns means for acceptance. With no fuel, the toy simply
   never finishes, but its object language has no levels (F7). This is
   the gap that F7 and 05's T4 discuss.
 
