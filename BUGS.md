@@ -47,14 +47,16 @@ is a design decision. Remove an entry when it is fixed.
       level excludes a cycle (`store-write` stores a body over the whole
       current history, and `CCellWrite` writes `BTag` blocks). On one,
       the report is an error block, with the limits of the third group
-      below. `heap-strs`, `heap-pairs` and `heap-jobs`, which read the
+      below. `heap-strs`, `heap-pairs`, and `heap-jobs`, which read the
       lists a `ConfinePaths` or `Exec` request carries, still take a
       fixed `heap-strs-fuel` of 1000000 (`self/eval.sl:1018`) and answer
       running out with `Nil`, so a longer list seems to be cut short
       with no report. Reproduced for `ConfinePaths`, on the tree at
-      `5fba336` (`proposals/self-formal/proto/bugs/heap_strs_cut.sl`:
-      a `reads` list of 1000000 entries `"absent-dir"` then `"."`,
-      then a `Stat "."`): under `slc --interpret` it prints
+      `5fba336`, under `ulimit -s unlimited` (both compilers overflow
+      the default 8 MB stack on it), with
+      `proposals/self-formal/proto/bugs/heap_strs_cut.sl` (a `reads`
+      list of 1000000 entries `"absent-dir"` then `"."`, then a
+      `Stat "."`): under `slc --interpret` it prints
       `confine ok` and `stat cwd refused`, while the reference and
       the binary `slc --build` makes print `stat cwd ok`, as `slc
       --interpret` does with 999999 entries. `Exec`'s lists were
@@ -170,7 +172,7 @@ is a design decision. Remove an entry when it is fixed.
     compilers.
 
 23. **`slc`'s compile-time printer cuts a deep value short with `_`.**
-    `show-at` (`self/elab.sl:4680-4717`) starts at a depth of 100000
+    `show-at` (`self/elab.sl:4680-4725`) starts at a depth of 100000
     and spends it twice per nested field, once in `show-at` and once
     in `shown-field`, and prints `_` when it runs out, with no report.
     So a list of more than about 50,000 elements prints wrongly.
@@ -186,8 +188,8 @@ is a design decision. Remove an entry when it is fixed.
     same list in a final function: `slc --interpret` cuts it the same
     way, and the binary `slc --build` makes from it prints the whole
     list, since the emitted OCaml printer seems to have no depth bound.
-    This seems to conflict with DESIGN.md §45, which prints `_` only
-    for "a union with more than one", "an erased field, a cell, a
+    This seems to conflict with DESIGN.md §45, whose cases that print
+    `_` are "a union with more than one" and "an erased field, a cell, a
     slot, a function, an opaque proof, and a value whose type has no
     readable `Matchable`", and with §31's "A crash produces no value,
     never a different one". §28 asks a failed `comptime-match` to
@@ -211,7 +213,7 @@ is a design decision. Remove an entry when it is fixed.
     - `README:385-386` puts the sugar budget "as its first `subterm`
       parameter, ahead of the raw". In `elab-expr-demand`
       (`self/elab-main.sl:752`) it is `sugar`, after the `subterm`
-      parameters `fuel`, `callbacks` and a `hop-` index.
+      parameters `fuel`, `callbacks`, and a `hop-` index.
     - `README:463-465` lists macros as "Not modelled", "which the
       reference does not implement either". `self/elab-main.sl`
       expands macros (`env-expand`, `:509` onward), the reference
@@ -241,7 +243,7 @@ is a design decision. Remove an entry when it is fixed.
     The reference stops at the first error and prints only that one.
     Acceptance seems unaffected, since the first error already makes
     `slc` exit 1, and `--first-error` hides the later messages.
-    DESIGN.md does not say whether more than one error is reported;
+    DESIGN.md seems not to say whether more than one error is reported;
     the later messages seem to conflict with §27's "its results become
     `Settled` with the resulting values" and §28's "the error prints
     the expected constructor and the actual value". Which answer is
