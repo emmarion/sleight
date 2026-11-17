@@ -1,0 +1,8 @@
+(def-fns _ $ (many check-assert-bad : (erased (List $ Stmt) p0) (many (List $ Ent) es) (many (Nat) i) (many (Ctor) ct)
+    (many (List $ Stmt) rest) (erased (Ctx p0 es (Cons (Stmt) (Assert i ct) rest)) c) -> (many (Turn CState p0) o))
+  (let-match many (nth-find (Ent) es i) (FoundAt _ _ _ e nth)
+    ((MissingAt _ _ _ nn) (reject p0 es _ c (FAssertRange es i ct rest nn) "assert: no such entry")))
+  (let-match many e (MkEnt v k))
+  (let ((many ct2) (erased hd)) (head v))
+  (let ((many es2) (erased sn)) (set-nth (Ent) es i (MkEnt v (KIs ct)) e nth))
+  (More CState p0 $ Checking p0 es2 rest (CAssert p0 es i ct rest v k es2 c nth hd sn)))

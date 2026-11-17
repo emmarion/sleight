@@ -1,0 +1,6 @@
+(def-fns _ $ (many check-need-bad : (erased (List $ Stmt) p0) (many (List $ Ent) es) (many (Nat) i) (many (Ctor) ct)
+    (many (List $ Stmt) rest) (erased (Ctx p0 es (Cons (Stmt) (Need i ct) rest)) c) -> (many (Turn CState p0) o))
+  (let-match many (nth-find (Ent) es i) (FoundAt _ _ _ e nth)
+    ((MissingAt _ _ _ nn) (reject p0 es _ c (FNeedRange es i ct rest nn) "need: no such entry")))
+  (let-match many e (MkEnt v k))
+  (More CState p0 $ Checking p0 es rest (CNeed p0 es i ct rest v c nth)))
