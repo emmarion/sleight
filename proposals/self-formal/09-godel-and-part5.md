@@ -18,7 +18,9 @@ references.
   one: a Sleight relation `Prov` that formalizes acceptance and meets the
   derivability conditions D1 to D3 inside Sleight. Nobody has built it.
   So 03 and 05 may claim Gödel-based limits only conditionally on that
-  step (§4 below gives wording).
+  step (§4 below gives wording). §9 does not force the diagonal
+  sentence to be built from a relational `Sub`: a macro in a goal type
+  can splice in the unit's own text (`r_self_goal.sl`, compiled).
 - **What the cheap diagonal already gives.** 03's `read-file` diagonal
   gives three things without Gödel: no faithful, hypothesis-free,
   non-erased `compile`; no uniform H in a form a function can recurse
@@ -26,11 +28,16 @@ references.
   statement. Gödel II adds limits on Π-type statements: uniform safety,
   and (T) together with safety. It also needs only consistency, not
   soundness. Its price is the internal `Prov` step above.
-- **The naive arithmetic route is blocked.** One route is to show that
-  Sleight interprets HA or IΣ₁. Implication is level-stratified, which
-  blocks that route in its obvious form: a body cannot apply a hypothesis
-  whose level arrives packed in data (compiled). The `Prov` route needs
-  only first-order implications, which work.
+- **The obvious arithmetic translation meets level stratification.**
+  One route is to show that Sleight interprets HA or IΣ₁. Implication is
+  level-stratified: a body cannot apply a closure whose level arrives
+  packed in an argument or in a call's result (compiled). That blocks
+  the translation of nested implications in its obvious form. It does
+  not obviously block a rule-based, PRA-style translation whose
+  implications are first-order (data to data): an induction function
+  from packed premises to a packed conclusion compiles
+  (`r_induction_rule.sl`). Whether that covers all of PRA is unchecked.
+  The `Prov` route also needs only first-order implications.
 - **Q2, 03's detour.** SOUNDNESS.md never mentions the driver's call of
   a final `Fn` value. Part 5 says only that "the driver's loop over a
   `Program` (§42) is outside the claim, each step being a total call".
@@ -76,9 +83,13 @@ fixed set (my reading):
 ### 2.2 Is the theory recursively enumerable?
 
 Under "some permitted run passes", ⊢ T is Σ₁: there exist files F and a
-finite elaboration trace that accepts. That needs only that the spec's
-elaboration is a finitely branching computable process. It does not
-need checking to terminate. DESIGN.md is prose, so "computable" is my
+finite elaboration trace that accepts. That needs only that whether a
+finite trace is an accepting trace of a given unit is decidable. It does
+not need checking to terminate, on any unit. Under "every permitted run
+passes", ⊢ T is Σ₁ too if the spec's elaboration is finitely branching
+(`slot-eq` has two answers; the file system is fixed by F): a passing
+unit then has a finite tree of runs, by König's lemma, and that tree is
+the witness. DESIGN.md is prose, so that the check is decidable is my
 reading of it. The reference implementation is evidence (rule 2): it
 implements the elaboration and terminates on accepted inputs within its
 fuel. A run that finishes within fuel is a finished run, if its
@@ -145,9 +156,18 @@ agree):
 - `sys.sl top_mp.sl` (PASS): at the top level such a packed function
   applies freely (§20: "The top level is above every function level").
 
+- `r_result_closure_bad.sl` (refused by both, "`K` was not in scope
+  when level `L` was minted"): the same holds for a closure that a call
+  inside the body returns, the innermost step of axiom S.
+- `r_induction_rule.sl` (`--goal proved` PASS, both): `ind` takes a
+  base case and a packed first-order step, P n to P (Succ n), and
+  returns a packed ∀n. P n, by minting a level after unpacking the
+  step, as `hyp_factory.sl` does.
+
 So modus ponens works at the meta level (top-level application) and for
 hypotheses of known lower level. It does not work inside a body for a
-hypothesis of unknown level. SOUNDNESS.md part 8 describes the same
+closure of unknown level, unless the conclusion is itself a packed
+closure built by a factory. SOUNDNESS.md part 8 describes the same
 refusal as what stops Curry's paradox.
 
 ### 2.4 How Gödel II could be met
@@ -166,25 +186,47 @@ closure under logic. T_A must be closed under intuitionistic deduction,
 including axioms whose hypotheses are implications. Two options fail:
 - Fixed levels per formula. Each statement unit mints its own levels,
   so ⟦A⟧ differs between units unless one vocabulary mints them all.
-  Also, validating every S-axiom instance
-  (A→(B→C))→((A→B)→(A→C)) by direct closures seems to need level(A→C)
-  above level(A→(B→C)) for every B. That means infinitely many levels
-  below one, against "a well-order of type ω" (SOUNDNESS.md part 3,
-  line 115), unless levels are shared, and then a same-level call needs
-  a `subterm` decrease.
-- Packed levels. Internal MP fails (`hyp_packed_bad.sl`).
+  V has finitely many `def-lvl` forms, so formulas must share levels.
+  A function at a level of V cannot call a unit's own lemmas, which are
+  at later levels (§18: "a function at a later level cannot be called
+  from code at an earlier level"). Also, validating every S-axiom
+  instance (A→(B→C))→((A→B)→(A→C)) by direct closures seems to need
+  level(A→C) above level(A→(B→C)) for every B. That means infinitely
+  many levels below one, against "a well-order of type ω" (SOUNDNESS.md
+  part 3, line 115). With shared levels, a same-level call needs a
+  `subterm` decrease.
+- Packed levels. Internal MP with a data consequent fails
+  (`hyp_packed_bad.sl`), and so does the innermost step of axiom S
+  (`r_result_closure_bad.sl`).
+- A rule-based, PRA-style translation (my proposal, unchecked beyond
+  one case). Translate only free-variable formulas with decidable
+  matrices, as graph relations, with each theorem's universal closure
+  packed. Implications are then between data. Induction becomes an
+  internal function from packed premises to a packed conclusion, which
+  compiles (`r_induction_rule.sl`). Composition of packed totality
+  proofs is `hyp_factory.sl`'s `compose`. G2 holds for PRA and, as I
+  recall, for its consistent r.e. extensions, with consistency a
+  free-variable formula. Not checked: closure of T_A under all of PRA's
+  rules, graphs for every primitive recursive function, and a
+  primitive recursive check of acceptance traces for σ.
 
-A cleverer translation (level parameters, `Predates` carried in data,
-factories) may exist. I did not find or rule one out. README.md's "its
-strength is about IΣ₂" concerns the provably total functions ("computes
-exactly the multiply recursive functions"). Even if it holds, it does
-not by itself supply ⟦·⟧ with the closure properties G2 needs.
+A cleverer translation for HA (level parameters, `Predates` carried in
+data, factories) may exist. I did not find or rule one out. README.md,
+in its paragraph that begins "The author asserts", says that "the
+language as a whole computes exactly the multiply recursive functions,
+so its strength is about IΣ₂ (anticlassicality aside), with
+proof-theoretic ordinal ω^ω^ω". Read as a claim about computation,
+which is how README.md derives it, it does not by itself supply ⟦·⟧
+with the closure properties G2 needs. Read as Sleight interpreting
+IΣ₂ with closure under deduction, it would supply route A's base; I
+found nothing in README.md that argues that reading.
 
 **B. Internal provability predicate on codes (Hilbert–Bernays–Löb).**
 Define `Prov c` in Sleight as an inductive relation saying that a unit
 with goal code c passes. That means formalizing §1 to §72 as a finitary
 derivation system: run-position evaluation, macro expansion with its
-10000 cap, literal interning, `read-file` and `slot-eq` as inputs. G2
+10000 cap, and literal interning, with `read-file` and `slot-eq` as
+inputs. G2
 then needs:
 - **D1 (meta):** if ⊢ T, then ⊢ `Prov ⌜T⌝`. A true `Prov` instance has
   a finite derivation, which can be written out or obtained by
@@ -197,9 +239,19 @@ then needs:
 - **D3 (internal):** `Prov ⌜A⌝ → Prov ⌜Prov ⌜A⌝⌝`, formalized Σ₁
   completeness of `Prov`.
 - **A diagonal sentence G** with ⊢ G → ¬`Prov ⌜G⌝` and the converse.
-  Since §9 bars a substitution function in types, G is built
-  relationally: G := for every y with `Sub ⌜φ⌝ y`, ¬`Prov y`. Building
-  it needs a proof that `Sub` is functional.
+  §9 bars a substitution function in types, but its own words make an
+  exception: "elaborating a type calls none: the only code that runs is
+  a macro's expansion". So there are two constructions. Relationally,
+  G := for every y with `Sub ⌜φ⌝ y`, ¬`Prov y`, which needs a proof that
+  `Sub` is functional. Or, as 03's diagonal does, a macro reads the
+  unit's text with `read-file` (§65) and expands to ¬`Prov` of that
+  text; then G is ¬`Prov ⌜G⌝` after expansion, if codes are unit texts.
+  `r_self_goal.sl` (`--goal proved` PASS, reference and slc) has a goal
+  type that a macro expands to `(Prov "<the file's own text>")`. That
+  second form puts the burden on `Prov`'s formalization of macros and
+  `read-file`, which route B needs anyway. A string literal is opaque to
+  the checker (§45), so whether D2 and D3 can be proved about such codes
+  is open.
 
 Every internal implication here goes from inductive derivations to
 inductive derivations or to `False`. It calls earlier, closed lemmas,
@@ -238,12 +290,14 @@ give G1-type results: some sentence is undecided. They do not give
 - r.e. (§2.2);
 - Σ₁-completeness for a halting relation (⊢ `Halts e` whenever e
   halts, by a written derivation);
-- Σ₁-soundness (⊢ `Halts e` only if e halts; this follows from
-  SOUNDNESS.md's (T), (S), and (E)).
+- consistency, with ¬`Halts e` applicable to `Halts e` at the top
+  level (§20), so that no e has both proved.
 
 From these, some e diverges while ⊬ ¬`Halts e`. If every true
 non-halting statement were provable, enumerating proofs would decide
-halting. Every proof of G2 I know needs some internalized Σ₁
+halting. Σ₁-soundness (⊢ `Halts e` only if e halts) is not needed for
+this; on my reading it would follow from SOUNDNESS.md's (T), (S), and
+(E), which are argued there, not proved. Every proof of G2 I know needs some internalized Σ₁
 completeness, D3 or an instance of it.
 
 ### 2.5 The cheap diagonal against Gödel II
@@ -252,7 +306,7 @@ completeness, D3 or an instance of it.
 |---|---|---|
 | No faithful, hypothesis-free, non-erased `compile : Src -> Verdict` (03 F6) | Gives it, under §3.4's premises | Nothing |
 | Uniform H not provable in a form a function can recurse on (03 F6/F7, 05 §4.3) | Gives it, with soundness ((T), (S), (E)) and a faithful stepper | Needs only consistency, and also covers non-recursable forms (¬¬H, Π-forms), but only for H *with* safety (H alone does not give Con: a stripped run that reaches absurd code still "halts" in some sense) |
-| Uniform stripped-run safety not provable (05 §4.3, T7) | Does not give it: a Π statement yields nothing to run | The only route, under route B's D1 to D3 and route C's two lemmas |
+| Uniform stripped-run safety not provable (05 §4.3, T7) | Does not give it: a Π statement yields nothing to run | Gives it under route B's D1 to D3 and route C's two lemmas, or under a route A translation with the same lemmas; I know no other route |
 | Uniform (T) + full-semantics safety not provable (05 T7) | Only in recursable form, with soundness | Every form, from consistency, under the same conditions |
 
 ## 3. Q2: SOUNDNESS.md and the detour
@@ -290,8 +344,9 @@ finishes, by well-founded induction on μ") asks a decrease only of the
 calls an activation makes, never of the root. The root here is called
 with no proof, as a top-level call is (§20). The invariants (I1) to (I3)
 at that call are those in force at the end of elaboration. Part 5's
-remark that each `Program` step is "a total call" treats driver-made
-calls as covered. So I read (T) as covering the final-`Fn` call, and
+remark that each `Program` step is "a total call" can be read as
+treating driver-made calls as covered, though the same sentence puts
+the driver's loop "outside the claim". So I read (T) as covering the final-`Fn` call, and
 (E) as covering its stripped run. Two things make this a reading, not a
 quotation:
 - part 3's full semantics does not say that it includes the driver;
@@ -307,7 +362,9 @@ of the full semantics") suggests that meaning without saying it.
 
 From `proto/review5/`:
 - `main.exe ../../../../std/macro.sl 03_detour.sl` prints `(BFalse)`,
-  exit 0.
+  exit 0. Every run below also warns on standard error that line 37,
+  inside the string literal, is "dedented past indentation 2"; that is
+  a layout warning, not a refusal.
 - `--extract out.ml` writes the OCaml, exit 0. (`--extract` takes the
   next argument as its output path. Written as `--extract
   ../../../../std/macro.sl 03_detour.sl`, it took `std/macro.sl` as the
@@ -352,20 +409,25 @@ Yes, on my reading, under these premises:
    literal "means what it would mean with those values written out").
    It must also not matter that one run is the compile-time evaluator's
    and the other the driver's. §31 gives one semantics, "a machine with
-   unlimited stack and heap"; that is my reading.
+   unlimited stack and heap"; that is my reading. It also sets crashes
+   aside: §31 and §42 allow one run to crash where the other does not.
 4. The rest of the macro run ends. In `diagonal.sl` this is by
    inspection: `diag-fn`, `macro-fail`, `fail-raw`, and `str-raw`
-   (`std/macro.sl:5-36`) are non-recursive and call only `read-file`
-   and `intern-string`. Those must return; for `read-file` that is a
-   host assumption (03 F7). 03's "the same way" cannot be a P, because
+   (`std/macro.sl:5-36`) are non-recursive and, apart from `compile`
+   and each other, call only `read-file` and `intern-string`. Those
+   must return; for `read-file` that is a host assumption (03 F7). 03's "the same way" cannot be a P, because
    `diag-fn` needs a `MacroWorld` that only the expander supplies (§65).
    Inspection replaces it here. For a real `compile`, the macro must
    also read every file of its unit and build `Src` from them, still by
    non-recursive code plus calls already covered.
 5. `read-file` returns Q's text in Q's run. That is, "faithful" is
    relative to a fixed file system (§2.1).
+6. After the macro returns, the rest of Q is accepted when the macro
+   expands to nothing, and Q is rejected when it expands to
+   `compile-error`. In `diagonal.sl` the rest is one string literal,
+   and the expansion count stays far below §62's 10000.
 
-Under 1 to 5, Q's spec run ends, and its verdict is the negation of
+Under 1 to 6, Q's spec run ends, and its verdict is the negation of
 `compile`'s answer on Q, as 03 F6 says. Premise 1 is the weakest. If
 "the checker" in part 1 means the implementations, P's acceptance is
 established (§3.3), but premise 2 then adds that the spec agrees with
@@ -378,8 +440,9 @@ returns, reading part 5 as counting the driver's call as one of the
 activations it covers."** Add: "SOUNDNESS.md does not mention the
 driver's call of a final `Fn` value. Part 5's measure argument asks no
 decrease of a root activation, and its last sentence calls each
-`Program` step 'a total call', so this reading seems sound, but it is a
-reading. The macro's other code cannot be given a P, since it needs a
+`Program` step 'a total call', though the same sentence puts the
+driver's loop 'outside the claim'. So this is a reading, not a
+quotation. The macro's other code cannot be given a P, since it needs a
 `MacroWorld` (§65). In `diagonal.sl` it is non-recursive apart from that
 call, and its termination is by inspection, given that `read-file` and
 `intern-string` return (09 §3.4)."
@@ -393,48 +456,65 @@ for effectively axiomatized theories that satisfy the
 Hilbert–Bernays–Löb derivability conditions ... I have not checked that
 Sleight meets the conditions." with:
 
-> Gödel's second theorem would apply in this conditional form. Let
-> `Prov` be a Sleight inductive relation on codes of units, formalizing
-> acceptance under `--goal proved` (§71). Suppose (a) no unit proves
-> `(goal erased (False))`; (b) whenever a unit proves T, one proves
-> `(Prov ⌜T⌝)`; and (c) Sleight proves D2 and D3 for `Prov` and a
-> diagonal sentence built relationally (§9 bars substitution in a type).
-> Then no unit proves ¬`(Prov ⌜False⌝)`. If moreover Sleight proves
+> On my reading, Gödel's second theorem would apply in this
+> conditional form. Let `Prov` be a Sleight inductive relation on codes
+> of units, formalizing acceptance under `--goal proved` (§71). Suppose
+> (a) no unit proves `(goal erased (False))`; (b) whenever a unit proves
+> T, one proves `(Prov ⌜T⌝)`; and (c) Sleight proves D2 and D3 for
+> `Prov`, and a diagonal sentence G with G ↔ ¬`(Prov ⌜G⌝)`, built from a
+> relational substitution or by a macro that reads the unit's text (09
+> §2.4). Then, by the usual derivation from these conditions (cited from
+> memory), no unit proves ¬`(Prov ⌜False⌝)`. If moreover Sleight proves
 > that `(Prov ⌜False⌝)` yields an accepted program whose stripped run
 > reaches absurd code, it cannot prove uniform stripped-run safety. The
-> same goes for uniform (T) with full-semantics safety. None of (b),
-> (c), or that lemma has been attempted (09 §2.4). Anticlassicality does
-> not exempt Sleight, since the argument is intuitionistic. README.md's
-> IΣ₂ remark concerns provably total functions and does not supply (c).
+> same goes for uniform (T) with full-semantics safety, given the
+> matching lemma. None of (b), (c), or those lemmas has been attempted
+> (09 §2.4). As far as I recall, that derivation is intuitionistic, so
+> anticlassicality does not obviously exempt Sleight. README.md's IΣ₂
+> remark is derived there from the functions Sleight computes; read
+> that way, it does not supply an interpretation of arithmetic closed
+> under deduction, and it says nothing about (b) or (c).
 
-Also delete "The claimed IΣ₂ strength (F9) appears to be more than such
-results usually need": strength in provably total functions is not what
-G2's conditions ask.
+Also replace "The claimed IΣ₂ strength (F9) appears to be more than
+such results usually need" with: "The claimed IΣ₂ strength (F9) would
+supply a base for G2 only if it means that Sleight interprets IΣ₂ with
+closure under deduction; README.md derives it from the functions
+Sleight computes, which does not give that (09 §2.4)."
 
 **05 T7.** Replace "if it is consistent and meets Gödel II's conditions
-(unchecked)" with "if it is consistent and conditions (b) and (c) of
-§4.3 hold for a formalized `Prov` (unattempted)".
+(unchecked)" with "if it is consistent, conditions (b) and (c) of
+§4.3 hold for a formalized `Prov`, and the matching lemmas of §4.3 hold
+(all unattempted)".
 
 **05 §9.** Replace "That Sleight meets the conditions of Gödel's second
 theorem (r.e. checker, enough arithmetic, derivability conditions)"
-with: "r.e. holds under the readings of 09 §2.2. Σ₁ statements and
-consistency of a coded system are expressible as goals (09 §2.3,
-compiled). D1 to D3 for a formalized `Prov`, the diagonal sentence, and
-any interpretation of HA or IΣ₁ are unattempted. The naive arithmetic
-interpretation meets level stratification (09 §2.3, compiled)."
+with: "r.e. appears to hold under the readings of 09 §2.2. Σ₁
+statements and consistency of a coded system are expressible as goals
+(09 §2.3, compiled). D1 to D3 for a formalized `Prov`, the diagonal
+sentence, and any interpretation of HA, IΣ₁, or PRA are unattempted.
+The obvious translation of nested implications meets level
+stratification (09 §2.3, compiled); a PRA-style translation with
+first-order implications does not obviously meet it (09 §2.4)."
 
 **00-summary's Gödel bullet** (line 576) should then point to 09 for
 the conditions. It is not part of this task.
 
 ## 5. Unverified
 
-- That the spec's elaboration is a finitely branching computable
-  process (§2.2). DESIGN.md is prose.
+- That the spec's acceptance traces are decidable to check, and that
+  its elaboration is finitely branching (§2.2). DESIGN.md is prose.
 - The relational Q axioms: I cited the prelude lemmas but did not write
   the axioms out. I did not try HA, IΣ₁, or Σ₁ induction beyond the
   fixed-level shape of `hyp_fixed.sl`.
-- The S-axiom remark in route A is reasoning, not a compiled
-  impossibility. A cleverer translation is not ruled out.
+- The S-axiom remark in route A is reasoning; only its innermost step
+  is compiled (`r_result_closure_bad.sl`). A cleverer translation is not
+  ruled out.
+- The PRA-style route: only the induction function is compiled
+  (`r_induction_rule.sl`). G2 for consistent r.e. extensions of PRA is
+  from memory.
+- The macro-built diagonal: `r_self_goal.sl` shows only that a goal type
+  can contain the unit's own text, not that D2 or D3 can be proved about
+  such codes.
 - Route B: no `Prov`, D2, D3, `Sub`, or G was built. Whether D2 holds
   given §71's one goal per unit and the global gensym and literal state
   is open.
@@ -447,3 +527,102 @@ the conditions. It is not part of this task.
   (E)'s "follows" implies termination of the stripped run.
 - §3.4 premise 2 (the spec accepts P as the implementations do) and
   premise 3 (the evaluator's run and the driver's run are one semantics).
+
+## Review notes
+
+An adversarial reviewer read the brief, CLAUDE.md, DESIGN.md in full,
+SOUNDNESS.md in full, README.md's "Logic and strength", 03 F6 and F7
+with their review notes, and 05 §4.3, T7, and §9 with theirs. It re-ran
+`hyp_packed_bad.sl` (refused, the quoted message), `hyp_fixed.sl` and
+`hyp_factory.sl` (accepted), and `--goal proved` on `sys.sl` with
+`sigma1.sl`, `con.sl`, and `top_mp.sl` (PASS), all under the reference
+and `_build/release/slc`; and `03_detour.sl` under the reference,
+`--extract` (to a scratch path), `--build`, `slc --interpret`, and `slc
+--build` (each prints `(BFalse)`, exit 0), and `diagonal.sl` under the
+reference and `slc --interpret`. A byte comparison confirmed the prefix
+match (909 bytes) and that the unescaped literal equals `diagonal.sl`
+(969 bytes). `std/macro.sl` was unchanged afterwards.
+
+Errors found and changed:
+
+1. §2.2, the r.e. condition. "Finitely branching computable process"
+   was both more and less than needed: "some run passes" needs only a
+   decidable check of finite accepting traces, and finite branching is
+   what makes "every run passes" Σ₁, through König's lemma, which was
+   not covered. Rewritten.
+2. §2.4 B and §4, "Since §9 bars a substitution function in types, G is
+   built relationally". §9 itself lets a macro run while a type is
+   elaborated, and a macro can read the unit's text (§65), as 03's
+   diagonal does. `r_self_goal.sl` (new) has a goal type that expands
+   to `Prov` of the file's own text; `--goal proved` passes under both
+   implementations. Both constructions are now given, with the open
+   point that string literals are opaque to the checker (§45).
+3. Summary and §2.4 A, "The naive arithmetic route is blocked". The
+   compiled refusals block nested implications whose proof must call a
+   closure of unknown level. A rule-based, PRA-style translation with
+   first-order implications avoids them in the one case tried:
+   `r_induction_rule.sl` (new) turns a packed first-order step and a
+   base case into a packed ∀n inside a function body, accepted by both.
+   The heading and text now say the obvious translation meets
+   stratification and the PRA-style one does not obviously; added as a
+   third option under route A.
+4. §2.3, only a hypothesis packed in an argument was compiled; the S
+   axiom's innermost step uses a closure returned by a call in the same
+   body. `r_result_closure_bad.sl` (new) is refused by both with "`K`
+   was not in scope when level `L` was minted". Added.
+5. §2.4 A, fixed levels. Added that V has finitely many `def-lvl` forms,
+   so formulas must share levels, and that a function at a level of V
+   cannot call a unit's later lemmas (§18, quoted).
+6. §2.4 A and §4, README.md's IΣ₂ remark was described as concerning
+   "the provably total functions", a phrase README.md does not use. It
+   derives the strength from "computes exactly the multiply recursive
+   functions" and also names an ordinal. Now quoted, attributed to the
+   paragraph that begins "The author asserts", and the two readings
+   separated. The suggested deletion of 05's IΣ₂ sentence became a
+   replacement that keeps the conditional.
+7. §2.4, Kleene G1. Σ₁-soundness was listed as a premise and said to
+   "follow" from SOUNDNESS.md's claims, unhedged. The argument needs
+   consistency (with top-level application of ¬`Halts e`), not
+   Σ₁-soundness. Reworded and hedged.
+8. §3.4 lacked a premise that the rest of Q is accepted when the macro
+   expands to nothing and rejected when it expands to `compile-error`.
+   Added as premise 6. Premise 3 now says that it sets crashes aside,
+   which §31 and §42 allow in one run and not the other. Premise 4 now
+   says that `diag-fn` also calls `compile` and the macro helpers.
+9. §3.2, "treats driver-made calls as covered" was stated as what part
+   5 does; the same sentence puts the driver's loop "outside the
+   claim". Now a reading. §4's suggested 03 wording said "this reading
+   seems sound"; changed to the same.
+10. §4, suggested 05 wording. The T7 replacement dropped the lemma that
+    `(Prov ⌜False⌝)` yields an accepted program reaching absurd code,
+    without which (b) and (c) give only ⊬ consistency, an overclaim.
+    Added. The §4.3 replacement now hedges the derivation from D1 to D3
+    and its intuitionistic character as recalled, and the §9
+    replacement says "appears to hold" for r.e.
+11. §2.5, row 3 said the Gödel route is "the only route"; a route A
+    translation with the same lemmas would also give it. Reworded.
+12. §3.3 omitted the layout warning (line 37) that every run prints on
+    standard error. Added.
+13. §2.4 B, a four-item list whose last item read as two. Rephrased.
+
+Confirmed: the DESIGN.md quotes (§9, §18, §20, §27, §29, §31, §45, §65,
+§71); the SOUNDNESS.md quotes of parts 1, 3, 5, 7, and 8, verbatim,
+including part 5's last sentence; `grep driver` hits lines 195 and 289
+only; line 115's "a well-order of type ω"; the prelude line numbers for
+`Nat`, `Eq`, `Add`, `Mul`, `add`, `mul`, `add-fn`, and `mul-fn`;
+`std/macro.sl:5-36`; `call_in_type_bad.sl` is refused citing §9. The
+route B outline (D1 to D3, the diagonal, then top-level application)
+uses no internal application of a closure of unknown level: Con → G
+can be built by a factory, as `hyp_factory.sl` does, since G is itself
+a closure type (my reasoning).
+
+Unsure:
+- Whether G2 holds for consistent r.e. extensions of PRA stated as
+  free-variable theories, and whether some version for theories that
+  only interpret Q would weaken route A's base further (from memory,
+  not checked).
+- `tests/anticlassical.sl` refutes excluded middle as one function over
+  every erased `Type P`. Whether a classical base such as IΣ₁ could
+  still be interpreted instance by instance was not examined.
+- Whether a macro-built G is compatible with D3, given that a string
+  literal has no `is` rule (§45).
