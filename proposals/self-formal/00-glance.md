@@ -15,27 +15,32 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
 
 ## Five things worth knowing first
 
-- **Diagonal.** If Sleight's functions terminate (SOUNDNESS.md's (T), argued, not proved), no non-erased
-  `compile : Src -> Verdict` with no further evidence can be faithful on every source; only the mechanism is
-  tested. It does not refute owner statement 4(ii) as mathematics, nor a `compile` taking erased evidence of H
-  for its one source. slc does not escape it: its compile is one `Program` step bounded by fuel, and its `World`
+- **Diagonal.** If Sleight's functions terminate and its checking ends (SOUNDNESS.md's (T), (C), and (E), argued,
+  not proved), no non-erased `compile : Src -> Verdict` with no further evidence can be faithful on every source;
+  only the mechanism is tested. It does not refute owner statement 4(ii) as mathematics, nor a `compile` taking
+  erased evidence of H for its one source, though, if Sleight is sound, no source can produce that evidence for
+  itself (03's reasoning). slc does not escape it: its compile is one `Program` step bounded by fuel, and its `World`
   blocks only the literal construction (03's reading). 05's version needs T1–T4 and determinism through T3, not
   T5, and no quine in its `read-file` macro form (00-summary §2 item 2).
 - **Spikes.** The intrinsic-derivation plus `Program`-driver pattern compiles and runs at toy scale, fuel-free, on both
-  implementations, but proves partial correctness only: an always-"stuck" (06) or never-answering (07) step passes,
-  and 07's `Rejected` reason text is unconstrained. For one variant with a nondeterministic rule added, both
+  implementations, but proves partial correctness only: an always-"stuck" `step`, `advance`, or `run-total` (06)
+  or a never-answering `step` (07) passes, and 07's `Rejected` reason text is unconstrained. 06's first teeth check
+  tests `step` only against `Step`, not the spec. For one variant with a nondeterministic rule added, both
   derivations exist (compiled). Neither models Sleight's own machine (00-summary §2 items 16, 17).
 - **`slot-eq`.** §67 lets answers differ between runs, so acceptance can depend on the implementation; answers already
   differ (interpreters vs `--build` binaries with externs on `imm_eq.sl`; slc's native build vs `--byte`,
   `--interpret`, and the reference on `slot_eq_share.sl`). That an `ENone` answer rejects is inferred. The output
-  theorem therefore cannot be "the same values, up to crash"; 04 makes `slot-eq` a second oracle beside `world-do`
-  (00-summary §2 items 5, 18).
+  theorem therefore cannot be "the same values, up to crash"; 04 makes `slot-eq` an oracle beside the host's
+  answers to `world-do` and `read-file` (00-summary §2 items 5, 18).
 - **Evaluation order.** DESIGN.md fixes eagerness and some run-position order, but not body statements, sibling arguments,
-  `values` entries, or several §15 bindings in general; elaboration order is visible through gensyms (00-summary §2 item 6).
+  `values` entries, or several §15 bindings in general. Elaboration order is visible through gensyms; both
+  implementations elaborate the head, then expand an application's argument macro calls, then elaborate its
+  arguments, left to right. At runtime the reference runs a head form before an argument; slc's order is untested
+  (00-summary §2 item 6).
 - **slc printer defect.** `slc --interpret` on a 100003-element list prints 49,999 `Cons _ 0` then `Cons _ _ _)`:
   a wrong value, not a §31 crash. It is confined to `show-at` (`--interpret`'s final printer, `comptime-match`
-  mismatch messages, and `dump-context` reports); compiled slc output and the reference print all elements
-  (00-summary §2 item 10).
+  mismatch messages, `entry-value`, and `dump-context` reports); compiled slc output and the reference print all
+  elements (00-summary §2 item 10).
 
 ## Decisions, at a glance (00-summary §3)
 
@@ -47,7 +52,7 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 |---|---|---|---|---|
 | 1 | Where does the spec start? | (a) source bytes, small reader before a `Raw` relation (01, 04) | 14, 17 | no |
 | 2 | What does "parameterized the semantics" mean? | (b) generic over a model record (05); 04: extern table | 9, 16 | no |
-| 3 | Is the order of elaboration part of the language? | (a) fix it: head, then items left to right (01) | 5, 13 | part |
+| 3 | Is the order of elaboration part of the language? | (a) fix it: head, then argument macro calls, then arguments, left to right (01) | 5, 13 | part |
 | 4 | Is the runtime evaluation order fixed? | fix it, O1/O3 (02); 04 asks if order is unobservable | — | part |
 | 5 | How is `slot-eq`'s nondeterminism handled? | (a) oracle parameter (01, 02, 05; 04 treats it as one); shapes differ | 8 | part |
 | 6 | What is a compile-time crash or fuel exhaustion? | tracks disagree; 01 and 02 opposite, cross-referenced | 5, 14 | part |

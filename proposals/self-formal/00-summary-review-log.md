@@ -1602,3 +1602,81 @@ Unsure, not changed:
 - Key finding 10 says the printer defect "reaches" three consumers; 00-glance says "confined to
   `show-at`". Both follow 04 r2.2 to r2.4 and this file's third review; no further consumer was
   searched for.
+
+## Third review propagation
+
+Each track and spike file now ends with "Third review notes". This pass read all seven of those
+sections and the corrected body text they point to, and changed 00-summary.md and 00-glance.md to
+match. Citations `rN`, `r2.N`, and `r3.N` are as in 00-summary.md's header, which now defines
+`r3.N`. Nothing below is a decision.
+
+1. Picture "Fuel", key finding 2, and section 6: the diagonal's premise is now SOUNDNESS.md's (T),
+   (C), and (E), (E) because §27 strips erased positions before a run (03 r3.1; 05 r3.1). Added the
+   step carrying SOUNDNESS.md's claims over to a rejected Q (03 r3.2, listed as unverified), Q fixing
+   its flags (03 r3.3), and the reading of "faithful" the `ENone` copy needs (03 r3.4). The
+   underclaim about erased H evidence is replaced: if Sleight is sound, no Q can produce it for
+   itself, while code outside Q may (03 r3.5). 00-glance's diagonal bullet aligned.
+2. Key finding 4 and decision 14 (05's (b)): a uniform erased `Halts` proof exists for a terminating
+   toy step (`proto/review3/05_halts_uniform.sl`); the diagonal rules it out for a faithful compiler
+   (05 r3.4). Packed-level closures: a packed `Predates` is also refused (06 r3.2).
+3. Key finding 6, decision 3, rough edge 1, and 00-glance (bullet and row 3): elaboration order is
+   no longer "left to right, depth first"; both implementations take the head first, then expand
+   every macro call among an application's arguments before elaborating any argument, then the
+   arguments left to right (`proto/review3/gensym_*.sl`; 01 r3.1). Decision 3's recommendation now
+   states that order.
+4. Key finding 6, decision 4, rough edge 4, section 6, and 00-glance: the reference runs a head form
+   before an argument form (`proto/review3/head_arg_order.sl`; 02 r3.1); section 6's "arguments
+   before head per `lib/eval.ml:24`" item is removed. slc's order is listed as untested, since
+   `slc --interpret` overflows its stack on that file at any depth (02 r3). This pass's own check
+   (variants in the scratchpad, not kept): the overflow also occurs with the head at depth 0 and not
+   with a small array size, so it seems to be slc's crash on the oversized `array-new`; since §31
+   leaves how a crash is reported unspecified, it is listed in section 6 as possibly, not evidently,
+   a defect.
+5. Key finding 6: `Measure` cost is no longer an observer of order; it is absorbed once the world's
+   answers are inputs (02 r3.3).
+6. Decision 14 (01): the logic is reversed to 01's corrected form: the fuelled version needs no
+   hypothesis, and (a) would follow under H plus fuel monotonicity (01 r3.2).
+7. Decision 13 and key finding 15: §28's content is "the expected constructor and the actual value";
+   the implementations differ on the first message's position after a compile-time crash (01 r3.3).
+8. Decision 6 (02's C4): SOUNDNESS.md part 6 argues the rest of elaboration terminates without (T);
+   the depth bound bounds steps by 02's count, a reading (02 r3.2).
+9. Decision 7: SOUNDNESS.md's full-semantics route, which an R1 spec takes over or replaces (02
+   r3.8). Decision 8: MINIMAL.md's "Evaluation and typing are relations, not functions" and 02's
+   reading of the step as a deriving function beside such a relation (02 r3.9); 02's prototype
+   addresses are natural numbers (02 r3.5). Decision 9: E1's alternative of dropping the
+   extern-only facts (02 r3.4).
+10. Key finding 10 and 00-glance: the claim that the `show-at` defect contradicts
+    `self/README.md:254-258` is withdrawn (04 r3.2); `entry-value` added as a consumer (04 r3.12);
+    `heap-strs-fuel` silently cutting a request's string list past 10^6 elements added (04 r3.4).
+11. Key finding 11 and section 6: stores marked `(imm o n)` are emitted as barrier-free
+    `Array.unsafe_set` on the constructor's block (04 r3.1).
+12. Key finding 18 and 00-glance: `read-file` is an oracle beside `world-do` and `slot-eq` in 04
+    (04 r3.5).
+13. Rough edge 2 cites 04 §5.1 for §61 (04 r3.7); rough edge 5 adds that §17's levels are meant to
+    rule out the diverging case, unsettled (04 r3.7).
+14. Decision 5: 05's "rejects everything" is withdrawn under positive `Fails`, and the crash-oracle
+    warning narrowed to sources that run compile-time code, if a crash counts as a rejection (05
+    r3.2, r3.3).
+15. Section 6: whether stripped-run safety alone gives consistency is not worked out (05 third
+    review); one of 05's "first attempt refused" claims is reproduced (05 r3).
+16. Decision 18c and rough edge 27: §18 says outright that "a function at a later level cannot be
+    called from code at an earlier level", so the rough edge is reworded as a consequence, with
+    whether it is wanted left to 18c (06 r3.1). Decision 8b: owner statement 6 concerns the spec's
+    run, Q3.2 the implementation's heap (06 r3.6).
+17. Key findings 16 and 17, section 7, and 00-glance: 06's further vacuous implementations, an
+    always-`Ended`/`Stuck` `advance` and an always-`AgreeStuck` `run-total`
+    (`proto/review3/06_vacuous.sl`; 06 r3.4); 06's first teeth check tests `step` only against
+    `Step`, the stronger swap being refused in `step-back` (06 r3.5); 07's any-`init` vacuity (07
+    third review).
+18. Section 6: 07's "no verdict if and only if some run diverges" is false as worded; now "a run
+    that the checker reaches", neither direction proved (07 r3.5). Section 7: in `step-det`,
+    `SVar` against `SVarNo` needed `nth-nonth` (07 r3.2). Decision 8a: 07's (b) "nearer the prose"
+    is 07's reading, with §31's "that of a machine" (07 r3.4).
+19. Header: `r3.N` defined. Paragraphs touched were rewrapped to 100 columns and some condensed to
+    keep 00-summary.md near 600 lines; 00-glance.md stays under 110 lines.
+
+Unsure, not changed:
+- 03 r3, 04 r3, and 05 r3 also corrected citations and details that 00-summary.md does not state
+  (line ranges, attributions inside the track files); nothing here was changed for them.
+- Key finding 10 drops 04's remark that the unrefuted zero cases of `str-split-fuel` and the sugar
+  budget would be proof obligations, for length.
