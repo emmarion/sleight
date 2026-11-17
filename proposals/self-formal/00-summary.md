@@ -15,8 +15,9 @@ is `02-dynamic-semantics.md`, `03` is `03-fuel-termination.md`, `04` is
 `06-spike-certified-stepper.md`, and `07` is `07-spike-round-trip.md`.
 `§n` alone is
 DESIGN.md. "Owner statement n" is item n of the brief's "Owner decisions",
-which are an earlier session's paraphrases, not the owner's words; they
-are the only owner positions anywhere in this file.
+which are an earlier session's paraphrases, not the owner's words; they,
+and the goals the brief lists beside them (such as "minimize fuel use"),
+are the only owner positions this file reports.
 
 ## Contents
 
@@ -27,6 +28,7 @@ are the only owner positions anywhere in this file.
 5. Cross-file inconsistencies
 6. What is not yet known or unverified
 7. Spikes
+8. Review notes
 
 ## 1. The picture in one page
 
@@ -49,8 +51,9 @@ disagree, the decision listed says so.
   total, with an explicit continuation stack; one fixed evaluation order;
   `Nat` is a machine primitive; `slot-eq` reads an oracle. (02 §3 Q1, Q2,
   Q3, Q4, Q6; decisions 3, 4, 7, 8, 9.)
-- **Fuel.** No hypothesis-free, non-erased Sleight `compile` on source
-  text can be faithful for every source (the diagonal, key finding 2). So
+- **Fuel.** If Sleight's functions terminate, no hypothesis-free,
+  non-erased Sleight `compile` on source text can be faithful for every
+  source (the diagonal, key finding 2; partly untested reasoning). So
   fuel either stays as an internal device that never shows in a result, or
   the unbounded part is moved into the driver's `Program` loop, which
   prototypes show needs no fuel. The tracks recommend different
@@ -91,8 +94,8 @@ Only findings the track and spike files support after their reviews.
 "Tested" means a prototype was run on the reference (`_build/default/bin/main.exe`) and,
 where stated, on slc.
 
-1. **Elaboration reads run results, so elaboration and run are one
-   relation.** Head dispatch needs a `Settled` entry whose stored value
+1. **Elaboration reads run results, so it cannot be a typing relation
+   separate from the run.** Head dispatch needs a `Settled` entry whose stored value
    names the form (§6 item 1); `comptime-match` reads a stored value (§28);
    a run-position form "is elaborated, its erased positions are stripped,
    the evaluator runs the code, and its results become `Settled`" before
@@ -119,7 +122,8 @@ where stated, on slc.
    **not** refute owner statement 4(ii) read as mathematics, nor a
    `compile` that takes erased evidence of H for its one source; it does
    suggest (untested inference, assuming Sleight is sound) that H for all
-   sources is not provable inside Sleight. slc as written escapes, since
+   sources, in the form of erased step counts, is not provable inside
+   Sleight. slc as written escapes, since
    its elaborator needs a `World`, which "only the driver supplies" (§42;
    03 F6). 05 §4.3 gives a related quine version for a compile-and-run
    function (no quine written) and a Gödel-II reading whose conditions are
@@ -130,8 +134,8 @@ where stated, on slc.
    with an erased exclusivity lemma, is accepted, and packaged as a goal it
    passes `--goal proved` (05 F2, F3).
 4. **Fuel-free shapes exist, with limits.** A total step looped by the
-   `Program` driver runs with no fuel counter (02 §2.6, in a review variant
-   with the oracle as a function; 03 F5; 05 F6). With `--eval-fuel 1000`, a
+   `Program` driver runs with no fuel counter (02 §2.6, in an uncommitted
+   review variant with the oracle as a function; 03 F5; 05 F6). With `--eval-fuel 1000`, a
    93025-step computation finishes when cut into `Program` steps and fails
    with `out of fuel` as one call, in both implementations (03 F5).
    Recursion on an erased `Halts` derivation (Bove–Capretta) is accepted,
@@ -155,15 +159,17 @@ where stated, on slc.
    §3.8; 05 §2.2); that an `ENone` implementation would reject it is
    inferred from §67, not observed. In practice answers already differ:
    `(add 1 2)` against `3` is `ENone` in the reference interpreter and
-   `ESome` compiled with externs (02 §2.4); two run-position
-   `(str-append "a" "b")` are `ESome` compiled by slc and `ENone` under
-   `slc --interpret`, because ocamlopt 4.14.1 shares equal immutable
-   constants (04 §2.5).
+   `ESome` in the reference's `--build` output with externs (02 §2.4); two
+   run-position `(str-append "a" "b")` are `ESome` compiled by slc and
+   `ENone` under `slc --interpret`, which 04 attributes to ocamlopt 4.14.1
+   sharing equal immutable constants, as its `share.ml` shows for tuples
+   (04 §2.5).
 6. **What DESIGN.md does and does not fix about evaluation order.** Fixed:
    eagerness (§31); in run position, "the forms inside a form run before it
    does" (§27), and with §6's "The head is elaborated first", a head that
-   is a form runs before the arguments (reading, 02 §2.2); world effects
-   are ordered by the unique `World` (02 §2.2 item 5). Not fixed in general:
+   is a form runs before the arguments (reading, 02 §2.2); and, as 02
+   reads it, world effects are ordered by the unique `World` (02 §2.2
+   item 5). Not fixed in general:
    the runtime order of body statements (though §61 presumes written order
    in one case), sibling arguments, `values` entries, and several §15
    bindings before one statement. §15 ("behaves as if it were first bound
@@ -207,12 +213,14 @@ where stated, on slc.
     arguments to be atoms, which nothing types (an extern template would
     evaluate a non-atom twice); `-imm` FFI operations bypass OCaml's write
     barrier (safety unchecked); `Bytes.unsafe_to_string` relies on
-    uniqueness being sound; tail calls with 20 arguments held on amd64
-    4.14.1 without flambda only (04 §2.5).
+    uniqueness being sound; tail calls with 20 arguments were checked
+    only on amd64 with OCaml 4.14.1 and no flambda, where they held (04
+    §2.5).
 12. **`mini/` gaps.** A malformed shape has no derivation and
     `elab-program` can answer `ProgramStuck`; keywords are reserved `RKey`s
     though §19 says special forms "may be shadowed"; `Sexp` has no `Pos`
-    (01 §3.7, §3.10; 04 §2.4). Owner statement 3 needs `Stuck` refuted.
+    (01 §3.7, §3.10; 04 §2.4). 04 reads owner statement 3 as needing
+   `Stuck` refuted.
 13. **Parameterization works by indexing.** A relation can be an erased
     `TyCtor` parameter, and a `(Model R)` record indexed by it is accepted;
     a field can be used in types inside a body after `let-match`, but not
@@ -245,8 +253,9 @@ where stated, on slc.
     2). In 07, a `step` that always returns `More` passes the same goal,
     and the exclusivity field is a lemma about the spec alone (07 F7,
     review note 3). A `step` that itself loops is refused (07 review note
-    3). Exclusivity needs a deterministic spec: 07's proof uses
-    determinism of evaluation and of every lookup (07 §1, F4).
+    3). 07's exclusivity proof uses determinism of evaluation and of
+    every lookup, and 07 expects (a reading, not compiled) that without
+    it exclusivity could fail (07 §1, F4).
 
 ## 3. Decisions for the owner
 
@@ -301,7 +310,7 @@ order as tested.
 derivation zipper both need this order (07 F3, §5).
 Depends on it: determinism (T3), decision 13's error content, and the
 oracle (decision 5), whose answers are consumed in some order.
-Needs DESIGN.md wording. Context: 01 decision 5, §3.6; 02 rough edge 12;
+(a) needs DESIGN.md wording. Context: 01 decision 5, §3.6; 02 rough edge 12;
 05 §2.2, rough edge 5; 07 §5.
 
 **4. Is the runtime evaluation order fixed?**
@@ -324,7 +333,8 @@ lists observers (see cross-file item 2).
 Depends on it: whether the compiler theorem is lock-step (cheap) or needs
 confluence (expensive); slc's emitter would need checking against O1
 (02 Q3).
-Needs DESIGN.md wording. Context: 02 decision 3, §2.2, §2.3; 04 §2.5,
+O1 and O3 need DESIGN.md wording; O2 does not. Context: 02 decision 3,
+§2.2, §2.3; 04 §2.5,
 rough edge 1; brief proposal A.
 
 **5. How is `slot-eq`'s nondeterminism handled?**
@@ -363,11 +373,12 @@ a form. The tracks disagree:
   statement 3 then holds per bound. This departs from §31 at compile time,
   and heap exhaustion stays host-dependent.
 - 03: fuel exhaustion is not obviously a §31 crash ("cannot represent");
-  treat `OutOfFuel` as an outcome outside the spec, which decides whether
-  slc's current behaviour conforms.
-- 05: open; if the spec has no crash (its reading of §31), owner statement
-  3 is about the spec, and crashes must be kept out of the oracle or
-  completeness stated for the crash-free oracle.
+  treat `OutOfFuel` as an outcome outside the spec. The answer bears on
+  whether slc's current behaviour conforms.
+- 05: open. On 05's reading of §31 the spec has no crash, so the question
+  is whether owner statement 3 is about the spec or also about an
+  implementation, which "may crash"; and crashes must be kept out of the
+  oracle, or completeness stated for the crash-free oracle.
 - 04: open, as a sub-question of decision 10.
 - 07: its toy rejects a stuck compile-time run (`FLetStuck`), but 07
   calls that a stand-in, not a proposal, and a stuck term is a different
@@ -389,10 +400,12 @@ Recommended (02): R1. It mostly confirms DESIGN.md; the stripped-mode
 concern of owner statement 6 becomes a type-soundness obligation over
 stripped code with a heap typing. Stripping depends on the fact table
 (§39's call skipping), so it is an output of elaboration. The reading of
-owner statements 6 and 7 as "a mutating heap machine on stripped code" is
-the earlier session's and is not confirmed (brief).
+owner statement 6 as "the spec's run is a mutating heap machine on code
+with erased positions removed" is the earlier session's and is not
+confirmed (brief).
 Depends on it: what elaboration outputs; the statement of type soundness.
-Formal-spec choice only. Context: 02 decision 1, §2.1; 05 §3 T7.
+Formal-spec choice for R1 and R2; R3 departs from §37 and §39. Context:
+02 decision 1, §2.1; 05 §3 T7.
 
 **8. Machine state and addresses.**
 Options (02 Q2): (A1) `Imm n | Ptr a`, abstract never-reused addresses
@@ -417,8 +430,8 @@ DESIGN.md's prose but needing a simulation proof that 07 expects (its
 reading) to dominate the effort.
 Recommended (07): (a), if the evaluator part of the proof is to stay
 small. In 06's toy, big-step `Runs` and small-step `Star` agree for runs
-that end on the empty stack, and 06 calls the choice a presentation one
-there (06 Q1.4).
+that end on the empty stack, and 06 reads the choice as one of
+presentation there (06 Q1.4).
 Depends on it: decision 8, and the size of T5.
 Formal-spec choice only. Context: 07 decision 2, Q2; 06 Q1.4.
 
@@ -454,8 +467,8 @@ Options (02 Q5): (C1) CakeML-style "the spec's behaviour, or a prefix
 ending in a crash" (a compiler that always crashes satisfies it); (C2)
 crash only at named resource events (allocation, stack push, an FFI
 primitive past `array-limit`, `bytes-limit`, or the U62 host check); (C3)
-a spec indexed by heap and depth bounds, with a theorem for a host with at
-least c·H and c·D memory.
+a spec indexed by a heap bound H and a depth bound D, with a theorem for
+a host with at least c·H heap and c·D stack.
 Recommended (02): C2, with C3 as a later strengthening. 04 asks the same
 ("same value, or one side crashed", which §31 and §42 seem to force).
 Depends on it: T6.
@@ -597,7 +610,8 @@ Options and recommendations, which differ by track:
   iterative deepening, retrying with 2n (cheap stopgap; needs a
   monotonicity lemma and rolling back §62's count and §65's gensym
   counter); (c) keep fuel and make `OutOfFuel` a distinct outcome; (d) a
-  normalizing interpreter (ruled out by the diagonal for all sources);
+  normalizing interpreter (ruled out by the diagonal for all sources, if
+  it is a non-erased function on source text with no further evidence);
   (e) hybrid: a stepped interpreter run inline in bursts, suspending to
   the driver and replaying the current top-level form, so no result
   depends on the burst size. Recommends (e) for slc, (a) only for a new
@@ -611,7 +625,8 @@ Options and recommendations, which differ by track:
 Closures of one fixed-level type can call one another only with a
 decreasing argument in their type, such as an erased counter (key
 finding 4).
-The owner's goal "minimize fuel use" (brief) bears on all of these.
+The brief lists "minimize fuel use" among the owner's goals; it bears on
+all of these.
 Depends on it: decision 17, the architecture of every elaboration
 function. No DESIGN.md wording. Context: 03 decision 3, Q1; 04 decision
 3, Q2; 05 decision 5.
@@ -638,8 +653,9 @@ decision 1, Q1, F3, F6.
 counter-indexed closure?**
 Options (06 Q1): an erased trace folded at the halt by a per-step lemma
 (built); a closure at one fixed level with an erased step counter (built
-in review); a first-order derivation context (untested; 07's `Ctx` is
-of this kind for elaboration, my reading); small-step as the spec.
+in review); a first-order derivation context (untested; 07's `Ctx` is,
+on this summary's reading, of this kind for elaboration); small-step as
+the spec.
 Recommended (06): the trace, as a working hypothesis; 06 calls the
 choice between it and the counter closure one of presentation.
 Depends on it: whatever relies on a certified stepper. No DESIGN.md
@@ -841,11 +857,12 @@ Listed, not resolved.
    prelude text; 05 §4.4.4 finds that "too wide".
 4. **The expansion limit.** 01 decision 3 makes it a spec parameter `N`;
    03 decision 5 and 04 §2.3 treat it as a fixed language rule.
-5. **The wording of H.** 05 and 04 use owner statement 4(ii)'s "every
-   accepted compile-time form's spec run halts"; 01 decision 2 and 03 F7
-   use broader forms ("every compile-time run in the spec halts"; "every
-   compile-time evaluation the spec performs while deciding src halts").
-   01 flags its own difference.
+5. **The wording of H.** 05 §2.3 uses owner statement 4(ii)'s "every
+   accepted compile-time form's spec run halts"; 01 decision 2, 03 F7,
+   and 04 Q2 F1 use broader forms ("every compile-time run in the spec
+   halts"; "every compile-time evaluation the spec performs while
+   deciding src halts"; "every compile-time spec run halts"). 01 flags
+   its own difference; 03 and 04 do not.
 6. **What `--no-extern` buys.** 05 §5 says the extern agreement axioms can
    be removed "for programs checked and compiled with models only
    (`--no-extern`)". 02 §2.5 shows acceptance itself changes under
@@ -863,8 +880,9 @@ Listed, not resolved.
    which 01's never-crashing spec has no place for (05 itself flags the
    vacuity risk).
 9. **Going wrong.** 02 recommends `abort` as a defined outcome the
-   compiled code must reproduce (S1); 05 decision 7 offers only
-   "assume the spec does not go wrong" or "anything allowed after".
+   compiled code must reproduce (S1); 05 decision 7 offers only that T6
+   assume "the spec does not go wrong" or treat going wrong as "a
+   behaviour after which anything is allowed".
 10. **Two versions of the diagonal.** Not a contradiction, but different
     assumptions and scope: 03 F6 needs no quine (`read-file` supplies the
     text), concerns a verdict-only `compile`, and branches in a macro's
@@ -878,10 +896,8 @@ Listed, not resolved.
     as "more duplication, against rule 5"; 05 §3 and decision 2 recommend
     separate positive `Elab` and `Fails` relations with an exclusivity
     lemma, which is 01's rejected option (iii).
-12. **Within 04 (resolved).** §2.2 counted 20 `"internal:` sites and Q1
-    R1 said 17. A grep of `self/` gives 20 (12 in `elab.sl`, 6 in
-    `elab-main.sl`, 1 each in `eval.sl` and `emit.sl`), and R1 now says
-    20 (04 review note 27).
+12. **Within 04 (resolved).** 04 now gives 20 `"internal:` sites
+    throughout, as a grep of `self/` does (04 review note 27).
 13. **03 F4.1 versus 06's `ho_counter.sl` (resolved).** 03 F4.1 concluded
     that nested suspensions cannot be composed as closures of one
     fixed-level type; 06's review found a fixed-level closure invariant
@@ -903,13 +919,15 @@ Listed, not resolved.
 From the tracks' own "Unverified" sections and review notes.
 
 - **The diagonal beyond its mechanism**: no faithful `compile` was put in
-  Q; the step "H for all sources, as erased step counts, would yield a
-  runnable `compile`" is untested; it assumes Sleight is sound (03 §6). 05's
+  Q; the step that H for all sources, given as erased step counts, would
+  yield a runnable `compile` is untested and assumes Sleight is sound (03
+  F6, §6, review note 5). 05's
   version assumes quines, unwritten (05 §9).
 - **Gödel II**: whether Sleight meets its conditions, and README.md's IΣ₂
   / ω^ω^ω strength claim, are unchecked (05 §9; 03 F6). Which half of each
-  "uniform (T) versus safety" pair is provable is a guess (05 §4.3).
-- **SOUNDNESS.md's (T), (C), and (E)**, on which H rests, are a sessions'
+  pair, uniform (T) or full-semantics safety, is provable is a guess (05
+  §4.3).
+- **SOUNDNESS.md's (T), (C), and (E)**, on which H rests, are the sessions'
   argument, not proofs (05 §2.3; 03 review).
 - **Whether a function taking erased H(src) evidence can be written**, and
   whether P3 (completeness from a derivation) is an erased Sleight
@@ -1055,3 +1073,92 @@ today's Sleight at toy scale, and its cost sits mostly in the spec and
 its determinism lemmas (key finding 16). What remains is completeness,
 which both spikes leave open (key finding 17; decision 14), and scale
 (section 6).
+
+## Review notes
+
+Added by a final adversarial review, which read the brief, CLAUDE.md,
+all of DESIGN.md, and files 01 to 07 with their review notes, checked
+every quotation attributed to DESIGN.md against it (whitespace
+normalized), and re-ran several claims.
+
+Errors found and corrected above:
+
+1. Key finding 1's title said elaboration and run "are one relation".
+   01 proposes three layers (fact engine, run relation, elaboration
+   relation with run premises); its claim is that elaboration cannot be
+   a typing relation separate from evaluation. Retitled.
+2. Decision 7 spoke of "owner statements 6 and 7" and quoted "a mutating
+   heap machine on stripped code". The brief's unconfirmed reading
+   concerns statement 6 alone, worded "the spec's run is a mutating heap
+   machine on code with erased positions removed". Fixed.
+3. Cross-file item 5 put 04 with 05 as using owner statement 4(ii)'s
+   wording of H. 04 Q2 F1 says "every compile-time spec run halts",
+   the broader form, without flagging it. Fixed.
+4. The header said the brief's "Owner decisions" are the only owner
+   positions in the file, but decision 18 attributed the goal "minimize
+   fuel use" to the owner; that goal is in the brief's separate "Also"
+   line. The header now covers the brief's listed goals, and decision
+   18 attributes the goal to the brief.
+5. Decision 6, 05's entry, turned 05's open question (is owner statement
+   3 about the spec, or also about an implementation that "may crash")
+   into the claim that it is about the spec. Restored as a question.
+6. Decision 6, 03's entry, said the fuel question "decides" whether slc
+   conforms; 03 says it "affects" that. Softened.
+7. Decision 7 was marked "Formal-spec choice only", but its option R3
+   departs from §37 and §39. Marked accordingly.
+8. Decisions 3 and 4 were marked as needing DESIGN.md wording as a
+   whole; only the options that fix an order do (3(a); 4 O1 and O3).
+9. Key finding 17 stated "Exclusivity needs a deterministic spec" as
+   fact; 07 F4 gives it as its expectation, not a compiled result.
+   Hedged.
+10. The diagonal was stated without its hedges in two places: the
+    picture's "Fuel" item (now conditional on Sleight's functions
+    terminating, and marked partly untested), and decision 18 (d) (now
+    with 03's condition "a non-erased function on source text with no
+    further evidence"). Key finding 2's "H for all sources is not
+    provable" now carries 03's "in this form" (erased step counts).
+11. Key finding 5's "`ESome` compiled with externs" did not say by
+    which implementation; it is the reference's `--build` output.
+    The slc sharing explanation is now attributed to 04, with its
+    evidence (`share.ml`, tuples).
+12. Quotation marks around paraphrases: cross-file item 9 ("assume the
+    spec does not go wrong", "anything allowed after"), section 6 (the
+    erased-step-count step; "uniform (T) versus safety"). Replaced by
+    05's and 03's exact words or unquoted. Section 6's citation "03 §6"
+    for the soundness assumption is now 03 F6, §6, and review note 5.
+13. Smaller fixes: key finding 6 marks world-effect ordering as 02's
+    reading; key finding 4 notes 02's fuel-free variant is uncommitted;
+    key finding 11's tail-call sentence read as "held only without
+    flambda"; key finding 12 attributes the `Stuck` point to 04;
+    decision 8a's "06 calls" is now "06 reads"; decision 10's C3 says
+    heap and stack, not "memory" for both; decision 18b's "my reading"
+    named no author; "a sessions' argument" in section 6; cross-file
+    item 12 shortened to its present state.
+
+Re-run in review, all as the summary states: `diagonal.sl` accepted at
+969 bytes and rejected with one byte added, on the reference and `slc
+--interpret`; `slot_eq_comptime.sl` accepted and `slot_eq_comptime_none.sl`
+refused on both; `imm_eq.sl` printing `1` for the first pair only when
+built by the reference's `--build` with externs, `0` interpreted and under
+`--no-extern --build`; `tagslot.sl` printing `3`, and refused under
+`--no-extern`; `gensym_order.sl` giving the same numbering on both;
+07's three `--goal proved` sets, including `spin_vacuous.sl`, and 05's
+`spec.sl proof.sl`, all PASS on both; `slc --interpret deep.sl`
+(unlimited stack) printing 49,999 `Cons _ 0` and then `Cons _ _ _)`.
+`grep` finds neither "fuel" nor "diverg" in DESIGN.md, nor `def-prim`
+or `def-opaque`.
+
+Uncertain points, not changed:
+
+- Whether decision 10's C2 (crashes only at named resource events) and
+  decision 11's S1 (a defined `abort` that compiled code must produce)
+  are formal-spec choices, as marked, or constraints on implementations
+  that would need DESIGN.md wording.
+- 02 N4's "the reference interpreter and slc fail it" (decision 5 (f))
+  rests, for slc, on reading its source; 02 did not run slc.
+- Whether decision 1's recommendation, which 01 and 04 share, is
+  fairly summarized as "(a), with the reader proved early": only 04
+  says "early".
+- The summary is still long (over 1000 lines). Most of the length is
+  context the decisions cite; trimming further would drop content.
+
