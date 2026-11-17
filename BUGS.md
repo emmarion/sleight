@@ -248,3 +248,26 @@ is a design decision. Remove an entry when it is fixed.
     `Settled` with the resulting values" and §28's "the error prints
     the expected constructor and the actual value". Which answer is
     wanted is not decided here.
+
+26. **The reference interpreter's `-imm` blits corrupt its heap.** `lib/ffi.ml:89`
+    maps `array-blit-imm`, `array-blit-many-imm` and `array-move-imm` to
+    `Ffi_core.array_blit_imm` (`lib/ffi.ml:117-119`), a raw word copy
+    with no write barrier (`lib/ffi_core.ml:319-321`). In compiled code
+    the elements of such an array are immediates, which is what the
+    `Imm` evidence of §44 is for, but in the interpreter every element
+    is a heap-allocated `VWord` (`lib/value.ml:22`), so the copy moves
+    pointers behind the garbage collector's back. Reproduced with
+    `_build/default/bin/main.exe std/immediate.sl
+    proposals/self-formal/proto/bugs/blit_imm_interp.sl`, which blits
+    freshly computed `U62` values into an older array, allocates, and
+    reads them back: a segmentation fault (exit 139) in every run tried;
+    with `OCAMLRUNPARAM=s=4k` it stops instead with "runtime error: not
+    an extern integer: _". The same program with `array-blit` prints
+    `0`. `--build` crashes too, since the reference runs the top-level
+    call at compile time. `slc --interpret` prints `0`: `self/core.sl:482`
+    maps the three `-imm` blits to the ordinary blit. Only
+    `array-blit-imm` was run from Sleight; the other two share its
+    implementation. §31 lets a run crash only "where the host cannot
+    represent what is asked of it". The analysis, and the reasoning that
+    compiled `-imm` stores are safe when both words are immediates, are
+    in `proposals/self-formal/08-gc-imm-stores.md`.

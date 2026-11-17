@@ -37,10 +37,16 @@ byte-identical to the 4.14.1 tag's `runtime/caml/` headers.
   raw `memmove`, on a `Value.value array`. That array's elements are
   blocks (`VWord of Z.t`, `lib/value.ml:22`), not immediates. A
   reproducer that makes the same call corrupted 80,000 of 80,000
-  elements. The interpreter's `-swap-imm` and `-place-imm` are mapped
-  to the barriered `swap` and `place` (`lib/ffi.ml:102, 107`), so they
-  are not affected. I did not reproduce this end to end from a Sleight
-  program.
+  elements. A Sleight program, `proto/bugs/blit_imm_interp.sl`, also
+  breaks the reference interpreter through `array-blit-imm`: it
+  segfaults, or with `OCAMLRUNPARAM=s=4k` stops with "not an extern
+  integer" (§6). `--build` crashes the same way, because the program's
+  final call runs in run position in that interpreter. The
+  interpreter's `-swap-imm` and `-place-imm` are mapped to the
+  barriered `swap` and `place` (`lib/ffi.ml:102, 107`), so they are not
+  affected. slc's evaluator maps all three `-imm` blits to its plain
+  `array-blit` (`self/core.sl:482`, used at `self/eval.sl:555`), and
+  `slc --interpret` runs the same program correctly.
 - [A] For compiled code, the conditions are as follows. `Imm` must
   really mean "the compiled word is an immediate". Every read of a field
   that an `imm` store can change must be a mutable load. The program
@@ -84,14 +90,17 @@ byte-identical to the 4.14.1 tag's `runtime/caml/` headers.
   is a deletion barrier, which darkens the old value, in the
   snapshot-at-the-beginning style, together with a generational
   remembered set. It has no insertion barrier. Blocks allocated during
-  marking and cleaning are coloured black (`memory.c:452-454, 482-484`).
+  marking and cleaning, and during sweeping above the sweep pointer,
+  are coloured black (`memory.c:452-454, 482-484`).
 - [S] A minor collection's roots for old-to-young pointers are only the
   remembered set (`minor_gc.c:371-374`). Its other roots are the local
   and global roots.
 - [S] The marking loop pushes only fields with `Is_major_block(v)`
   (`major_gc.c:717`, macro at `:636-641`). `caml_darken` acts only on a
-  block (`:281-283`). A block turns black when its scan starts
-  (`:301`, `:671`), and the rest of its range waits on the mark stack.
+  block (`:281-283`). A block turns black when it is darkened and
+  pushed (`:301`, `:483`) or when it leaves the prefetch buffer to be
+  scanned (`:671`), before its fields are scanned. A range left
+  unscanned at the end of a slice waits on the mark stack (`:736-751`).
 - [S] The debug runtime runs `caml_heap_check` at the start of every
   major cycle (`major_gc.c:414-416` calls `gc_ctrl.c:264-267`). That
   check walks every block and asserts that each pointer field points to
@@ -188,13 +197,21 @@ byte-identical to the 4.14.1 tag's `runtime/caml/` headers.
   `tests/array_blit_imm.sl`, `array_move_imm.sl` and `array_imm_nat.sl`
   still pass in the interpreter with `OCAMLRUNPARAM=s=4k,o=1`. Their
   arrays are small and short-lived, so I take that as no evidence
-  either way.
+  either way. `proto/bugs/blit_imm_interp.sl` arranges the hazard from
+  Sleight: it makes an old destination array, blits freshly computed
+  `U62`s into it with `array-blit-imm`, allocates, and reads them back
+  (§6). It uses `u62-modulus-many`, so it needs externs, as
+  `tests/array_imm_nat.sl` does.
 
 ## 6. Experiments
 
 All of these ran with the normal runtime and with `-runtime-variant d`.
-`s` is the minor heap in words. Values below 4k seem to be clamped,
-because `s=256` gave the same minor-collection counts as `s=4k`.
+The six configurations of the two stress tests are those two runtimes,
+each with `OCAMLRUNPARAM` unset, `s=4k`, and `s=4k,o=1` (`stress.ml`) or
+`s=4k,o=20` (`slc_cells_driver.ml`). `s` is the minor heap in words.
+Values below 4k are clamped to `Minor_heap_min`, 4096 words
+(`gc_ctrl.c:398`, `caml/config.h:210`) [S], and `s=256` gave the same
+counts as `s=4k` [C].
 
 | Test | What it does | Result |
 |---|---|---|
@@ -203,6 +220,7 @@ because `s=256` gave the same minor-collection counts as `s=4k`.
 | `neg_young.ml` | Stores a young pointer into an old array through `int array`, then runs a minor collection and allocation. | Without the barrier: 10,000 of 10,000 corrupted (normal and debug). With `caml_modify`: 0. |
 | `neg_mark.ml` | Reads header colours to find the window in which `a` is black and `x` is white, while `x`'s only reference sits in `b`'s still-unscanned tail. It then moves `x` into `a` and overwrites `b`'s slot. | Without the barrier: `x` freed while still referenced in 20 of 20 windows. The debug runtime fails `gc_ctrl.c:64` (`Color_hd != Caml_blue`). With `caml_modify`: 0 of 20. In `imm` mode (only immediate-over-immediate stores in the same window, across all of `b` and `a`): 0 of 20. |
 | `interp_blit.ml` | The interpreter's `blit_imm` call on `Value.value` arrays. | 80,000 of 80,000 elements wrong (normal and debug). |
+| `../bugs/blit_imm_interp.sl`, run as `bin/main.exe std/immediate.sl …` | 1,000 trials. Each makes a 3-element `Copy U62` array, allocates (`churn 2000`) so that it is promoted, blits two freshly computed `U62`s into it with `array-blit-imm`, allocates again, reads them back, and counts mismatches. The control replaces the call with `array-blit` and drops the two `ImmAll` arguments. | Segfault (exit 139) in 3 of 3 runs, and with the debug runtime too. With `OCAMLRUNPARAM=s=4k`: "runtime error: not an extern integer: _" (exit 1) in 3 of 3 runs. A single trial with `churn 2000` also segfaults. The control prints `0` in every configuration. `slc --interpret` prints `0`, with or without `s=4k`. |
 | `kinds.ml` | `-dcmm` | Described in §4. |
 | `zarith_small.ml` | Described in §5. | No boxed value below 2^62. |
 
@@ -226,16 +244,22 @@ conditions:
 5. On OCaml 5, the same reasoning applies to one domain, and
    multi-domain use has not been looked at.
 
-The interpreter's `array-blit-imm`, `array-blit-many-imm` and
-`array-move-imm` meet none of these, since their elements are boxed
-`Value.value`s, and the OCaml-level reproducer breaks. Whether and how
+The reference interpreter's `array-blit-imm`, `array-blit-many-imm` and
+`array-move-imm` fail conditions 1 and 4, since their elements are
+boxed `Value.value`s, and both the OCaml-level reproducer and
+`proto/bugs/blit_imm_interp.sl` break. As I read §27 and §62, this
+also reaches a program built with `--build` wherever such a call runs
+at compile time, in run position or in a macro's expansion, since the
+reference interpreter evaluates those. Only the run-position case was
+observed (§1). Whether and how
 to change that is the owner's call. One option would be to map them to
 the barriered `blit`, as `-swap-imm` and `-place-imm` already are.
 
 ## 8. Unverified
 
-- A Sleight program that trips the interpreter's `blit_imm` end to
-  end. I did not write one.
+- Whether `array-blit-many-imm` and `array-move-imm` trip the same way
+  from Sleight. They call the same function (`lib/ffi.ml:118-119`), but
+  only `array-blit-imm` was run end to end.
 - A Sleight-level stress program using `array-swap-imm`. The emitted
   cell stores were driven from OCaml, and the `-imm` FFI functions were
   called directly.
@@ -244,3 +268,82 @@ the barriered `blit`, as `-swap-imm` and `-place-imm` already are.
 - Whether other emitted shapes, such as wide-tagged or `Slots`
   records, have any immutable field that an `imm` store could reach. I
   checked only `emit.sl:291` and `tests/cell_imm.sl`'s output.
+
+## Review notes
+
+An adversarial review by a Claude agent, at commit 0246a1c. None of the
+files this note cites changed between 5fba336 and 0246a1c. The OCaml
+sources were re-read at the GitHub tags 4.14.1 and 5.2.0, and Zarith's
+`caml_z.c` at `release-1.13`.
+
+Errors and changes:
+
+1. §1, §5, §6, §7 and §8 said the interpreter's `blit_imm` bug was not
+   reproduced from Sleight. It now is:
+   `proto/bugs/blit_imm_interp.sl` segfaults the reference interpreter
+   (exit 139, 3 of 3 runs, normal and debug runtime), and with
+   `OCAMLRUNPARAM=s=4k` it stops with "runtime error: not an extern
+   integer: _" (exit 1, 3 of 3). A control that uses `array-blit`
+   prints `0` in every configuration. `main.exe --build` on the same
+   file also segfaults, before anything is compiled. `slc --interpret`
+   prints `0`, because `ext-twin` maps the `-imm` blits to
+   `ExArrayBlit` (`self/core.sl:482`). The text now says so.
+2. §3 said a block turns black "when its scan starts" at `:301` and
+   `:671`. At `:301`, and at `:483`, it turns black when it is darkened
+   and pushed, before any scan. Only `:671` is at the start of a scan.
+   Reworded, with the mark-stack hand-off cited (`:736-751`).
+3. §3 said blocks allocated during marking and cleaning are black. They
+   are also black when allocated during sweeping above the sweep
+   pointer (`memory.c:452-454`). Added.
+4. §6 said values of `s` below 4k "seem to be clamped". The clamp is in
+   the source: `norm_minsize` (`gc_ctrl.c:398`) raises it to
+   `Minor_heap_min`, 4096 words (`caml/config.h:210`). Now cited.
+5. §6 did not say what the six stress configurations were. Reruns match
+   the recorded counts with `s=4k,o=1` for `stress.ml` (8,113 minor,
+   2,049 major, 3 compactions) and `s=4k,o=20` for
+   `slc_cells_driver.ml` (5,461 minor, 1,389 major, 8 compactions), so
+   the text now names those, as my best reading of what was run.
+6. §7 said the interpreter's blits "meet none of" the conditions. They
+   fail conditions 1 and 4; 2, 3 and 5 are not what breaks them.
+   Reworded, and the compile-time reach of the bug added.
+
+Checked and unchanged: every `memory.c`, `major_gc.c`, `minor_gc.c`,
+`gc_ctrl.c` and `str.c` line cited in §3; the comment at
+`memory.c:606-608`; `cmm_helpers.ml:742-744, 2414-2432` and
+`CSEgen.ml:247-251, 336-341` at 4.14.1; `write_barrier` at 5.2.0
+`memory.c:178-199` and `int_array_set` at `cmm_helpers.ml:765-767`;
+`ml_z_reduce` at `caml_z.c:405-423` with `Z_MAX_INT` = 2^62-1; every
+repository line in §2 and §5; the `-dcmm` output of `kinds.ml` (`int
+array` gives `(store int …)`, `Obj.t array` the tag-254 test and
+`caml_modify`, `word array` and the record field `caml_modify` alone);
+the five `int array` stores in three functions of slc's output for
+`tests/cell_imm.sl`, and its `K5_0` type. Reruns: `neg_young` 10,000 of
+10,000 without the barrier and 0 with it; `neg_mark` 20 of 20, 0 and 0,
+with the debug runtime failing at `gc_ctrl.c:64`; `interp_blit` 80,000
+of 80,000; `zarith_small` 0 of 1,000,000 boxed and 2^62 boxed; both
+stress tests ok in all six configurations, normal and debug.
+
+Unsure:
+
+- The count of 3,298 heap checks was not re-counted. A heap check runs
+  at the start of each major cycle in the debug runtime, and my rerun
+  of `stress.ml` with `s=4k,o=20` printed 1,212 of them for 1,208
+  major collections, so the figure is plausible but unverified.
+- §4's statement that ocamlopt 4.14 without flambda does no type-based
+  alias analysis rests on reading `CSEgen.ml`, not on a search of the
+  whole backend.
+- The reproducer could not be run under `--no-extern`, which segfaulted
+  even for the control, probably because `u62-modulus-many` then
+  builds 2^62 in the unary model. So whether the models' cell writes are sound under GC
+  was not exercised by it, although `lib/eval.ml:47-55` stores them
+  through an ordinary `value array` assignment.
+- OCaml 5, flambda, arm64 and systhreads remain untested, as §8 says.
+
+Outcome of the reproduction attempt: reproduced. A Sleight program run
+by `_build/default/bin/main.exe std/immediate.sl
+proposals/self-formal/proto/bugs/blit_imm_interp.sl` crashes through
+`array-blit-imm`, deterministically, and the same program with
+`array-blit` does not. The values blitted are below 2^62, so their
+`Z.t` is an immediate, but the interpreter's array holds `VWord`
+blocks around them, and those blocks are what the raw `memmove`
+copies without a barrier.
