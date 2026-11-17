@@ -1828,3 +1828,81 @@ Unsure, not changed:
 - Whether 01's rough edge 13 (here 30) is a deviation from §6 or only a matter of which error is
   reported; listed as a question.
 - 00-summary is 622 lines, slightly above the target.
+
+## Propagation check (fourth round)
+
+A check of the fourth-round propagation against the track files as they now stand (all four notes
+sections and the bodies they point to), against the previous commit's 00-summary.md by content, and
+of 00-glance.md against 00-summary.md row by row. Re-run on the reference and
+`_build/release/slc --interpret`: `proto/review4/01_after_error_succ.sl` (the reference reports only
+"first"; slc also refuses the `comptime-match` for want of a `Settled` scrutinee),
+`01_head_name_err.sl` ("more than 10000 macro expansions" at 5:25, both), `02_share_pair.sl` (`1`,
+both, and also from `--build` binaries of both), `05_stripped_absurd.sl` under `--no-prelude`
+("absurd code reached", both), `proto/fuel/diagonal.sl` (969 bytes, accepted) and
+`03_diag/diagonal.sl` (970 bytes, "toy-compile accepts this source"), each from its own directory
+after `std/macro.sl` (both), `06_packed_counter.sl` after `std/list.sl spec.sl machine.sl` (prints
+`0`, both), and `07_loop_step_bad.sl` under `--goal proved` ("same-level call to `step-top`
+decreases no subterm argument", FAIL, on the reference and on slc without `--interpret`, which
+`--goal` refuses). Nothing below is a decision.
+
+1. Key finding 10 said the README's "1000000" "matches no fuel in `self/`", while the same item
+   names `heap-strs-fuel`, which is 10^6. 04 r4.5 and 04 §5 say it matches no interpreter or
+   printer fuel, the only 1000000 being `heap-strs-fuel`. Fixed.
+2. Key finding 15 said slc "skips every run-position run" after an error and that "only" a nullary
+   `(Zero)` gets a `Settled` value. 01 §3.7 says slc gates those runs, so it "seems not to run the
+   evaluator", and lists what was tested: a call and `(Succ (Zero))` get none, `(Zero)` does. The
+   hedge is restored and "only" replaced by the tested cases.
+3. Key finding 4 said fixed-level closures call one another "only with an erased counter"; 03 F4.1
+   says "A decreasing argument changes this", the counter being the one tested. It also said a
+   packed-level closure is "extended only at its packed level", unhedged; 06 r4.1 and its unsure
+   points make the refusal at a level minted during the run a reading of §18. Both reworded.
+4. Key finding 6 stated the form head's place in elaboration order as observed; 01 §3.6 and its
+   fourth review note that the head's gensym number is inferred, not printed. Marked.
+5. Decision 1 had dropped the reason for 04's reading, that totality alone "a total but unproved
+   front end could give" (04 decision 2). It is what separates 04's reading from 01's; restored.
+6. Decision 6, 05's bullet, had dropped "on my reading" from 05 decision 4's crash-free spec. The
+   hedge is restored as "on 05's reading of §31".
+7. Of the three details item 27 of the fourth propagation dropped, two bear on decisions and are
+   restored: decision 9 now gives 02's alternative to a further choice under models, that the spec
+   refuses what the compiler accepts (`tagslot.sl`; 02 decision 6); rough edge 12 again says §42's
+   "the same values" has nothing to compare for a program refused under models, and adds 02's
+   "apparently by design". Decision 10's reason for "up to crash" stays dropped: key finding 18
+   states it.
+8. Section 7's 06 paragraph had dropped "Not proved: progress, or anything about the driver",
+   while the 07 paragraph keeps its "Not proved". Restored (06 §1 "Missing: refuting 'stuck'
+   (progress)").
+9. Decision 14, 03's bullet, said 18's (a), (b), and (e) "give" form (i); 03 decision 2 says they
+   "can give" it. Fixed.
+10. Decision 22's "Logic soundness beyond consistency (SOUNDNESS.md's (T), (S), and (E))" read two
+    ways (the parenthesis as naming consistency). Now "stronger than consistency, as ... (T), (S),
+    and (E)", as 05 §5's table row puts it.
+11. 00-glance row 8a gave 07's reason as "to keep the evaluator proof small"; 00-summary says "so the
+    evaluator proof is a list of step proofs". Row 18c dropped the hedge on extending at a level
+    minted during the run. The spikes bullet said 06's `run-total` "halts within its count"; key
+    finding 17 says "halts or sticks". All three now follow 00-summary.
+12. Section 6's Gödel item said an erased proof of `False` "yields an accepted program that reaches
+    absurd code once stripped". `05_stripped_absurd.sl` exits 1 on both implementations: its first
+    run-position form checks and then fails, so the program is refused. Reworded to say that. (05
+    §4.3 and r4.4 also say "accepted program"; the argument seems to need only that the form checks.)
+
+Other content the previous commit stated and this one drops without a counterpart, judged not to
+bear on a decision: key finding 4's three sources of a `Halts` proof; key finding 8's "would
+otherwise expand forever"; key finding 16's `step-back` swap; section 7's `nth-nonth` detail;
+decision 11's "06 recommends neither", which row 11 of 00-glance also omits; decision 18a's "(as 03
+splits it)".
+
+Checked and found consistent: the header's `r4.N`; key findings 2, 5, 12, 17, and 18; decisions 3,
+5, 6 (02's C4), 8, 12, 13, 15, and 18c; rough edges 1, 7, 11, 17, 27, 28, and 30; cross-file items;
+section 6's diagonal, closures, OCaml, and slc-internals items. 00-glance's table agrees with
+§3 row by row in "Deps" numbers and wording marks, and its suggested order with the "Deps" entries.
+No narration, past-tense history, or missing Oxford comma was found in either file.
+
+Seen in the track files, outside this check's remit, not changed:
+- 03 F4.1 still says "06 F4.2 found that a closure whose level is packed in its argument can be
+  built but not applied by the stepper", which 06 r4.1 corrects; 00-summary follows 06.
+- 02 decision 8 still reads "V1 unless a reason for V2 turns up", while 02 Q8, corrected by 02 r4.6,
+  recommends "V1 for the theorem, V2 as an option, with the spec's own store a heap"; decision 12
+  follows Q8.
+
+Unsure, not changed:
+- 00-summary is now 630 lines, above the ~620 target; the restorations above account for the excess.

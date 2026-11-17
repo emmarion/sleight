@@ -27,8 +27,8 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
 - **Spikes.** The intrinsic-derivation plus `Program`-driver pattern compiles and runs at toy scale, fuel-free, on both
   implementations, but proves partial correctness only: an always-"stuck" `step`, `advance`, or `run-total` (06)
   or a never-answering `step` (07) passes, and 07's `Rejected` reason text is unconstrained. 06's first teeth check
-  tests `step` only against `Step`, not the spec, and that 06's `run-total` halts within its count is read from its
-  code, not its type. For one variant with a nondeterministic rule added, both derivations exist (compiled).
+  tests `step` only against `Step`, not the spec, and that 06's `run-total` halts or sticks within its count is read
+  from its code, not its type. For one variant with a nondeterministic rule added, both derivations exist (compiled).
   Neither models Sleight's own machine (00-summary §2 items 16, 17).
 - **`slot-eq`.** §67 lets answers differ between runs, so acceptance can depend on the implementation; answers already
   differ between implementations and modes, though not between runs as far as seen (interpreters vs `--build`
@@ -62,7 +62,7 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 | 6 | What is a compile-time crash or fuel exhaustion? | tracks disagree; 01 and 02 opposite, cross-referenced | 5, 14 | part |
 | 7 | Does the spec run post-erasure code? | R1, as §27 and §29 say (02) | — | no (R3 departs from §37, §39) |
 | 8 | Machine state and addresses? | A1: `Imm n \| Ptr a`, abstract never-reused addresses (02) | 5 | no, unless sharing goes in |
-| 8a | Compile-time run small-step over the compiler's machine? | (a) yes, to keep the evaluator proof small (07) | 8 | no |
+| 8a | Compile-time run small-step over the compiler's machine? | (a) yes, the evaluator proof a list of step proofs (07) | 8 | no |
 | 8b | Next spike on unique `Array` heap, abstract addresses? | yes, before scaling (06) | — | no |
 | 9 | Externs in the spec? | tracks disagree (02: E2; 04, 05: parameterize) | 2 | no |
 | 10 | Where may a compiled run crash? | C2, named resource events; C3 later (02); 04 asks if "a value some spec run gives, or a crash" | — | no (unsure) |
@@ -76,7 +76,7 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 | 18 | How is fuel kept out of results and theorems? | tracks disagree | 17 | no |
 | 18a | Resumable checker: derivation zipper or replay? | zipper for a new kernel; replay only retrofitting slc (07) | 17, 18 | no |
 | 18b | Certified stepper invariant: erased trace or counter closure? | erased trace, as a working hypothesis (06) | — | no |
-| 18c | Apply a closure whose level is packed beside it? | no change proposed; it works with packed `Predates`, except extending at a newly minted level (06) | — | only if changed |
+| 18c | Apply a closure whose level is packed beside it? | no change proposed; it works with packed `Predates`, except, on 06's reading of §18, extending at a level minted during the run (06) | — | only if changed |
 | 19 | Judgment shape and staging? | 01 §4.2 layers (Γ/Σ home of run-position facts open); run relation as a parameter (01) | — | no |
 | 20 | Where does the proof stop at the output end? | O1 now, O2 + O4 later (04) | — | no |
 | 21 | `native-compute`? | N3, same trust as the output end (04) | — | no, unless 6 changes §72 |
