@@ -6,9 +6,10 @@ in it is the owner's decision unless it says so and cites the brief's
 list of owner statements.
 
 Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
-**[compiled]** is a test run tonight with the reference
-(`_build/default/bin/main.exe`), files under
-`proposals/self-formal/proto/dyn/`; **(reading)** is my inference.
+**[compiled]** is a test run tonight, with the reference
+(`_build/default/bin/main.exe`) unless it names slc or OCaml, files under
+`proposals/self-formal/proto/dyn/` or a `proto/review*/` directory;
+**(reading)** is my inference.
 
 ## 1. Summary
 
