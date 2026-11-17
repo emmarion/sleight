@@ -309,8 +309,14 @@ expanded one item at a time instead (`expand_seq`, `:723`). A head
 that is a form is elaborated before the arguments are spliced
 (`settle_head`, `:1368`, and `computed_head`): `review3/gensym_head.sl`,
 whose head is a macro call that takes a number, gives the head 1 and
-the arguments 2 and 3. A macro can branch on its number, so the order
-can decide acceptance. [D] DESIGN.md fixes "The head is elaborated
+the arguments 2 and 3 (inferred: the head's number is not printed, and
+`b` gets 4). A head that is a name is only looked up for dispatch
+first (`:1376`); its elaboration, with its errors, comes after the
+splicing (`:1383`): in `proto/review4/01_head_name_err.sl`,
+`(nosuch (loop))` with `nosuch` unbound and `loop` a macro that
+expands to itself is refused, on both implementations, with "more
+than 10000 macro expansions", not with the unbound name. A macro can
+branch on its number, so the order can decide acceptance. [D] DESIGN.md fixes "The head is elaborated
 first" (§6), that statements come before the code after them (§27), that
 "the forms inside a form run before it does" (§27), and hoisting (§15),
 which places hoisted bindings "just before the statement or final form
@@ -341,13 +347,18 @@ the items.
   goes on, and slc's `--first-error` (MANUAL.md) stops at the first.
   `error_then_effects.sl`: after the first error, slc still prints a
   later `compile-warn`, but then refuses a later macro call as not
-  constant-known. After an error slc still runs some run-position code:
-  `proto/review2/after_error_run.sl` binds `(Zero)` after an error and a
-  `comptime-match` reads it ("expected `Succ`, got 0"). But a call of a
-  function, defined before or after the error, gives no `Settled` result
-  (`after_error_call.sl`, `after_error_call2.sl`), and a macro bound
-  after the error is not dispatched (`after_error_macro.sl`). Why, in
-  slc's source, was not traced.
+  constant-known. slc gates its run-position runs on there being no
+  earlier error (`self/elab-main.sl:539`, `:545`, `:739`, `:2152`, each
+  `(and (env-run-pos …) $ not $ env-failed …)`), so after an error it
+  seems not to run the evaluator at compile time. Accordingly a call of
+  a function, defined before or after the error, gives no `Settled`
+  result (`proto/review2/after_error_call.sl`, `after_error_call2.sl`),
+  nor does `(Succ (Zero))` (`proto/review4/01_after_error_succ.sl`),
+  and a macro bound after the error is not dispatched
+  (`after_error_macro.sl`). A nullary `(Zero)` bound after an error is
+  still `Settled`: a `comptime-match` reads it ("expected `Succ`, got
+  0", `proto/review2/after_error_run.sl`), by a path in slc's source
+  that was not traced.
 - [C] Both implementations read a whole file before elaborating it.
   `reader_phase.sl` (a missing `)` on line 3) and `pragma_phase.sl` (an
   unknown pragma) print no earlier `compile-warn`. Reading is per file,
