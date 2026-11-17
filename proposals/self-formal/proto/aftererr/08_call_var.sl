@@ -1,0 +1,5 @@
+(def-fns _ $ (many f : (many (Nat) n) -> (many (Nat) m)) (Succ n))
+(let ((many y)) (Zero))
+(compile-error "first")
+(let ((many x)) (f y))
+(comptime-match many x (Succ _))

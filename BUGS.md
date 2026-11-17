@@ -23,7 +23,8 @@ is a design decision. Remove an entry when it is fixed.
     reproducers under `audit/2026-10-07/`, in the tree at `aa84d4e`) are two
     instances. A survey of
     `self/eval.sl` and `self/heap.sl` at `f9d57e1` (read from the code;
-    beyond A2/A3, none of the cases below was reproduced) found the
+    beyond A2/A3 and the `heap-strs-fuel` case, reproduced separately,
+    none of the cases below was reproduced) found the
     same shape in several places, in three groups:
 
     - *Fuel.* No longer a fixed 1000000: `flatten-value` seeds
@@ -39,7 +40,21 @@ is a design decision. Remove an entry when it is fixed.
       level excludes a cycle (`store-write` stores a body over the whole
       current history, and `CCellWrite` writes `BTag` blocks). On one,
       the report is an error block, with the limits of the third group
-      below.
+      below. `heap-strs`, `heap-pairs` and `heap-jobs`, which read the
+      lists a `ConfinePaths` or `Exec` request carries, still take a
+      fixed `heap-strs-fuel` of 1000000 (`self/eval.sl:1018`) and answer
+      running out with `Nil`, so a longer list seems to be cut short
+      with no report. Reproduced for `ConfinePaths`, on the tree at
+      `5fba336` (`proposals/self-formal/proto/bugs/heap_strs_cut.sl`:
+      a `reads` list of 1000000 entries `"absent-dir"` then `"."`,
+      then a `Stat "."`): under `slc --interpret` it prints
+      `confine ok` and `stat cwd refused`, while the reference and
+      the binary `slc --build` makes print `stat cwd ok`, as `slc
+      --interpret` does with 999999 entries. `Exec`'s lists were
+      not tried. This seems to conflict with DESIGN.md §31: "The
+      semantics is that of a machine with unlimited stack and heap. A
+      real run may crash where the host cannot represent what is asked
+      of it. A crash produces no value, never a different one."
     - *A block of the wrong shape, or a missing argument.* `rope-walk`
       returns `REmpty` on a block that is neither `BTag` nor a
       string/char `BExt`. `list-refs` and `ctor-fields` return `Nil`
@@ -92,8 +107,17 @@ is a design decision. Remove an entry when it is fixed.
     not exit, the reference's warnings from later files would follow the
     program's output instead of preceding it. No test has this shape;
     `self/bootstrap.sh` compares each side's whole stderr, warnings
-    included, so one that did would fail there. Which order is wanted
-    is not decided here.
+    included, so one that did would fail there. The two also differ in
+    acceptance when a later file fails: with
+    `proposals/self-formal/proto/review5/01_prog_first.sl`, whose
+    `Program` writes `effect` and exits with 0, followed by
+    `proposals/self-formal/proto/review2/rf_b.sl` (a syntax error) or
+    `proposals/self-formal/proto/review5/01_late_error.sl` (a
+    `compile-error`), the reference writes `effect` and exits 0,
+    reporting nothing about the second file, while `slc`, compiled or
+    under `--interpret`, reports the second file's error and exits 1
+    without running the `Program` (on the tree at `5fba336`). Which
+    order is wanted is not decided here.
 
 20. **The two compilers disagree on a `let` of a constant before a
     `delegate` call.** In a function `f at g` whose body is
@@ -137,3 +161,51 @@ is a design decision. Remove an entry when it is fixed.
     committed) left the time exponential in `fold_vars` and `unify`, so
     a fix probably has to make every term walk sharing-aware, in both
     compilers.
+
+23. **`slc`'s compile-time printer cuts a deep value short with `_`.**
+    `show-at` (`self/elab.sl:4680-4717`) starts at a depth of 100000
+    and spends it twice per nested field, once in `show-at` and once
+    in `shown-field`, and prints `_` when it runs out, with no report.
+    So a list of more than about 50,000 elements prints wrongly.
+    Reproduced on the tree at `5fba336`, with
+    `ulimit -s unlimited`, by three files under
+    `proposals/self-formal/proto/bugs/`, each building a list of 50002
+    `0`s: `show_at_final.sl` as a final value under `slc --interpret`
+    (`final-text`, `self/interp.sl:15`), `show_at_match.sl` in a
+    failed `comptime-match`'s message (`show-typed`), and
+    `show_at_dump.sl` in a `dump-context` report (`entry-value`). Each
+    prints 49,999 `Cons _ 0` and then `Cons _ _ _)`; the reference
+    prints all 50002 and `Nil _` in each. The binary `slc --build`
+    makes from `show_at_final.sl` prints the whole list as well,
+    since the emitted OCaml printer seems to have no depth bound.
+    This seems to conflict with DESIGN.md §45, which prints `_` only
+    for "a union with more than one", "an erased field, a cell, a
+    slot, a function, an opaque proof, and a value whose type has no
+    readable `Matchable`", and with §31's "A crash produces no value,
+    never a different one". §28 asks a failed `comptime-match` to
+    print "the actual value, including its discriminant and
+    arguments". `dump-context`'s report is defined by MANUAL.md (§54),
+    so whether §45 governs it is not decided here.
+
+24. **`self/README.md` has claims the code seems not to bear out.**
+    Checked against the tree at `5fba336`, read from the code:
+    - `README:254-258` says the interpreter and the generated printer
+      take "a fuel of 1000000 or 100000" and that "running out returns
+      an error value, never a wrong answer silently". The interpreter's
+      default fuel is 1000000000 (`self/core.sl:3614`, and MANUAL.md
+      says the same); the only 1000000 in `self/` seems to be
+      `heap-strs-fuel` (`self/eval.sl:1018`, entry 18). The emitter's
+      `show-fuel` of 100000 (`self/emit.sl:4`) falls back to
+      `show_any` when it runs out (`self/emit.sl:1380`), which prints
+      `?` (`self/runtime.ml:18`) rather than returning an error value;
+      that case was not reached in a run. `show-at`'s 100000, which
+      prints `_` silently (entry 23), is not mentioned there.
+    - `README:385-386` puts the sugar budget "as its first `subterm`
+      parameter, ahead of the raw". In `elab-expr-demand`
+      (`self/elab-main.sl:752`) it is `sugar`, after the `subterm`
+      parameters `fuel`, `callbacks` and a `hop-` index.
+    - `README:463-465` lists macros as "Not modelled", "which the
+      reference does not implement either". `self/elab-main.sl`
+      expands macros (`env-expand`, `:509` onward), the reference
+      runs them, and `README:61-62` and `:128` themselves say slc
+      takes `std/macro.sl`'s macros and holds macro expansion.
