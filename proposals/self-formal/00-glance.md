@@ -15,14 +15,15 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
 
 ## Five things worth knowing first
 
-- **Diagonal.** If Sleight's functions terminate and its checking ends (SOUNDNESS.md's (T), (C), and (E), argued,
-  not proved), no non-erased `compile : Src -> Verdict` with no further evidence can be faithful on every source;
-  only the mechanism is tested. It does not refute owner statement 4(ii) as mathematics, nor a `compile` taking
-  erased evidence of H for its one source, though, if Sleight is sound, the diagonal source cannot produce that
-  evidence for itself, while code outside it may (03's reasoning). SOUNDNESS.md's claims are stated for accepted
-  programs; 03 carries them to the diagonal source through an accepted detour with the call of `compile` in a final
-  value (compiled with a toy `compile`), reading part 5 as covering the driver's call. slc does not escape it: its compile is one `Program`
-  step bounded by fuel, and its `World` blocks only the literal construction (03's reading). 05's version needs
+- **Diagonal.** If Sleight's functions terminate (SOUNDNESS.md's (T) and (E), argued, not proved), no non-erased
+  `compile : Src -> Verdict` with no further evidence can be faithful on every source; only the mechanism is tested.
+  It does not refute owner statement 4(ii) as mathematics, nor a `compile` taking erased evidence of H for its one
+  source, though, if Sleight is sound, the diagonal source cannot produce that evidence for itself, while code
+  outside it may (03's reasoning). SOUNDNESS.md's claims are stated for accepted programs; 03 carries (T) and (E) to
+  the diagonal source through an accepted detour with the call of `compile` in a final value (compiled with a toy
+  `compile`), reading part 5 as covering the driver's call, so the argument does not use (C), checking ends, which
+  03's and 05's own summaries list. slc does not escape it: its compile is one `Program` step bounded by fuel,
+  and its `World` blocks only the literal construction (03's reading). 05's version needs
   T1–T4, determinism through T3 (not T5), and soundness of the logic; its `read-file` macro form needs no quine,
   and with `slot-eq` it applies to the all-`ENone` copy (00-summary §2 item 2).
 - **Spikes.** The intrinsic-derivation plus `Program`-driver pattern compiles and runs at toy scale, fuel-free, on both

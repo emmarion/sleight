@@ -25,11 +25,11 @@ Each item is the tracks' recommendation, not a decision.
 - **The run.** A small-step heap machine over post-erasure code (§27): `Imm n | Ptr a` words,
   abstract never-reused addresses compared only for equality, mutable blocks, a total step, one
   fixed order, `Nat` primitive, `slot-eq` from an oracle (02 §3; decisions 4, 5, 7, 8, 9).
-- **Fuel.** If Sleight's functions terminate and its checking ends (SOUNDNESS.md's (T), (C), and
-  (E), argued, not proved), no hypothesis-free non-erased Sleight `compile` on source text is
-  faithful on every source (key finding 2; partly untested). Fuel either stays internal, never
-  showing in a result, or the unbounded part moves into the driver's `Program` loop, fuel-free in
-  prototypes; mechanisms differ by track (decisions 18, 18a).
+- **Fuel.** If Sleight's functions terminate (SOUNDNESS.md's (T) and (E), argued, not proved), no
+  hypothesis-free non-erased Sleight `compile` on source text is faithful on every source (key
+  finding 2; partly untested). Fuel either stays internal, never showing in a result, or the
+  unbounded part moves into the driver's `Program` loop, fuel-free in prototypes; mechanisms differ
+  by track (decisions 18, 18a).
 - **Theorems.** Intrinsic, since a type holds no call (§9): T1/T2 accepted ⇒ `Elab`, rejected ⇒
   `Fails`; T3 never both, per oracle; T4 every source accepted or rejected (owner statement 3),
   relative to a halting hypothesis H; T5 compile-time values match the spec run; T6 output refines
@@ -55,15 +55,16 @@ Each item is the tracks' recommendation, not a decision.
    and expands to `compile-error` exactly when it accepts (`proto/fuel/diagonal.sl`, both
    implementations; 03 F6), inside a macro's output or a `comptime-match`, since `compile-error`
    fires in erased code too (§4; 03 r1). Reasoning: a non-erased `compile : Src -> Verdict` with no
-   further evidence, faithful on every source, is impossible if Sleight's functions terminate and
-   its checking ends (SOUNDNESS.md's (T), (C), and (E), (E) since §27 strips erased positions;
-   argued, not proved; 03 §1, F6, r3.1). SOUNDNESS.md states these "about any program the checker
-   accepts", and Q may be rejected; 03 carries (T) and (E) over through an accepted P, Q's text
-   before the macro call with the call of `compile` in a final value, which the driver applies after
-   elaboration (`proto/review5/03_detour.sl`, toy, both), reading part 5 as covering that call, so
-   (C) is not needed for Q (03 F6, r5.1). The answer of the spec's run of `compile` on Q is taken to
-   be determined by Q; Q fixes its flags (r3.3); with `slot-eq`, apply it to an all-`ENone` copy, if
-   "faithful" means every run §67 permits agrees (r2.3, r3.4). It does
+   further evidence, faithful on every source, is impossible if Sleight's functions terminate
+   (SOUNDNESS.md's (T) and (E), (E) since §27 strips erased positions; argued, not proved; 03 F6,
+   r3.1). SOUNDNESS.md states these "about any program the checker accepts", and Q may be rejected;
+   03 carries them over through an accepted P, Q's text before the macro call with the call of
+   `compile` in a final value, which the driver applies after elaboration
+   (`proto/review5/03_detour.sl`, toy, both), reading part 5 as covering that call (03 F6, r5.1).
+   F6 thus does not use (C), checking ends; 03's and 05's own summaries list it as a premise,
+   only weakening their stated result (03 r5 unsure points). The answer of the spec's run of
+   `compile` on Q is taken to be determined by Q; Q fixes its flags (r3.3); with `slot-eq`, apply it
+   to an all-`ENone` copy, if "faithful" means every run §67 permits agrees (r2.3, r3.4). It does
    **not** refute owner statement 4(ii) as mathematics, nor a `compile` taking erased evidence of H
    for its one source, though, if Sleight is sound, no Q can produce that evidence for itself; code
    outside Q may (r3.5). It suggests (untested, assuming soundness) that H for all sources, in a
@@ -108,10 +109,10 @@ Each item is the tracks' recommendation, not a decision.
    right, then elaborate a head that is a name, then the arguments left to right
    (`proto/review3/gensym_*.sl`, `proto/review4/01_head_name_err.sl`; special forms' operands
    unchecked; 01 §3.6, r3.1, r4.2). At runtime the reference and `slc --interpret` run a head form
-   before an argument form in a body (`proto/review3/head_arg_order.sl`, 02 §6, r3.1;
-   `proto/review3/00_arg_head_order.sl`, this summary's own check), and so does slc's compiled code,
-   native and `--byte`, in one test (`proto/review5/04_head_arg_compiled.sl`; 04 r5.2). Order is
-   observable without divergence: an argument's write precedes another's crash under slc's native
+   before an argument form in a body (the reference: `proto/review3/head_arg_order.sl`, 02 §6, r3.1;
+   both: `proto/review3/00_arg_head_order.sl`, this summary's own check), and so does slc's compiled
+   code, native and `--byte`, in one test (`proto/review5/04_head_arg_compiled.sl`; 04 r5.2). Order
+   is observable without divergence: an argument's write precedes another's crash under slc's native
    build and the reference, §15 allowing either order (`proto/review5/04_effect_vs_crash.sl`; 04
    §5.1, r5.3). Crashes, stuck states, and divergence can also observe it; `Measure`'s cost readings
    are absorbed once the world's answers are inputs; that nothing else does is a conjecture (02
@@ -201,8 +202,9 @@ formal-spec choice. Recommendations are the tracks', never decided.
 statement 3 says "source code", positions are observable, and a core start drops head dispatch and
 macros, central to DESIGN.md's aims (01's reading). 04 reads statement 3 as asking only totality,
 which a total but unproved front end could give; "the spec's verdict on the text" needs reader and
-expander proved (04 decision 2, r2.19). *Deps:* 14, `Pos` in the judgment, 17 (R2). *Wording:* none.
-(01 decision 1, §4.1.)
+expander proved (04 decision 2, r2.19). 01 reads reading as separable, per file or for all files,
+except where it fails only in a later file, when acceptance depends on rough edge 31 (01 §3.7).
+*Deps:* 14, `Pos` in the judgment, 17 (R2). *Wording:* none. (01 decision 1, §4.1.)
 
 **2. What does "parameterized the semantics" (owner statement 1) mean?** (a) one fixed spec; (b)
 generic over a model record (extern models, oracle, and file system); (c) also syntax (1 (d)); (d)
@@ -233,17 +235,18 @@ versus confluence; slc's emitter vs O1. *Wording:* O1, O3 need it. (02 decision 
 
 **5. How is `slot-eq`'s nondeterminism handled?** (a) an oracle parameter; (b) a nondeterministic
 relation (T3 false); (c) compile-time answer = word equality; (d) forbid it at compile time; (e)
-always `ENone` (`tests/slot_eq.sl` and `Slots` disagree); (f) always truthful (both implementations
-fail it; 02 r2.5). *Rec.* by every track that decides it: (a), shapes differing: 01 an answer
-stream; 02 a step → bit map with `ESome` needing the bit *and* equal words, theorem "some oracle
-exists", needing `Nat` words immediate (E2, 9) and a shared store (12) (02 r5.1); 05 an oracle also
-recording crash points and file contents, existentially quantified in the verdict and logged by the
-compiler; 04 treats the answers as an oracle (key finding 18). 05 warns an oracle free to answer
-`ENone` or crash lets a compiler over-reject while meeting T1 to T3, a crash rejecting every source
-that runs compile-time code (§29), which with the shipped prelude is every source
-(`lib/prelude.sl:354` runs `pow2`), if a crash is a rejection (6) (05 §3 T3, r3.3, r5.5). See
-cross-file 1. *Deps:* T3, completeness, 8. *Wording:* (c), (d) need it. (01 decision 6; 02 decision
-4; 05 decision 3, §4.2.)
+always `ENone` (`tests/slot_eq.sl` and `Slots` disagree); (f) always truthful (both interpreters
+fail it, and both implementations' built code on two separately computed `Nat`s equal to 2^63,
+`proto/review5/02_big_nat_slot_eq.sl`; 02 Q4, r2.5, r5.2). *Rec.* by every track that decides it:
+(a), shapes differing: 01 an answer stream; 02 a step → bit map with `ESome` needing the bit *and*
+equal words, theorem "some oracle exists", which on 02's reading needs equal `Nat`s to be one word,
+as E2 makes them (9), and a shared store (12) (02 Q4, r5.1); 05 an oracle also recording crash
+points and file contents, existentially quantified in the verdict and logged by the compiler; 04
+treats the answers as an oracle (key finding 18). 05 warns an oracle free to answer `ENone` or crash
+lets a compiler over-reject while meeting T1 to T3, a crash rejecting every source that runs
+compile-time code (§29), which with the shipped prelude is every source (`lib/prelude.sl:354` runs
+`pow2`), if a crash is a rejection (6) (05 §3 T3, r3.3, r5.5). See cross-file 1. *Deps:* T3,
+completeness, 8. *Wording:* (c), (d) need it. (01 decision 6; 02 decision 4; 05 decision 3, §4.2.)
 
 **6. What is a compile-time crash or fuel exhaustion?** §31 allows crashes "where the host cannot
 represent what is asked of it"; §72 makes one "an error at its argument"; elsewhere silent. Both
@@ -369,8 +372,10 @@ Malformed syntax must be a positive error (01 §3.7). *Deps:* every pass's archi
 
 Sub-questions: H as 4(ii)'s "every accepted compile-time form's spec run halts" or the broader
 "every compile-time run" (cross-file 5); H over evaluation only, `read-file` and `native-compute`
-axiomatized (03: yes). *Deps:* 6, 18, whether elaboration takes fuel. *Wording:* only the budget
-alternative. (01 decision 2; 03 decisions 2, 4, F7; 05 decision 5, §4.3; 07 decision 4.)
+axiomatized (03: yes); whether literals are an evaluation site, §45 leaving open whether their
+entries come from "elaborating statements" (03 F7, r5.6). *Deps:* 6, 18, whether elaboration takes
+fuel. *Wording:* only the budget alternative. (01 decision 2; 03 decisions 2, 4, F7; 05 decision 5,
+§4.3; 07 decision 4.)
 
 **15. Which flags are spec parameters; is the expansion limit one?** 01 in: prelude and extern
 on/off, `--fn-same`, `--goal`, `--comptime-unconfine` names, and FFI names and arities; out:
@@ -385,9 +390,9 @@ any prelude text, `--no-prelude` the empty one, qualified: it also frees `extern
 an empty text equals `--no-prelude` is the owner's call. *Rec.* (01): (c), since (a) seems to need
 the 2881-line prelude elaborated in Sleight via the evaluator under proof. 05: generic over the
 prelude is "too wide" (cross-file 3). Under (c), where the spec captures `Nat`, `Char`, and `String`
-is open, since the prelude uses literals before it ends (01 §4.5, r5.2). Also: are INTERNALS.md's
-`def-prim` and `def-opaque` in (04 rough edge 3)? *Wording:* none. (01 decision 9, §4.5, r2.4; 05
-§4.4.4.)
+is open: capturing them when the prelude ends would miss its own literals (`lib/prelude.sl:2526`,
+`:2542`) (01 §4.5, r5.2). Also: are INTERNALS.md's `def-prim` and `def-opaque` in (04 rough edge 3)?
+*Wording:* none. (01 decision 9, §4.5, r2.4; 05 §4.4.4.)
 
 ### E. The compiler
 
@@ -529,8 +534,9 @@ need anyway" (11). *Wording:* none; 02 asks what §13's "the only reference" mea
     after the arguments' macro calls expand, so `(nosuch (loop))` is refused for the expansion
     limit, not the unbound head (`proto/review4/01_head_name_err.sl`); a deviation, or only which
     error is reported, which DESIGN.md does not fix? (01 §5.13, r4.2.)
-31. **When the driver runs a file's final value** (§27): at its file's end or after every file? The
-    implementations differ on acceptance (key finding 15). (01 §5.14, r5.1.)
+31. **When the driver runs a file's final value** (§27): at its file's end or after every file, and
+    does a `Program`'s `Exit` end the unit? The implementations differ on acceptance (key finding
+    15). (01 §5.14, r5.1.)
 
 ## 5. Cross-file inconsistencies
 
@@ -562,17 +568,19 @@ Open ones; numbers follow the review log, gaps being resolved items.
 
 - **The diagonal beyond its mechanism**: no faithful `compile` was put in Q; "H for all sources
   yields a runnable `compile`" is untested and assumes soundness (03 F6, r5); the detour carrying
-  (T) and (E) to a rejected Q assumes the spec accepts P as the checker does and part 5 covers the
-  driver's call of a final value, only P's shape being compiled, and the `slot-eq` step is reasoning
-  (03 §6, r2.3, r3.4, r5.1); all rests on (T), (C), (E), and logic soundness, unproved; 05's quine
-  form assumes unwritten quines (05 §9, r5.2).
+  (T) and (E) to a possibly rejected Q assumes the spec accepts P as the checker does and part 5
+  covers the driver's call of a final value, only P's shape being compiled and no P written for the
+  macro's other code, and the `slot-eq` step is reasoning (03 §6, r2.3, r3.4, r5.1); all rests on
+  (T) and (E), and 05's version also on logic soundness, all unproved; 05's quine form assumes
+  unwritten quines (05 §9, r5.2).
 - **Gödel II** conditions and README.md's IΣ₂ / ω^ω^ω claim are unchecked (05 §9). By 05's
   reasoning, if the logic is sound the diagonal rules out uniform H in a recursable form, and
   uniform stripped-run safety alone would give internal consistency, since an erased proof `p` of
   `False` gives an accepted program whose final `Fn` body `(lift p)` reaches absurd code once
-  stripped (`proto/review5/05_stripped_absurd_final.sl`, `p` an axiom under `--no-prelude`:
-  accepted, then "absurd code reached" on both, built or interpreted; refused with the form in run
-  position); formalizing this inside Sleight is untried (05 §4.3, r2.3, r5.1).
+  stripped (`proto/review5/05_stripped_absurd_final.sl`, `p` a `def-prim` axiom under
+  `--no-prelude`, which SOUNDNESS.md's claims exclude, so it shows only the shape: accepted, then
+  "absurd code reached" on both, built or interpreted; refused with the form in run position);
+  formalizing this inside Sleight is untried (05 §4.3, r2.3, r5.1, r5 unsure points).
 - **SOUNDNESS.md's (T), (C), (E)** are argued, not proved; they "do not cover" `--no-prelude`
   programs with own models or `def-prim`; H also needs well-behaved host I/O (03 F7, r2.6; 05 §2.3,
   r2.8).

@@ -1979,3 +1979,65 @@ rows (12–17 ns per batched step and 6–12 ns per `Continue` compiled, about 1
 
 Unsure, not changed:
 - 00-summary.md is 647 lines, above the ~640 target; the additions above account for it.
+
+## Propagation check (fifth round)
+
+A check of the fifth-round propagation against the track files as they now stand (all five notes
+sections and the bodies they point to, 01's and 02's fifth notes included), and of 00-glance.md
+against 00-summary.md row by row. Re-run on the reference and `_build/release/slc`:
+`proto/review5/01_prog_first.sl` then `01_late_error.sl` (the reference prints `effect` and exits 0;
+slc `--interpret` reports "late" and exits 1) and then `review2/rf_b.sl` (the reference exits 0);
+`02_big_nat_slot_eq.sl` (`0`, that is `ENone`, from `--build` binaries of both; with the two
+2^63 − 1 arguments replaced by 5, `1` from both binaries; `0` interpreted by the reference);
+`05_stripped_absurd_final.sl` under `--no-prelude` ("absurd code reached" from the reference,
+`slc --interpret`, and the `--build` binaries of both, which build); `04_effect_vs_crash.sl` (`effect
+ran`, then the `Array.make` crash, from the reference and slc's native build);
+`04_head_arg_compiled.sl` (the `Array.make` crash from slc's native and `--byte` builds); and
+`03_detour.sl` after `std/macro.sl` (`(BFalse)` from the reference and `slc --interpret`). The
+prelude lines `lib/prelude.sl:354`, `:2526`, and `:2542` were opened. Nothing below is a decision.
+
+1. Key finding 2, the "Fuel" bullet of section 1, and 00-glance's diagonal bullet gave the premises
+   as (T), (C), and (E) and then said (C) is not needed for Q, which read two ways. 03 F6 says the
+   detour "needs (T) and (E) only for an accepted program, and (C) not at all", and 05 §4.3 points
+   to that detour; 03 §1 and 05 §1 still list (C), which 03's fifth review leaves as only weakening
+   the stated result. The premises are now (T) and (E), with a sentence saying that 03's and 05's
+   summaries also list (C).
+2. Section 6's diagonal item said "all rests on (T), (C), (E), and logic soundness"; only 05's
+   version uses logic soundness, and the detour does not use (C). Reworded; it also says "possibly
+   rejected Q" (03 F6) and adds 03's unsure point that no P was written for the macro's other code.
+3. Decision 5 stated as fact that 02's "some oracle exists" needs `Nat` words immediate. 02 Q4 marks
+   it "(reading)" and allows "some other choice that makes equal `Nat`s one word". Hedged and
+   widened.
+4. 02 r5.2's 2^63 test was left out as not bearing on a decision. It is evidence for decision 5's
+   option (f), always truthful: the built code of both implementations answers `ENone` there. Added
+   to (f), and (f)'s "both implementations fail it" narrowed to both interpreters, which is what 02
+   §2.4 tested.
+5. Decision 16 said only that the prelude uses literals before it ends; 01 §4.5 names the lines and
+   says capture at the prelude's end would miss them. Both added.
+6. Decision 1 did not carry 01 §3.7's consequence of 01 r5.1: reading is a separable total function
+   except where it fails only in a later file, when acceptance depends on when the driver runs a
+   `Program` final. Added, pointing to rough edge 31, which now also asks whether a `Program`'s
+   `Exit` ends the unit (01 §5 item 14).
+7. Decision 14's sub-questions on H's scope left out 03 r5.6: literals as a possible compile-time
+   evaluation site, since §45 leaves open whether their entries come from "elaborating statements".
+   Added.
+8. Section 6's Gödel item did not carry 05's fifth-review unsure point that `p` comes from a
+   `def-prim` under `--no-prelude`, which SOUNDNESS.md part 1 excludes, so the test shows only the
+   shape. Added.
+9. Key finding 6 cited `head_arg_order.sl` for the reference and `slc --interpret` together;
+   `slc --interpret` overflows on that file (02 §6, r3), and its order comes from
+   `00_arg_head_order.sl`. The citations now say which shows which.
+
+The fifth propagation's dropped details (its item 21) were checked: the README's "1000000" and the
+printer `?` bear on no decision; the condensed rough edges 5, 7, and 12 match 04 §5.1, 04 §5.4, and
+02 §5.4. 01 r5.3's `finals` and 03 F5's re-run timing rows stay out, as bearing on no decision.
+
+Checked and found consistent: key findings 5, 8, 11, and 15 against 04 r5.1 to r5.7, 03 r5.5, and
+01 r5.1; decisions 3, 8, 8a, and 18c against 07 r5.4, 04 r5.4, and 06 r5.2 to r5.4; section 7's 06
+timings against 06 F6; 00-glance's table against §3 row by row ("Deps" numbers, recommendations,
+and wording marks) and its suggested order. No narration, past-tense history, or missing Oxford
+comma was found in the changed text.
+
+Unsure, not changed:
+- 00-summary.md is now 655 lines, above the ~640 target; the additions above account for it.
+- Whether 03's and 05's own summaries should drop (C) is for those files; neither was edited here.
