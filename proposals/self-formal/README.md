@@ -5,5 +5,7 @@ branch. Everything here is a proposal or an agent's reading; nothing is
 approved, and nothing here is a design decision (CLAUDE.md rules 1 and
 11). Where a file and DESIGN.md disagree, DESIGN.md is right.
 
-Start with `00-summary.md` once it exists; the numbered files are the
-individual tracks it combines.
+Read `00-glance.md` first (one page), then `00-summary.md`, which combines
+the numbered files: tracks 01 to 05 and spikes 06 and 07, each reviewed
+adversarially, with its corrections listed in its "Review notes".
+Prototypes are under `proto/`.
