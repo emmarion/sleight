@@ -230,13 +230,15 @@ both.
   identity, which dataflow fixes. A specific oracle tape consumed in
   step order would make the answers depend on order, so an
   order-independence statement has to quantify over oracles.
-- Compile time: within one macro run, `gensym`, `read-file` and the
+- Compile time: within one macro run, `gensym`, `read-file`, and the
   other §65 primitives are ordered by the unique `MacroWorld`. Which
   number a given `gensym` call gets also depends on the order in which
   the elaborator reaches macro calls. §65 threads the world "sequentially
   through all of elaboration", and §6 elaborates the head first, but I
   found no statement of the order in which a call's arguments are
-  elaborated. A gensym number can reach the output (`intern-nat`, §65),
+  elaborated. Both implementations expand every macro call among an
+  application's arguments before elaborating any argument (01, §3.6,
+  `proto/review3/gensym_depth.sl`). A gensym number can reach the output (`intern-nat`, §65),
   so elaboration order is observable; that is a question about the
   elaboration spec, separate from runtime evaluation order.
   `native-compute` results are fieldless constructors (§72), so sharing
@@ -280,8 +282,8 @@ quantified over `slot-eq` oracles, does not depend on evaluation order.
   the new body, a functional update of a `many` map, not a physical one
   (`self/heap.sl:204-207`), and `store-read` prefers the overlay
   (`self/heap.sl:191-202`). A unique `cell-write` calls `hwrite` on the
-  same address (`self/elab-main.sl:251-266`); a `many` one allocates a
-  copy (`:270-287`).
+  same address (`self/elab-main.sl:251-269`); a `many` one allocates a
+  copy (`:271-288`).
 - In slc every value is an address, immediates included: a `Nat` is a
   `BExt (PNat n)` block (`self/eval.sl:44-53`, `word-of-block`).
   `slot-eq` compares allocation positions (`self/eval.sl:804-809`), so
@@ -306,7 +308,7 @@ quantified over `slot-eq` oracles, does not depend on evaluation order.
 ### 2.5 Externs and representation
 
 [compiled] `tagslot.sl`: with `(def-fns ... (many id-at : (many (Four)
-c) (many (Nat) n at c) -> ...) n)`, `(let ((many c)) (A3))` and `(id-at
+c) (many (Nat) n at c) -> ...) n)`, `(let ((many c)) (A3))`, and `(id-at
 c 3)`:
 - With externs it is accepted and prints `3`. The literal's slot is tag
   slot 3 (§35), so `n` is not passed: it is read back from `c`'s word.
@@ -325,7 +327,10 @@ check whether such a choice is consistent.
 `proto/dyn/machine.sl` (163 lines) is checked with the reference, with
 and without `--no-extern`, and with `slc --interpret`, and prints `imm
 1`, or `imm 0` with an all-false oracle. It has:
-- `Word` (`WImm n | WPtr a`), mutable `Block`s in a heap, and ANF code:
+- `Word` (`WImm n | WPtr a`), with `a` a natural-number position in the
+  heap list (`alloc` uses the heap's length, as in A2 below), compared
+  only for equality; blocks overwritten at their position by a
+  functional `set-nth`; and ANF code:
   variables, constructor allocation, `cell-alloc`, unique invocation
   (an in-place write), `slot-eq` reading an oracle bit, a closure, an
   application, `let`, and a field read.
@@ -419,7 +424,7 @@ Values as words:
 - **A3: everything boxed (slc's interpreter).** Pros: matches slc today.
   Cons: §33's identities (`vacant-slot` = `Nat` 0, tag slots) then hold
   only through a separate map from a block to its word, as slc's
-  `word-of-block` does (`self/eval.sl:43-52`); `slot-eq` must then say
+  `word-of-block` does (`self/eval.sl:44-53`); `slot-eq` must then say
   whether it compares addresses (slc compares allocation positions) or
   words. slc so built does read `at` back through a tag slot:
   `slc --interpret tagslot.sl` prints `3` [compiled].
@@ -501,8 +506,14 @@ Values as words:
   bound), once the order and the `slot-eq` answers are fixed (Q3, Q4),
   so owner statement 3 ("accepted or rejected") would hold per bound,
   provided the rest of elaboration terminates (SOUNDNESS.md part 6
-  argues it does, from (T)). With no loop form, a depth bound seems to
-  bound the steps of each run even without (T); unproved. The bound
+  argues that canonicalization, unification, and meta solving do
+  without (T), which it uses only for the runs; §62 bounds the
+  expansions). A depth bound D bounds the steps of each run even
+  without (T), by a count (reading; not machine-checked): there is no
+  loop form and `let` does not recurse, so one activation evaluates each
+  part of a body at most once and makes at most B calls, B the largest
+  number of call sites in any body of the finite program; activations
+  then form a tree of depth at most D and branching at most B. The bound
   departs from §31's "unlimited stack and heap" for compile time and
   needs owner wording. A depth bound does not bound the heap, so a
   compile-time heap exhaustion stays host-dependent unless C3's heap
@@ -559,7 +570,7 @@ the `at` reading-back that follows, since both entries are `many`
 
 1. **Does the spec run post-erasure code (R1)?** Recommended: yes. §27
    and §29 already say the evaluator runs stripped code at compile time,
-   and §19, §36 and §39 describe runtime by post-erasure code, so this
+   and §19, §36, and §39 describe runtime by post-erasure code, so this
    mostly confirms DESIGN.md; the open part is the formal spec's object
    and slc's `CErased` placeholders. (reading) A machine could give
    erased values placeholder words, as slc does, but §35 says "An erased
