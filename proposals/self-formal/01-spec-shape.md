@@ -294,11 +294,12 @@ elaborated, and only then are the arguments elaborated left to right,
 each nested application in the same way. In the reference this is
 `splicing` (`lib/elab.ml:710-722`), called on a call's arguments before
 its head is checked (`:1380-1383`); a sequence of statements is
-expanded one item at a time instead (`expand_seq`, `:723`). A head that is a form is elaborated before
-the items are spliced (`settle_head`, `:1368`, `computed_head`):
-`review3/gensym_head.sl`, whose head is a macro call that takes a
-number, gives the head 1 and the arguments 2 and 3. A macro can branch
-on its number, so the order can decide acceptance. [D] DESIGN.md fixes "The head is elaborated
+expanded one item at a time instead (`expand_seq`, `:723`). A head
+that is a form is elaborated before the arguments are spliced
+(`settle_head`, `:1368`, and `computed_head`): `review3/gensym_head.sl`,
+whose head is a macro call that takes a number, gives the head 1 and
+the arguments 2 and 3. A macro can branch on its number, so the order
+can decide acceptance. [D] DESIGN.md fixes "The head is elaborated
 first" (§6), that statements come before the code after them (§27), that
 "the forms inside a form run before it does" (§27), and hoisting (§15),
 which places hoisted bindings "just before the statement or final form

@@ -468,3 +468,63 @@ Points I am unsure of:
   brief's owner statement 1 (an earlier session's paraphrase) says no
   consistency theorem is expected.
 - "Accepted as first written" (F4) remains the author's report.
+
+## Third review notes
+
+A third adversarial review read DESIGN.md in full, every file in
+`proto/stepper/`, and re-ran at c236135 (no code change since d6644d9):
+`run.sl` under the reference, `--no-extern`, `--build`,
+`slc --interpret`, and `slc --build`; `complete.sl total_demo.sl` under
+the same five; `ho_counter.sl` and `ho_exist_build.sl` under the
+reference, `--no-extern`, and `slc --interpret`; both bad files; both
+teeth checks; a wrong `runs-fn` step; the numeral refusal; the line
+counts; the 24 + 2 failure sites; and the 7821- and 26021-step runs
+(1.39 s and 11.3 s reference, 0.53 s and 3.3 s slc, 0.06 s built, peak
+22–41 MB). All matched, up to timing noise (the one-line file took
+0.38 s, not 0.44 s). Errors found and changes made:
+
+1. §5 rough edge 1 said DESIGN.md does not say whether calling a
+   later-level closure from earlier code is meant to be impossible.
+   §18 says it: "A level created later is strictly higher than one
+   created earlier, so a function at a later level cannot be called
+   from code at an earlier level." Reworded as a consequence, not a gap.
+2. F4.2 rested on "my reading" and the second review's open point said
+   a packed `Predates` was not compiled. It now is:
+   `proto/review3/06_packed_predates_bad.sl` packs
+   `(Predates (Level) L S)` with `S` minted first; a function at `S`
+   applies the closure (accepted when the file stops there), and the
+   step that mints `L2` is refused at `(prove-predates L2 S)` with
+   "`L2` was not in scope when level `S` was minted". F4.2 quotes the
+   §18 sentence and the result; §6 updated.
+3. F1 said the `ExWhile` unfolding "makes every premise a strict
+   subterm". Any rule's premises are fields of its derivation, so that
+   holds whatever the rules are; the unfolding does not create it.
+   Reworded; added that the recursion is on derivations, not commands.
+4. Vacuity: besides a `step` that always answers `SStuck`, an `advance`
+   that always answers `Ended` with `Stuck`, and a `run-total` that
+   always answers `AgreeStuck`, have the theorems' types
+   (`proto/review3/06_vacuous.sl`, accepted). Added to F3, which also
+   now says the step-count bound comes from `finish`'s recursion, not
+   from a type.
+5. F2's first teeth check (swap in `step` only) tests `step` against
+   `Step`, not against the spec; said so, and added the stronger check
+   (swap in both `Step` and `step`), refused in `step-back` at `ExSeq`.
+6. Decision 4's "since 02 recommends one" named nothing; it is 02's A1
+   (abstract addresses). It also cited owner statement 6, which is about
+   the spec's run, for Q3.2, which is about the implementation's heap;
+   the mismatch is now stated.
+7. Summary: "an erased step counter that each extension decreases" read
+   as the counter decreasing over the run; it increases, and each
+   extension's call to the previous closure decreases it. Reworded.
+8. F4.1 said "the state holds" the closure; in `ho_fixed_bad.sl` it is
+   the stepper's argument. F1 omitted `alloc-fn` from `runop-fn`'s
+   lemmas. Oxford commas in F1, F2, and F4.1.
+
+Points I am unsure of:
+
+- Whether some arrangement other than the three compiled ones (no proof,
+  a packed `Predates`, a fixed level with a counter) lets packed-level
+  closures be applied, for example a state type parameterised by the
+  stepper's level. My reading of §18 (`prove-predates` needs a level
+  "created by `def-lvl`", not a parameter) says no; not compiled.
+- Timings remain single runs; `_build/release/slc` was used as found.

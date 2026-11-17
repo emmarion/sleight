@@ -293,15 +293,15 @@ spec has one. The reason string of `Rejected` is free text, so a
 `step` may give any reason with a correct `Fails`. Nor does it cover
 `drive.sl`: the driver, which reaches `cstep` and `rstep` through its
 own wrappers `zipper` and `replay` rather than through a `Certified`
-value, and the text it prints for each
-verdict, are outside the proved statement. Program 6
-has a diverging run, so (by my reading, not proved) it has neither
-derivation, since `Evals` and `Sticks` both need a finite `Runs`; the
-loop runs at constant memory. That is consistent with "no verdict if
-and only if some run diverges". Of the two directions, "a diverging
-run gives no verdict" is evident from the code (a `Waiting` state
-leaves only on `Halt`); the converse is not. Neither direction is
-proved. [A] The divergence comes from the toy's untyped object
+value, and the text it prints for each verdict, are outside the proved
+statement. Program 6 has a diverging run, so (by my reading, not
+proved) it has neither derivation, since `Evals` and `Sticks` both need
+a finite `Runs` and `Step` is deterministic; the loop runs at constant
+memory. That is consistent with "no verdict if and only if a run that
+the checker reaches diverges" (a program rejected before a diverging
+`Let` still gets a verdict). Of the two directions, "a diverging run
+gives no verdict" is evident from the code (a `Waiting` state leaves
+only on `Halt`); the converse is not. Neither direction is proved. [A] The divergence comes from the toy's untyped object
 language, which has no levels; whether a run-position form of full
 Sleight can diverge at all bears on §17 ("Termination rests on
 levels"), see §5 below.
@@ -612,3 +612,57 @@ Points I am unsure of:
   would ask again and append, never dropping the bad answer. I read
   the answers as always produced in request order, so it does not
   arise here; not proved.
+
+## Third review notes
+
+A third adversarial review read DESIGN.md in full and every file in
+`proto/roundtrip/` and `proto/review2/07_*`, and re-ran at c236135 (no
+code change since 669b328): programs 0 to 5 in both variants under the
+reference and `slc --interpret` (outputs and step counts as in F2);
+program 6 (22 MB, flat over 9 s, both variants); the three
+`--goal proved: PASS` sets and the replay set without `impl.sl` (FAIL)
+under both checkers; the four refusals under both; the looping-`step`
+refusal; both bare-`ne` refusals; the three `predates` variants of
+`drive.sl`; and `07_nondet_spec.sl` with `07_nondet_both.sl`
+(`(MkBoth _ _ _)`) and with `det.sl` (refused at `det.sl:48`, missing
+`SNumUp`). All matched. Errors found and changes made:
+
+1. §1 said a `Program` step is a machine step, a statement, "or the
+   resumption after a run halts", as if resumption were a step of its
+   own. In the zipper the step whose machine step halts also resumes
+   the checker (program 1 takes 4 steps: start the `Let`, `SNum`,
+   `SRetNil` with the resumption, and the `Need`). Reworded.
+2. F4 said the reference refuted "every cross-constructor case on its
+   own". `step-det`'s `SVar`/`SVarNo` cases, whose indices do not clash,
+   needed `nth-nonth` (`det.sl:40`, `:44`). Narrowed.
+3. F7 said `drive.sl` calls `cstep` and `rstep` "directly"; it calls
+   them through its wrappers `zipper` and `replay`, passed to a generic
+   `drive` as its `step` parameter. Reworded.
+4. Q2: "(b) reads closer to DESIGN.md's prose" and "(a) the spec reads
+   as a machine" as a con, with no source. §31 says "The semantics is
+   that of a machine with unlimited stack and heap". Both are now [A],
+   with §31 quoted.
+5. F7's "no verdict if and only if some run diverges" is false as
+   worded: a program rejected before a diverging `Let` gets a verdict.
+   Now "a run that the checker reaches".
+6. F2 table: Oxford comma in program 0's description. Header: names the
+   third review's commit.
+
+The theorem's type was checked against the claims: `MkCertified` takes
+an existential `S` and `L`, an `init`, a `step` from any `S p` to
+`More (S p)` or `Fin (Verdict p)`, and `excl`, which mentions only
+`spec.sl` relations and is discharged by `exclusive` whatever `S` is.
+Since `Verdict p` carries an erased `Elab [] p` or `Fails [] p`, every
+`Fin` is correct from any state, and `init` is constrained by nothing.
+Vacuous implementations that pass: a `step` that answers `More` on any
+or all states (`spin_vacuous.sl`), with any `init`; and any reason
+string in `Rejected`. A `step` cannot loop by calling itself at its own
+level (refused, "decreases no subterm argument").
+
+Points I am unsure of:
+
+- That nothing other than these two kinds of vacuity passes; I found no
+  third, but did not prove there is none.
+- The `p0` refusal of F5 was reproduced only as "`src`, declared
+  `erased`, used in a non-erased position" (`src` made erased); the
+  quoted `p0` wording is the author's.

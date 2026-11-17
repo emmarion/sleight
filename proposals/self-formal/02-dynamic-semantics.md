@@ -364,8 +364,12 @@ and without `--no-extern`, and with `slc --interpret`, and prints `imm
   the callee's canonical atom", §39), so stripping is part of the
   elaboration spec's output, not a syntactic function of the source. A type-soundness
   theorem over stripped code needs a heap typing (cell slot contents,
-  §13 uniqueness, `at` targets). Cost: the soundness proof is where most
-  of the effort goes.
+  §13 uniqueness, `at` targets). SOUNDNESS.md argues safety in another
+  way: in a "full semantics" in which "Every position runs, erased ones
+  included" (part 3), with its (E) relating the stripped run to that one
+  through (T) (part 7). A spec of R1 would take over that obligation or
+  replace it by a direct proof over stripped code. Cost: the soundness
+  proof is where most of the effort goes.
 - **R2: full typed code, erased parts skipped by the machine.** The same
   machine, but it walks typed code and ignores erased nodes. Pros: one
   object for typing and running. Cons: just R1 with the strip inlined
@@ -582,7 +586,10 @@ the `at` reading-back that follows, since both entries are `many`
    continuation, total step, `Program`-driven. Recommended: yes. (reading)
    It meets every requirement I found in §33, §35–§38, §41, and §66, and
    the driver loop needs no fuel (prototype, with the oracle as a
-   function, 2.6).
+   function, 2.6). MINIMAL.md lists "Evaluation and typing are
+   relations, not functions" under "Decided about the semantics" of the
+   minimal language; a step function here would sit beside such a
+   relation as its deriving function, as in mini/ (reading).
 3. **Fix the evaluation order (O1/O3)?** Recommended: fix it in the
    spec. Sub-question: does §15's "behaves as if ... placed just before"
    fix timing? If so, it orders argument forms before a form head, which
@@ -674,10 +681,18 @@ the `at` reading-back that follows, since both entries are `many`
   the manual). What OCaml 4.14.1 does here was checked [compiled]:
   `let ... and` in written order, application arguments and tuples
   right to left.
-- That the reference interpreter evaluates arguments before the head:
-  `lib/eval.ml:24` is `apply (eval1 env f) (List.map (eval1 env) args)`,
-  and OCaml 4.14.1 evaluates application arguments right to left, so the
-  `List.map` runs first. Not observed directly in a Sleight run.
+- `lib/eval.ml:24` is `apply (eval1 env f) (List.map (eval1 env) args)`,
+  and OCaml 4.14.1 evaluates application arguments right to left, so
+  within one `CApp` the `List.map` runs first. This does not make the
+  reference run arguments before a form head: the elaborator binds a
+  head and argument that are not variables to anonymous entries in the
+  order it elaborates them (`pending`, `lib/elab.ml:2268-2272`), so the
+  `CApp` sees variables. [compiled] `proto/review3/head_arg_order.sl`,
+  inside a function body, has a head form that recurses 50 deep and an
+  argument form that crashes allocating a huge array: under
+  `--eval-fuel 20` the reference reports "out of fuel", and without it
+  the array crash, so the head runs first. slc's interpreter overflows
+  its stack on that file either way, so it says nothing there.
 - That GC reuse of addresses is unobservable because a slot word keeps
   its block alive. This is a reading of OCaml's runtime, not checked.
 - CakeML's top-level theorem allowing early termination on resource
