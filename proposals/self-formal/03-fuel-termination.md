@@ -161,7 +161,10 @@ The file behind 3 was not saved. Reproduce each from the text here.
    did not test a level-indexed `Res` whose continuations sit at
    existentially bound lower levels and carry `Predates` proofs. 06 F4.2
    found that a closure whose level is packed in its argument can be
-   built but not applied by the stepper.
+   applied and extended at that packed level when two `Predates` proofs
+   and a counter are packed with it (`proto/review4/06_packed_counter.sl`);
+   what fails, on 06's reading of §18, is extending it at a newly minted
+   level.
 2. **A function cannot iterate `Program` steps.** The function `run-all :
    (subterm unique (Program L) p) (World) -> ...` matches `Continue _ k`,
    calls `(k w)`, and recurses on the result `p2`. It is refused:
@@ -763,7 +766,7 @@ Unsure:
 - F6 and F7 still rest on SOUNDNESS.md's (T) and on the logic's
   soundness, neither proved.
 
-## Coordinator note
+## Coordinator notes
 
 1. §6's first item still gave "it needs a `World`" as the reason slc
    cannot stand in for the faithful `compile`, which the second review's
@@ -883,3 +886,6 @@ Unsure:
   states of the full semantics of a program, and Q is not such a
   program when rejected.
 - The compiled timing rows and the 22 MB figure, still not re-run.
+2. F4.1's last sentence still gave 06's superseded "built but not
+   applied" finding; restated to match 06 F4.2 after its fourth review.
+   Flagged by the fourth-round propagation check of 00-summary.

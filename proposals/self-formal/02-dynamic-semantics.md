@@ -637,7 +637,9 @@ option, with the spec's own store a heap (as 01's Σ is).
    aborts. It gives the theorem content even though no consistency
    theorem is expected.
 8. **Compile-time values: trees (V1) or graphs (V2)?** Recommended: V1
-   unless a reason for V2 turns up.
+   for the theorem, V2 as an option, with the spec's own store a heap
+   that keeps one block per `Settled` value, since N1's "there is an
+   oracle" seems to need that (Q8, reading).
 
 ## 5. Rough edges in DESIGN.md (questions, not resolutions)
 
@@ -976,3 +978,10 @@ Unsure, not changed:
 - slc's runtime order of a head form against an argument form is still
   unobserved (its interpreter overflows on `head_arg_order.sl`).
 - The summary is still longer than the brief's 15 lines.
+
+## Coordinator note
+
+1. Decision 8 still read "V1 unless a reason for V2 turns up", which
+   disagreed with Q8 as corrected by fourth review note 6. Restated to
+   match Q8. Flagged by the fourth-round propagation check of
+   00-summary.
