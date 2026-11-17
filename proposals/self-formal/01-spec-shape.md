@@ -808,3 +808,58 @@ Unsure, not changed:
   splicing order. Special forms splice their operands through their own
   paths (`lib/elab.ml:922`, `:1079`, `:1740`), not checked one by one.
 - The summary is still far beyond the brief's 15 lines.
+
+## Fourth review notes
+
+Added by a fourth, independent review. Every test under
+`proto/spec-shape/` and the `proto/review2/` and `proto/review3/` tests
+this file cites were rerun on the reference and on `_build/release/slc
+--interpret` (and `fuel.sl` and the `--no-prelude` program under
+`--eval-fuel 5`, the `slot_eq` pair under the reference's
+`--no-extern`); the outputs quoted reproduce. New tests are
+`proto/review4/01_*.sl`.
+
+1. §3.7 (from the second review) said "After an error slc still runs
+   some run-position code". slc gates each run-position run on no
+   earlier error (`self/elab-main.sl:539`, `:545`, `:739`, `:2152`), and
+   `review4/01_after_error_succ.sl` shows `(Succ (Zero))` after an
+   error gets no `Settled` value; only the nullary `(Zero)` of
+   `after_error_run.sl` does, by an untraced path. The inference from
+   that one test was wrong. Rewritten, and section 6 adjusted.
+2. Decision 5 and §3.6 said the order is "the head first". That holds
+   for a head that is a form. A name head is only looked up for
+   dispatch first (`lib/elab.ml:1376`) and elaborated after the
+   arguments are spliced (`:1380-1383`, which §3.6 already cited):
+   `review4/01_head_name_err.sl`, `(nosuch (loop))`, is refused for the
+   expansion limit, not for the unbound head, on both implementations.
+   Fixed; added as section 5 item 13.
+3. Decision 3 asked whether the spec "keeps" the expansion limit, as if
+   that were open; §62 already fixes it ("At most 10000 expansions run
+   in one run"). Reframed: only making it a parameter `N` is open, and
+   that would change DESIGN.md. Decision 8 adjusted to match.
+4. Decision 2 derived (a) from (b) "under H together with a lemma that
+   more fuel never changes an answer". Monotonicity alone does not give
+   it: a lemma that a halting spec run is reached at some finite fuel
+   is also needed, with H applied to the finitely many runs of one
+   program. Added.
+5. §3.2 cited `settled-ty-apply`'s elaboration-time condition ("must
+   check as a term") as what the Run layer needs; the run-time one is
+   "the application is checked again, against the facts `settled-eq`
+   reads" (§65). Both now quoted.
+6. Section 5 item 12 omitted §29's most direct sentence, "So any
+   `Special` or `Macro` that is ever invoked (§6) comes from run
+   position", against which the built-in `Special` entries (bound
+   before any file is read) stand. Added.
+7. §3.7 said `Fails` "is the `Err` outcome of `ElabProgram`"; it is a
+   separate one-constructor relation over a derivation of that outcome
+   (`mini/elab.sl:1237-1241`). Fixed.
+8. §3.9 quoted `pos_observable.sl`'s output with a shortened file name;
+   it prints the path as given on the command line. Fixed.
+
+Unsure, not changed:
+- Whether §5 item 13 is a deviation from §6 or only a matter of which
+  error is reported, which DESIGN.md does not fix.
+- `review3/gensym_head.sl`'s "the head gets 1" is inferred from the
+  other numbers, not printed; the earlier notes did not say so (now in
+  §3.6).
+- The summary is still far beyond the brief's 15 lines.

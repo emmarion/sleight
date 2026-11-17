@@ -50,10 +50,12 @@ Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
   goes only through unique references. Recommendation: fix one order in the spec (no
   confluence proof needed), and leave order-independence as an optional
   later theorem.
-- `slot-eq` is nondeterministic by §67, and in practice too: the
-  reference interpreter and `slc --interpret` answer `ENone` where code
-  compiled by either with externs answers `ESome` [compiled]; under the
-  reference's `--no-extern` the compiled code also answers `ENone`. Recommendation: make the spec a deterministic
+- `slot-eq` is nondeterministic by §67, and its answers do vary between
+  implementations and modes in practice (no run-to-run variation was
+  seen): the reference interpreter and `slc --interpret` answer `ENone`
+  where code compiled by either with externs answers `ESome`
+  [compiled]; under the reference's `--no-extern` the compiled code
+  also answers `ENone`. Recommendation: make the spec a deterministic
   function of the program, the world's answers, and an oracle tape of
   `slot-eq` bits; the compiler theorem says some oracle exists.
 - Crash: "agrees or crashes" has no teeth. Recommendation: allow a crash
@@ -193,11 +195,14 @@ Not fixed in general (DESIGN.md does not say, as far as I found):
 
 [compiled, `--extract`] `order2.sl`: in `(values (g (h n)) (h (g n)))`
 the reference emits `(h n)`, then `(g n)`, and then the two outer calls
-as OCaml `let x = g .. and y = h .. in`. The OCaml manual leaves the
-order of `let ... and` unspecified (from memory; not checked against the
-manual tonight); OCaml 4.14.1, as installed, evaluates it in written
-order, both `ocamlopt` and `ocamlc` [compiled], while it evaluates
-application arguments and tuple components right to left. In
+as OCaml `let x = g .. and y = h .. in`. The OCaml 4.14 manual
+(ocaml.org/manual/4.14/expr.html) says such a `let` "evaluates expr1 …
+exprn in some unspecified order", and that for an application "The
+order in which the expressions expr, argument1, …, argumentn are
+evaluated is not specified"; OCaml 4.14.1, as installed, evaluates
+`let ... and` in written order, both `ocamlopt` and `ocamlc`
+[compiled], while it evaluates application arguments and tuple
+components right to left. In
 `((pick) (h n))` the reference emits the head `(pick)` first, then
 `(h n)`, then the application: it does not hoist the argument above a
 form head. `order1.sl` emits `(g n)` then `(h n)` for `(f (g n) (h n))`.
@@ -237,8 +242,9 @@ both.
   through all of elaboration", and §6 elaborates the head first, but I
   found no statement of the order in which a call's arguments are
   elaborated. Both implementations expand every macro call among an
-  application's arguments before elaborating any argument (01, §3.6,
-  `proto/review3/gensym_depth.sl`). A gensym number can reach the output (`intern-nat`, §65),
+  application's arguments before elaborating any argument, or a head
+  that is a name (01, §3.6, `proto/review3/gensym_depth.sl`,
+  `proto/review4/01_head_name_err.sl`). A gensym number can reach the output (`intern-nat`, §65),
   so elaboration order is observable; that is a question about the
   elaboration spec, separate from runtime evaluation order.
   `native-compute` results are fieldless constructors (§72), so sharing
@@ -399,7 +405,7 @@ Values as words:
 | value | word |
 |---|---|
 | tagged fieldless value at position k | `Imm k` |
-| untagged hollow value | `Imm 0`, which is `vacant-slot` |
+| fieldless value of an untagged type not marked `extern` (hollow or not, §33: "however the value was built") | `Imm 0`, which is `vacant-slot` |
 | a `Nat` | `Imm n` (Q6) |
 | newtype, `Placed`, `share`, `coerce` result | the word of its field, value, or source |
 | function (`def-fns` member) | `Ptr` to a closure |
@@ -418,7 +424,8 @@ Values as words:
 - **A1 (recommended): this state, Proposal B's addresses plus `Imm n`.**
   Pros: (reading) every DESIGN.md requirement I found is met (2.1). §38's "Nothing
   relies on two slots being distinct" is consistent with addresses that
-  are never reused, which memory safety needs anyway. GC reuse cannot be
+  are never reused, which a machine that never frees gives at no cost.
+  GC reuse cannot be
   observed, since a slot word keeps its block alive (reading). Cons:
   equal immediates make `slot-eq` answer `ESome` across unrelated
   values; §67 allows that. Cost: low.
@@ -507,7 +514,8 @@ Values as words:
   taken as compiler input, as `--eval-fuel` already is (MANUAL.md: the
   reference has no bound without the flag; slc's default is 1000000000).
   (reading) Accepting or rejecting would then be a function of (source,
-  bound), once the order and the `slot-eq` answers are fixed (Q3, Q4),
+  bound, flags, `read-file` oracle), once the order and the `slot-eq`
+  answers are fixed (Q3, Q4),
   so owner statement 3 ("accepted or rejected") would hold per bound,
   provided the rest of elaboration terminates (SOUNDNESS.md part 6
   argues that canonicalization, unification, and meta solving do
@@ -517,7 +525,12 @@ Values as words:
   loop form and `let` does not recurse, so one activation evaluates each
   part of a body at most once and makes at most B calls, B the largest
   number of call sites in any body of the finite program; activations
-  then form a tree of depth at most D and branching at most B. The bound
+  then form a tree of depth at most D and branching at most B. This
+  needs D to count activations, a tail call included, as `--eval-fuel`
+  does ("a tail call nesting inside the call it replaces", MANUAL.md).
+  A bound on the depth of the continuation stack of Q2's machine would
+  not do: there a tail call pushes no frame (2.6), so without (T) a
+  self tail call could step forever at constant depth. The bound
   departs from §31's "unlimited stack and heap" for compile time and
   needs owner wording. A depth bound does not bound the heap, so a
   compile-time heap exhaustion stays host-dependent unless C3's heap
@@ -568,7 +581,15 @@ I could not determine whether DESIGN.md needs V2 for correctness, and
 not only for cost. Slot facts derived from a run-position `slot-eq`
 (`ESome` gives `Eq (Slot) a b`) seem to need only equal *values* for
 the `at` reading-back that follows, since both entries are `many`
-(reading). Recommendation: V1 for the theorem, V2 as an option.
+(reading). Whatever the theorem compares, N1's "there is an oracle"
+seems to need the spec itself to keep one block per `Settled` value: an
+oracle can turn an `ESome` into `ENone` but not the reverse, and
+`proto/review4/02_share_pair.sl`, a run-position `(MkPair _ _ a a)`
+whose two fields a function compares with `slot-eq`, answers `ESome`
+in the reference and slc, interpreted and built [compiled]. A spec
+that stored `Settled` values as trees, copying `a` per field, could not
+match it (reading). Recommendation: V1 for the theorem, V2 as an
+option, with the spec's own store a heap (as 01's Σ is).
 
 ## 4. Decisions for the owner
 
@@ -604,8 +625,10 @@ the `at` reading-back that follows, since both entries are `many`
    tonight.
 5. **Crash: C2 at runtime, C4 at compile time?** Recommended: yes, with
    C3 as a later strengthening; 01's decision 7 is the alternative.
+   The depth bound counts activations, tail calls included (C4).
    Depends on it: whether owner statement 3 can be stated per
-   compile-time bound, and `native-compute` needs its own clause.
+   compile-time bound. Either way, `native-compute` needs its own
+   clause.
 6. **Externs: is `Nat` primitive (E2)?** Recommended: yes. Otherwise
    either the spec elaborates with `--no-extern` facts, and the compiler
    accepts programs (tagslot.sl) that the spec refuses, or the spec must
@@ -676,9 +699,9 @@ the `at` reading-back that follows, since both entries are `many`
 - The order-independence conjecture (2.3) is unproved. So is the claim
   that §13's property, as a heap invariant, follows from the uniqueness
   rules.
-- That the OCaml manual leaves the order of `let ... and` and of
-  application arguments unspecified (from memory; not checked against
-  the manual). What OCaml 4.14.1 does here was checked [compiled]:
+- What OCaml versions other than 4.14.1 do with `let ... and`. The
+  4.14 manual leaves it, and the order of application arguments,
+  unspecified (checked, 2.2), and 4.14.1 was observed [compiled]:
   `let ... and` in written order, application arguments and tuples
   right to left.
 - `lib/eval.ml:24` is `apply (eval1 env f) (List.map (eval1 env) args)`,
@@ -902,4 +925,54 @@ Unsure, not changed:
   `head_arg_order.sl` whatever the depth.
 - The OCaml manual's wording on the order of `let ... and` is still from
   memory.
+- The summary is still longer than the brief's 15 lines.
+
+## Fourth review notes
+
+Added by a fourth, independent review. All five files under `proto/dyn/`
+were rerun on the reference (with and without `--no-extern`) and on
+`_build/release/slc --interpret`; `imm_eq.sl` under `--build` on both
+and under the reference's `--no-extern --build`; `order1.sl` and
+`order2.sl` under `--extract`; `machine.sl` with an all-false tape;
+`review2/machine_fn_oracle.sl`, `review2/const_share.sl` and
+`review3/head_arg_order.sl`; and the OCaml order test on 4.14.1. The
+outputs quoted reproduce. New tests are `proto/review4/02_*.sl` (and
+01's `review4/01_head_name_err.sl`, cited in 2.3).
+
+1. C4's count ("activations then form a tree of depth at most D") holds
+   only if D counts activations, tail calls included, as `--eval-fuel`
+   does (MANUAL.md: "a tail call nesting inside the call it replaces").
+   The machine proposed in Q2 and 2.6 pushes no frame for a tail call,
+   so a bound on its stack depth would not bound the steps without (T),
+   which C4 claims to do without. Stated in C4 and decision 5.
+2. C4 said acceptance would be a function of "(source, bound)"; the
+   flags and the `read-file` oracle are inputs too (01, §3.4). Added.
+3. The OCaml manual's wording was "from memory" in 2.2 and section 6.
+   Checked against ocaml.org/manual/4.14/expr.html: `let ... and`
+   "evaluates expr1 … exprn in some unspecified order", and the order of
+   an application's head and arguments "is not specified". Quoted; the
+   section 6 item now covers only other OCaml versions.
+4. The summary said `slot-eq` is nondeterministic "in practice too";
+   what was observed is variation between implementations and modes,
+   not between runs. Reworded.
+5. Q2's table gave `Imm 0` for an "untagged hollow value"; §33 gives
+   `vacant-slot`'s word to every value with no non-erased field of an
+   untagged type not marked `extern`, "however the value was built",
+   which is wider than hollow types. Fixed.
+6. Q8 did not note that N1's existence claim needs the spec's own store
+   to share `Settled` values: `review4/02_share_pair.sl` (a run-position
+   pair of one box, its fields compared by `slot-eq` in a function)
+   answers `ESome` in the reference and slc, interpreted and built, and
+   an oracle can only turn `ESome` into `ENone`. Added, as reading.
+7. A1 said never-reused addresses are something "memory safety needs
+   anyway"; it does not (reuse after a free can be safe). Reworded.
+8. Decision 5's "Depends on it: whether … and `native-compute` needs
+   its own clause" read as one dependency; split.
+
+Unsure, not changed:
+- Whether C4's tree count also needs care for a function value stored
+  in data and called through it (each call site is still in some body,
+  so B seems to cover it).
+- slc's runtime order of a head form against an argument form is still
+  unobserved (its interpreter overflows on `head_arg_order.sl`).
 - The summary is still longer than the brief's 15 lines.
