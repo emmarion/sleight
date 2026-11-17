@@ -251,8 +251,9 @@ both.
   differs, which §42 allows between models and implementations.
 
 Conjecture (needs proof, relies on §13 as a heap invariant): the set of
-crash-free, stuck-free behaviours, meaning world traces and final values
-up to renaming addresses, does not depend on evaluation order.
+crash-free, stuck-free, terminating behaviours, meaning world traces and
+final values up to renaming addresses, for given world answers and
+quantified over `slot-eq` oracles, does not depend on evaluation order.
 
 ### 2.4 Implementations
 
@@ -648,3 +649,83 @@ the `at` reading-back that follows, since both entries are `many`
   time (Q8).
 - I did not build or run slc (`_build/self/slc` is absent). The claims
   about slc are from reading its source.
+
+## Review notes
+
+Added by an adversarial review pass. Each item is an error found and the
+change made above, then points left uncertain.
+
+1. "A run on full code is not defined, because erased entries have no
+   word (§35)" stated a cause DESIGN.md does not give. Now: DESIGN.md
+   defines only a run on stripped code (§27, §29); §35's "An erased
+   variable has no word" is quoted separately; slc's `CErased` evaluates
+   to a token block (`self/elab-main.sl:173-176`).
+2. "Proposal A conflicts with §15 [compiled]" was too strong, and a
+   compile cannot establish what DESIGN.md says. Now conditional: it
+   depends on whether §15's "behaves as if" fixes timing and whether A
+   applies before or after hoisting. The extract shows the reference
+   runs a form head before the hoisted argument, against a timing
+   reading of §15.
+3. "Head against arguments" was listed as unfixed. In run position §6
+   ("The head is elaborated first") with §27 (a form "runs as soon as it
+   has been elaborated") fixes head first (reading). Added; and noted
+   that O1 as written puts the hoisted argument before the head, the
+   opposite of the reference.
+4. §61 was not cited. It presumes a body statement runs before a later
+   one with no dataflow between them. Added as 5b and rough edge 11.
+5. §15's "The order of the uses does not matter" was not mentioned;
+   added to show §15 is about use-checking.
+6. "Macro calls are elaborated in a fixed order" had no source. Replaced
+   by what DESIGN.md states (§6 head first, §65 sequential threading);
+   gensym numbers are observable via `intern-nat`. Rough edge 12.
+7. Missed observer: the `Measure` request (`lib/prelude.sl:1386`) lets a
+   program read time and GC counts. Added to 2.3 and the summary.
+8. "Divergence ... possible only if erased proofs can be forged" ignored
+   the unbounded driver loop (§42) and rests on §17's termination being
+   sound. Now hedged and scoped to one step.
+9. OCaml order was unverified. Compiled test: OCaml 4.14.1 (`ocamlopt`
+   and `ocamlc`) evaluates `let ... and` in written order and
+   application arguments and tuples right to left. The manual's
+   "unspecified" stays from memory.
+10. `self/elab-main.sl:174-176` was the wrong range for `CApp`; now
+   178-182.
+11. `store-write` does not update "in place"; it is a functional update
+   of a `many` map at the same address.
+12. mini/eval.sl: the relation fixes no order; only the deriving
+   function computes head then arguments. Corrected with line cites.
+13. Table: `Settled` handles are not compile-time only (§64: "an `MMany`
+   handle carries its value into an extracted program"); a cell can be
+   at a tag slot's word or a scrutinee's (§37, §23); §29's "nothing
+   otherwise" is about non-extern types, not model mode. Fixed.
+14. `imm_eq.sl`: compiled `ESome` holds only with externs; under
+   `--no-extern --build` it answers `ENone` (re-run). Fixed.
+15. Externs: §35 and §33 limit the tag-slot and `Nat`-word statements to
+   "with externs" explicitly, so the mode dependence is DESIGN.md's own
+   text, not a failure. E1 and decision 6 no longer claim the only
+   alternative is refusal: a spec running the `Nat` model could choose a
+   word per tag slot.
+16. R3's conflict is with §37 and §39 (skipping), not §27 (stripping).
+17. R1's "needs the elaborator's slot facts": §36 reads an `at` return's
+   word from the binder the promise names; the fact-table dependence is
+   §39's call skipping. Fixed.
+18. Decision 2's "fuel-free (prototype)": the committed prototype's run
+   is bounded by its 100-bit tape. A review variant with the oracle as a
+   function and a step counter checked and printed `imm 1` (not
+   committed). Fixed in 2.6 and decision 2.
+19. C4 departs from §31's "unlimited stack and heap" at compile time and
+   leaves heap exhaustion host-dependent; noted.
+
+Re-run tonight: all five prototypes with and without `--no-extern`
+(outputs as the file states; `tagslot.sl` refused under `--no-extern`
+with "does not satisfy `at`"), `imm_eq.sl` under `--build` both ways,
+and `--extract` of `order1.sl` and `order2.sl`.
+
+Uncertain points:
+- Whether §15's "behaves as if" is meant to fix timing; only the owner
+  can say.
+- Whether §61's ordering comes from written order or from §19's tail
+  requirement.
+- Whether choosing the interned literal's block as tag slot `k`'s word
+  under the `Nat` model is consistent (E1).
+- The summary is now longer than the brief's 15 lines.
+
