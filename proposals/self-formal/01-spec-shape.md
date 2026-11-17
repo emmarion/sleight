@@ -102,15 +102,20 @@ depends on it.
    meets first" (§15), though only for which of two conflicting uses of
    a unique binder is reported, not for errors in general. In the two
    programs tested, the reference and slc agree on the first message
-   but not on later ones (§3.7). *Depends on it:* how
+   but not on later ones (§3.7). On a compile-time crash they differ
+   even in the first message's position: for `fuel.sl` under
+   `--eval-fuel 5` the reference names the file alone and slc names
+   `lib/prelude.sl:354:75` (§3.4). *Depends on it:* how
    much of the elaboration order the spec must pin down (decision 5).
 5. **Is the order of elaboration part of the language?** It is visible
    through gensym numbers, the expansion count, and which error comes
    first (§3.6). DESIGN.md fixes only part of it. *Recommended:* yes.
-   The order would be: the head first, then the items left to right,
-   depth first, each statement before the code after it. This is the
-   reference's order, as tested. It needs DESIGN.md wording, which is
-   the owner's to give.
+   The order would be the one both implementations follow, as tested
+   (§3.6): the head first; then every macro call among the list's
+   items, left to right, each call's output expanded before the items
+   after it; then the items left to right, depth first; each statement
+   before the code after it. It needs DESIGN.md wording, which is the
+   owner's to give.
 6. **How is `slot-eq` handled at compile time?** Under DESIGN.md, one
    program can be accepted by one conforming implementation and
    rejected by another, or by the same one on another run (§3.8). *Options:*

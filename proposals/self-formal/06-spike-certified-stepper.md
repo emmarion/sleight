@@ -7,8 +7,8 @@ Where it and DESIGN.md disagree, DESIGN.md is right.
 Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
 **[ran]** is a run tonight of the reference (`_build/default/bin/main.exe`,
 commit d6644d9; the first review re-ran everything at ad07c35, the
-second at 07692f2, with no change to `bin/`, `lib/`, `src/`, `self/`, or
-`std/` in between) and, where said, of `_build/release/slc`. The
+second at 07692f2, and the third at c236135, with no change to `bin/`,
+`lib/`, `src/`, `self/`, or `std/` in between) and, where said, of `_build/release/slc`. The
 prototype is `proto/stepper/`. Every command line starts with the
 repository's `std/list.sl`, then `spec.sl machine.sl`.
 
@@ -35,10 +35,11 @@ repository's `std/list.sl`, then `spec.sl machine.sl`.
   taken, folded back at the halt by a non-recursive per-step lemma
   (`step-back`) over the spec lifted to stacks. A closure invariant
   ("the rest composed with the current focus gives the spec's run") also
-  works at one fixed level if it takes an erased step counter that each
-  extension decreases (`ho_counter.sl`, added in review) [ran]. Without
-  that counter it is refused at a fixed level, and with its level packed
-  in the state it can be built but not applied (§17, §18) [ran].
+  works at one fixed level if it takes an erased step counter, which
+  each extension's call to the previous closure decreases
+  (`ho_counter.sl`, added in review) [ran]. Without that counter it is
+  refused at a fixed level, and with its level packed in the state it
+  can be built but not applied (§18) [ran].
 - Missing: refuting "stuck" (progress), an in-place (unique) heap in the
   implementation, and abstract addresses. Proof is about 210 lines
   against 90 lines of stepper code and 67 lines of spec. Checking all of
@@ -51,7 +52,7 @@ repository's `std/list.sl`, then `spec.sl machine.sl`.
 `Val` is `VNum n | VPtr a`; `Mem` is `MkMem env heap`, registers as a
 `(List (Val))` and the heap as a `(List (List (Val)))`, an address being
 a position. `Op` has `OSet`, `OMov`, `OPred`, `OAdd`, `OAlloc`, `ORead`,
-and `OWrite`; `Cmd` has `CSkip`, `COp`, `CSeq`, `CIf` (zero test) and
+and `OWrite`; `Cmd` has `CSkip`, `COp`, `CSeq`, `CIf` (zero test), and
 `CWhile`. The atomic semantics `RunOp m o m2` is stated with the
 prelude's `Nth`, `SetNth`, `Repeat`, and `Add` (`lib/prelude.sl:1281-1302`,
 `:33-36`) and one new relation, `Alloc` (append at the end, address =
@@ -64,14 +65,16 @@ register 1 to register 2 and sums the list through register 2 [ran:
 `Runs` has five rules (`spec.sl:69-78`). `CIf` goes through a relation
 `Pick m x c1 c2 c`, and `CWhile` unfolds: `ExWhile` derives `Runs m
 (CWhile x b) m2` from `Runs m (CIf x (CSkip) (CSeq b (CWhile x b))) m2`.
-That makes every premise a strict subterm, so all inductions below are
-plain `subterm` recursion on derivations (§21: "Subterm recursion (§17)
-may go through an erased field.").
+Every premise of a rule is a field of the derivation, so all inductions
+below are plain `subterm` recursion on derivations (§21: "Subterm
+recursion (§17) may go through an erased field."), not on commands:
+`ExWhile`'s premise is about a larger command. This holds for any rule
+set; the unfolding does not create it.
 
 Determinism, `runs-fn : (Runs m c m1) (Runs m c m2) -> (Eq (Mem) m1 m2)`,
 is accepted [ran]. It uses `runop-fn` and `pick-fn`, which use
-`nth-fn`, `setnth-fn`, and `repeat-fn` from `std/list.sl` and `add-fn`
-from `lib/prelude.sl:407`. A wrong final step in it is refused [ran].
+`nth-fn`, `setnth-fn`, and `repeat-fn` from `std/list.sl`, `add-fn`
+from `lib/prelude.sl:407`, and `alloc-fn` from `spec.sl`. A wrong final step in it is refused [ran].
 
 ### F2. The stepper and the soundness theorem (`machine.sl`)
 
@@ -86,7 +89,7 @@ from `lib/prelude.sl:407`. A wrong final step in it is refused [ran].
   recursion (`machine.sl:46-50`).
 - `step : (many (List (Cmd)) k) (many (Mem) m) -> (many (StepOut k m) r)`
   returns `SNext k2 m2 (erased (Step k m k2 m2))`, `SHalt` (indexed by
-  the empty stack) or `SStuck`. It calls no function at its own level;
+  the empty stack), or `SStuck`. It calls no function at its own level;
   the list helpers recurse structurally.
 - `advance` takes the state and `(erased (Trace (c0 :: nil) m0 k m))`.
   On `SHalt` it applies `trace-back` to `RANil`, takes the one `RACons`
@@ -109,9 +112,11 @@ from `lib/prelude.sl:407`. A wrong final step in it is refused [ran].
 
 Checks that the theorem has teeth [ran, files in the session
 scratchpad]: swapping `c1` and `c2` in `step`'s `CSeq` case is refused
-at `SNext`; inverting the loop test in both `Step` and `step`, so the
-machine is consistent with itself but not with the spec, is refused in
-`step-back` at `ExWhile`.
+at `SNext`, which tests `step` against `Step` rather than against the
+spec. Inverting the loop test in both `Step` and `step`, so the machine
+is consistent with itself but not with the spec, is refused in
+`step-back` at `ExWhile`; swapping `c1` and `c2` in both is likewise
+refused in `step-back` at `ExSeq` [ran, third review].
 
 ### F3. Completeness and termination (`complete.sl`)
 
@@ -139,13 +144,16 @@ machine is consistent with itself but not with the spec, is refused in
   evidence, so nothing connects a failure to the derivation. I did not
   do this (§3 Q2). So as built, the completeness half proves only "if
   this machine halts, it halts with `mf`, and it halts or sticks within
-  the derivation's step count"; a machine that always sticks satisfies
-  it too.
+  the derivation's step count" (the bound is read from `finish`'s
+  recursion, not from a type); a machine that always sticks satisfies
+  it too, and so do an `advance` that always answers `Ended` with
+  `Stuck` and a `run-total` that always answers `AgreeStuck`
+  (`proto/review3/06_vacuous.sl`, accepted) [ran, third review].
 
 ### F4. What the checker refused, and why
 
 1. **A closure invariant at a fixed level, with no decreasing argument**
-   (`ho_fixed_bad.sl`): the state holds `(erased (Fn L (erased (Mem) mf)
+   (`ho_fixed_bad.sl`): the stepper takes `(erased (Fn L (erased (Mem) mf)
    (erased (RunsAll m k mf) a) -> (erased (Runs m0 c0 mf) d)) inv)`.
    Extending it after a step means a new closure at `L` calling `inv` at
    `L`: "same-level call to `inv` decreases no subterm argument". This
@@ -155,7 +163,7 @@ machine is consistent with itself but not with the spec, is refused in
    the state, lets `inv2` at `L` match `e` against `Refl` and call `inv`
    on `n`, a subterm of `(Succ n)`. The stepper, at a level minted after
    `L`, applies it at a halt. `ho_counter.sl` is accepted by the
-   reference, under `--no-extern` and by `slc --interpret`, and halts a
+   reference, under `--no-extern`, and by `slc --interpret`, and halts a
    small loop with `Halted` [ran in review].
 2. **A closure invariant at a packed level.** If the state packs
    `(erased (Level) L)` with `inv` at `L`, each step can `def-lvl` a fresh
