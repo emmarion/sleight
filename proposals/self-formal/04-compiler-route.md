@@ -39,13 +39,15 @@ proposal.
   arguments being atoms, which nothing types. A printer depth budget makes
   `slc --interpret` print a wrong value (`... Cons _ _ _)`) for a list of
   more than about 50,000 elements; the OCaml printer slc emits prints the
-  same list in full. The `-imm` FFI operations bypass OCaml's write
-  barrier, and the `Slots` implementation hashes raw heap addresses.
+  same list in full. The `-imm` FFI operations, and the stores of a cell
+  invocation or `cell-write` marked `(imm o n)` in emitted code, bypass
+  OCaml's write barrier, and the `Slots` implementation hashes raw heap
+  addresses.
   `slot-eq` compiles to OCaml `==`, and ocamlopt shares equal immutable
   constants, so a native compiled run can answer `ESome` where
   `slc --interpret` and the reference answer `ENone` (2.5).
-- [C] There are 103 FFI implementations and 7 extern types. Under §42 each
-  one is an agreement axiom.
+- [C] There are 103 FFI implementations and 7 extern types. [P] Under §42
+  each one is an agreement axiom.
 
 ## 2. Findings
 
@@ -72,15 +74,18 @@ proposal.
   (`self/README.md:353-362`).
 - [C] Emitter: `self/emit.sl` (1516 lines) writes OCaml text as a rope.
   `lib/ffi_core.ml`, `lib/driver_core.ml`, `self/runtime.ml`, and
-  `lib/ffi_templates.txt` are embedded into slc when slc is compiled
-  (`bootstrap.sh:26`, `self/README.md:133-142`).
+  `lib/ffi_templates.txt` are embedded into slc when slc is compiled, with
+  `lib/specials.txt` and `lib/prelude.sl` (`bootstrap.sh:26`,
+  `self/README.md:133-142`).
 - [C] `slc` runs a whole compile inside **one** `Program` step: `start`
   is a single `def-unique` continuation (`self/main.sl:187-191`). So
   every compile-time evaluation sits inside one call to a total function.
-  [P] The interpreter would need fuel (or some other measure) even with
-  more steps, since one total step cannot run an arbitrary evaluation to
-  completion; the single step only means the driver loop is not used to
-  spread the work.
+  (Under `--interpret`, the interpreted program's own `Continue` steps
+  then become further steps of slc's, `interp.sl:95-114`.) [P] Inside one
+  step the interpreter needs fuel (or some other measure), since one total
+  step cannot run an arbitrary evaluation to completion. Spreading the
+  evaluation over many driver steps, each doing bounded work, is the way
+  around that (F2 in Q2); slc does not do it.
 - [C] `self/README.md:463-465` says macros are "Not modelled", "which the
   reference does not implement either". The macro expander at
   `elab-main.sl:505-586` contradicts the first half, and the reference
@@ -131,7 +136,7 @@ definition whose header is `(erased name :`.
 | site | kind | zero case |
 |---|---|---|
 | interpreter `eval`/`apply` (`elab-main.sl:185-187, 424`) | fuel. MANUAL.md:154-162: "bounds how deeply applications nest, a tail call nesting inside the call it replaces"; slc's default 10^9 | error value "out of fuel", reported as an error. MANUAL calls it a §31 crash |
-| `show-at` depth 100000 (`elab.sl:4680-4682`, used by `show-typed` at `elab.sl:4730`, which the `comptime-match` mismatch message uses at `:4784`, and by `slc --interpret`'s final printer at `interp.sl:15`) | printer fuel | **prints `_` silently**. The budget is spent twice per nested field (`show-at` at `elab.sl:4682` and `shown-field` at `:4717`). [T] `slc --interpret deep.sl` (a 100003-element list, stack unlimited) prints 49,999 `Cons _ 0` and then `Cons _ _ _)`. [P] That is a wrong output under §45 ("Any other value prints by its type", and `_` is listed only for a union with more than one constructor, erased fields, cells, slots, functions, opaque proofs, and values with no readable `Matchable`), not a §31 crash ("A crash produces no value, never a different one"). It also contradicts `self/README.md:254-258` ("running out returns an error value, never a wrong answer silently") |
+| `show-at` depth 100000 (`elab.sl:4680-4682`, used by `show-typed` at `elab.sl:4730`, which the `comptime-match` mismatch message uses at `:4784` and `entry-value` at `:4890`, and by `slc --interpret`'s final printer at `interp.sl:15`) | printer fuel | **prints `_` silently**. The budget is spent twice per nested field (`show-at` at `elab.sl:4682` and `shown-field` at `:4717`). [T] `slc --interpret deep.sl` (a 100003-element list, stack unlimited) prints 49,999 `Cons _ 0` and then `Cons _ _ _)`. [P] That is a wrong output under §45 ("Any other value prints by its type", and `_` is listed only for a union with more than one constructor, erased fields, cells, slots, functions, opaque proofs, and values with no readable `Matchable`), not a §31 crash ("A crash produces no value, never a different one"). `self/README.md:254-258` ("running out returns an error value, never a wrong answer silently") is said of "the interpreter and the generated printer", the emitted one (`README:363-368`); `show-at` is what `README:369-370` calls `elab.sl`'s compile-time printer, which that sentence does not cover, so the README is silent on this defect rather than contradicted by it |
 | `show-fuel` 100000 (`emit.sl:4`, `:1473`, `:1478`) | fuel for *generating* the emitted OCaml printers, one per type, memoized (`emit.sl:1379-1386`) | [C] uses `show_any`, which prints `?` (`self/runtime.ml:18`). [P] It bounds the nesting of types met while generating, not of values, so it seems hard to reach. [T] The generated printer recurses on the value with no bound: `deep.sl` compiled by slc (the 22 MB output built with `ocamlc` under an unlimited stack) and `proto/review2/04-deep-fn.sl` (the same list, built at run time) compiled by `slc --build` both print all 100003 elements, byte for byte as the reference does (`deep.sl` under the reference, unlimited stack, about 7 minutes), where `slc --interpret` cuts them as above |
 | `heap-strs-fuel` 10^6 (`eval.sl:1018-1025`; also passed to `heap-pairs` and `heap-jobs`, `eval.sl:1055, 1146, 1159`) | fuel | truncates the list (returns `Nil`) |
 | `str-split-fuel` (`base.sl:100-109`) | fuel equal to the string's length | unreachable but not refuted |
@@ -139,10 +144,13 @@ definition whose header is `(erased name :`.
 | `Steps n` (`elab-main.sl:1243...`) | budget | zero case refuted by type |
 | macro expansions ≤ 10000 (`elab-main.sl:511, 560`; the elaborator group's first `subterm` parameter, named `fuel`, is this budget and is checked again at `:586, 764, 779`) | **specified**: [D] §62 "At most 10000 expansions run in one run, every file on the command line included." | refusal, as §62 requires |
 
-- [P] So the only fuel a correctness theorem must face is the interpreter's
-  (and `show-at`'s, which looks like a plain bug that could be fixed by
-  recursion on the value's structure). The expansion limit is part of the
-  language.
+- [P] So the fuel a correctness theorem must face is the interpreter's;
+  `show-at`'s and `heap-strs-fuel`'s, whose zero cases give a wrong answer
+  silently (a `_`, or a request's string list cut short past 10^6
+  elements), look like plain bugs that recursion on the value's structure
+  could fix; and the zero cases of `str-split-fuel` and the sugar budget,
+  which are believed unreachable and would become proof obligations. The
+  expansion limit is part of the language.
 
 ### 2.4 `mini/`'s deriving functions (the shape route 3 would copy)
 
@@ -173,21 +181,26 @@ definition whose header is `(erased name :`.
   (`lib/ffi_core.ml:1-5`, `to_any`/`of_any`/`cast`). Tagged types become
   OCaml variants per *shape* with **mutable** inline records of `Obj.t`
   (`emit.sl:291`, `README:212-246`). A cell write is `r.fi <- arg`
-  (`emit.sl:823`). So slc mutates only blocks that OCaml declares
-  mutable. I found no `Obj.set_field`.
+  (`emit.sl:823`), except a store marked `(imm o n)` (§37), which is
+  emitted as `Array.unsafe_set (of_any cell : int array) k (of_any n : int)`
+  on the constructor's block (`imm-stores`, `emit.sl:863-868`, used at
+  `:876`). [T] Compiling `std/immediate.sl tests/cell_imm.sl` with slc
+  emits five such stores. So slc mutates only blocks that OCaml declares
+  mutable, but not always through the field syntax. I found no
+  `Obj.set_field`.
 - [C] A call is written `(name a1 ... an)` and a constructor is written
   `K { f0 = a0; ... }`, with the argument texts inlined
   (`emit.sl:909-919`, `build-rope` at `:452-459`). `CApp`'s arguments have
   type `List (Code ctx many-one)` (`core.sl:611`), so nothing in the types
   says that they are atoms.
-- [T] In the two tests below, every call or constructor argument that is
-  not a variable is hoisted into a `let`, as §15 describes; two tests do not
-  show that this always holds. In `proto/04-compiler-route/order.sl` and
-  `ord2.sl` each call or constructor argument that is not a variable is
-  let-bound before the call that uses it. The bindings are in source
+- [T] In `proto/04-compiler-route/order.sl` and `ord2.sl`, each call or
+  constructor argument that is not a variable is let-bound before the
+  call that uses it, as §15 describes; two tests do not show that this
+  always holds. The bindings are in source
   order in `order.sl`, but not in `ord2.sl` (next item), so the emitted
   order is §15's placement, not source order in general. A multi-value result is sequenced by
-  `let tup_a0 = ... in let tup_a1 = ... in` (`emit.sl:365-369`); the
+  `let tupN_a0 = ... in let tupN_a1 = ... in`, `N` a depth
+  (`emit.sl:365-369`); the
   comment at `emit.sl:362-364` gives the reason as a workaround for an
   ocamlopt failure (`Selection.size_expr`), not evaluation order. [P] So
   OCaml's unspecified (in practice right-to-left) argument order does not
@@ -230,7 +243,8 @@ definition whose header is `(erased name :`.
   session's proposal B).
 - [C] The `-imm` operations write through `(cast a : int array)` with
   `Array.unsafe_set` and `caml_blit_bytes` (`lib/ffi_core.ml:235-241,
-  315-320`). [P] These skip `caml_modify`, which I believe is safe only
+  315-320`), and so do their templates (`lib/ffi_templates.txt:51-52`)
+  and the emitted `imm` cell stores above. [P] These skip `caml_modify`, which I believe is safe only
   when both the old and the new words are immediates, as `(imm o n)` and
   `Imm` require ([D] §37, §44). This is a dependency on OCaml runtime
   internals (GC barriers). The code comment at `ffi_core.ml:315-316`

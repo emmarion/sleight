@@ -36,8 +36,8 @@ decisions, which is an earlier session's paraphrase, not the owner's words.
   continuations.
 - A diagonal argument (F6; its mechanism is compiled in
   `proto/fuel/diagonal.sl`, the rest is my reasoning) says that, if
-  Sleight's functions terminate (SOUNDNESS.md's (T), argued there, not
-  proved), no non-erased Sleight function `compile : Src -> Verdict` that
+  Sleight's functions terminate and its checking ends (SOUNDNESS.md's
+  (T), (C), and (E), argued there, not proved), no non-erased Sleight function `compile : Src -> Verdict` that
   takes no further evidence can agree with the spec on every source. A source's
   macro can `read-file` its own text, call `compile` on it, and expand to
   a `compile-error` exactly when the answer is "accept". So "every source
@@ -251,15 +251,24 @@ with the spec on every source. Its termination is then the checker's
 (§17). Then a unit Q holds `compile`'s code and the macro above with
 `compile` in place of `toy-compile`. Q needs no quotation of itself,
 since `read-file` supplies the text. `Src` must carry every file the
-unit reads (§65) and the flags. Q can read each file of its unit, since
+unit reads (§65) and the flags; Q fixes the flags it assumes, and the
+argument concerns Q run with them. Q can read each file of its unit, since
 each is a source file. Q's spec run consists of one macro run of a total
-function plus ordinary elaboration, so it ends. Q's spec verdict is the
+function plus ordinary elaboration, so it ends, by SOUNDNESS.md's (T)
+for the macro run and (C) for the rest; since §27 strips erased
+positions before a run, the run's termination also uses (E).
+SOUNDNESS.md states these for programs the checker accepts, and Q may
+be rejected. In my reading they still apply: the same call of `compile`
+on Q's text runs in an accepted program, Q's text before the macro call
+followed by that call in run position, and when `compile` rejects Q, Q
+is accepted and the claims apply to Q itself. Q's spec verdict is the
 opposite of `compile(Q)`, which contradicts the assumption. This takes
 `compile`'s answer on Q to be the same inside Q's run as outside it. If
 `compile` calls `slot-eq`, whose answer may differ between runs (§67),
 the argument applies instead to its copy with every `slot-eq` answered
 `ENone`, which §67 allows an implementation to do always, so that copy
-must be faithful too (my reasoning).
+must be faithful too, if "faithful" means that every run §67 permits
+agrees with the spec (my reasoning).
 
 So, if Sleight's functions do terminate, no such function is a faithful
 compiler for all sources. It is the halting-problem form of
@@ -280,8 +289,9 @@ that applies here.
   language's own termination checker cannot witness this for a
   hypothesis-free Sleight `compile`.
 - A Sleight function `compile : (many Src s) (erased (H s) h) -> Verdict`.
-  Q would have to produce erased evidence of H(Q) inside Q, and nothing
-  above says it can. Such a function can recurse on an erased halting
+  Q would have to produce erased evidence of H(Q) inside Q. Rerunning
+  the argument with that evidence shows that, if Sleight is sound, no Q
+  can, though code outside Q may prove H(Q) (my reasoning). Such a function can recurse on an erased halting
   derivation: `tests/erased_subterm.sl` recurses on an erased `subterm`
   argument, and 05's `proto/theorems/bove.sl` does so on an erased
   `Halts` derivation, with each step returning an erased relation
@@ -343,8 +353,9 @@ happens at these places:
 The top level cannot loop (§3, §20), apart from macro re-expansion,
 which §62 caps. So H would follow from two things:
 - SOUNDNESS.md's claims (T), totality, and (C), checking terminates,
-  applied to the code that is run, and (E) as well if the spec's run
-  strips erased positions. SOUNDNESS.md part 1 makes these claims
+  applied to the code that is run, and (E) as well, since §27 runs a
+  form with "its erased positions are stripped" (unless a formal spec
+  runs unstripped code). SOUNDNESS.md part 1 makes these claims
   relative to the shipped prelude and says they "do not cover" a
   `--no-prelude` program with its own extern models or `def-prim`
   signatures, so H does not follow from them for such a program;
@@ -471,8 +482,9 @@ source whose compile-time run diverges has no derivation.
 - (P1) Partial correctness. If the procedure produces v, then `Verdict
   src v`. Under (a) and (e), the state carries an erased partial
   derivation, and `step` preserves it.
-- (P2) Each step is total. This is free from checking. Under (b) and (c),
-  `compile_n` is total.
+- (P2) Each step is total. This follows from the step being accepted,
+  given SOUNDNESS.md's (T) and (E). Under (b) and (c), `compile_n` is
+  total in the same sense.
 - (P3) Completeness. From an erased `(Verdict src v)` derivation, the
   procedure produces v: under (a) and (e) as a step count n with a proof
   that iterating `step` n times reaches v, and under (b) as an n with
@@ -554,6 +566,9 @@ source whose compile-time run diverges has no derivation.
   the files from `Src` would need none. The steps marked as inference in
   F6 (that recursion on an erased halting derivation scales from 05's toy
   to a compiler, and H not provable) are untested.
+- That SOUNDNESS.md's (T), (C), and (E), stated for accepted programs,
+  cover the run of the possibly rejected Q, through the accepted
+  program described in F6.
 - That the per-item expansion parameter (F3 row 2) never binds before
   the global count.
 - Whether the store can hold cycles (F3 row 5).
@@ -745,3 +760,60 @@ Unsure:
    cannot stand in for the faithful `compile`, which the second review's
    correction of F6 had superseded. Reworded to match F6; flagged by the
    third review of 00-summary.
+
+## Third review notes
+
+A third adversarial reviewer read DESIGN.md in full, SOUNDNESS.md parts
+0 to 7, the brief, and the cited code, and re-ran `diagonal.sl` (969
+bytes, accepted under the reference and `slc --interpret`), `fr/a.sl` to
+`fr/d.sl` under both, `suspend.sl` 0/1/2, and the `--eval-fuel 1000` pair
+under both. All behave as the body says.
+
+Errors found and changed:
+
+1. Summary and F6, the premise. Q's spec run ending needs checking to
+   end as well as functions to terminate, and §27 strips erased
+   positions before a run, so the stripped run's termination needs
+   SOUNDNESS.md's (E) too. The premise is now (T), (C), and (E).
+2. F6, Q may be rejected. SOUNDNESS.md part 1 states its claims "about
+   any program the checker accepts", and Q is rejected whenever
+   `compile` accepts it. Added the step that carries the claims over:
+   the same call of `compile` on Q's text runs in an accepted program
+   (Q's text before the macro call, then that call in run position).
+   Listed in section 6 as unverified.
+3. F6, the flags. `Src` carries the flags, but Q cannot read them; Q
+   fixes the flags it assumes, and the argument concerns Q run with
+   them. Added.
+4. F6, the `slot-eq` copy. That the `ENone` copy is faithful follows
+   only if faithfulness means every run §67 permits agrees with the
+   spec. Said so.
+5. F6, "What it does not refute": "Q would have to produce erased
+   evidence of H(Q) inside Q, and nothing above says it can" was an
+   underclaim. Rerunning the diagonal with that evidence passed to
+   `compile` gives the same contradiction, so, if Sleight is sound, no
+   Q can; code outside Q may still prove H(Q).
+6. F7, "(E) as well if the spec's run strips erased positions". §27
+   says a run-position form is run with "its erased positions are
+   stripped". The condition now cites §27, keeping the caveat for a
+   formal spec that runs unstripped code.
+7. Q2 P2, "free from checking". Totality of an accepted step is
+   SOUNDNESS.md's (T) and (E), argued, not proved. Hedged.
+
+Confirmed: the F1 quotes (§3, §17, §20, §27, §29, §31, §32, §42, §49,
+§62, §65, §72); `merge-opens` (`elab.sl:1987-2004`, two `UOk` exits on
+exhaustion), `Steps` (`elab.sl:1241-1244`), `ElabWorld`
+(`eval.sl:1492-1494`), `core.sl:3614`, `elab.sl:26`, `elab-main.sl:555`,
+`559-560`, and `158-3234` (the file has 3398 lines); MANUAL.md:154-166 and
+195; the reference's expansion cap (`lib/elab.ml:684`); DESIGN.md has no
+"fuel". Under `slc --interpret`, `fr/a.sl` reports, besides the quoted
+error, "`B` was not in scope when level `L` was minted" at the upward
+call to `bind`, which agrees with F4.1's remark that §17 forbids that
+call; the reference stops at the first error. The F6 reasoning,
+checked step by step, holds under the premises now stated.
+
+Unsure:
+- Whether "faithful" for a nondeterministic spec is best read as "every
+  permitted run agrees" (item 4); a weaker reading would need another
+  route for a `compile` that calls `slot-eq`.
+- The compiled timing rows and the 22 MB figure were not re-run by any
+  review.

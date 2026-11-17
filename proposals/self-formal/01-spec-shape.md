@@ -79,7 +79,10 @@ depends on it.
    which one is meant is for the owner. (b) A fuel parameter, with a
    third outcome `OutOfFuel`, or with exhausted fuel a rejection, as
    02's C4 proposes for a depth bound. (c) A coinductive "diverges" outcome.
-   *Recommended:* (a), stated so that (b) is a corollary. *Not analysed
+   *Recommended:* (a), obtained from (b): a fuelled deriving function
+   is total with no hypothesis, and (a) would follow from it under H
+   together with a lemma that more fuel never changes an answer other
+   than `OutOfFuel` (reading; not checked). *Not analysed
    here:* whether statement 2's idea, a fuel-free deriving function run
    as steps of the driver's `Program` loop (§27, §42), changes this;
    such a loop computes without fuel but by itself proves no
@@ -92,8 +95,8 @@ depends on it.
 4. **What does a rejection carry?** *Options:* (a) only "rejected";
    (b) the first error's position and macro-call trace; (c) also a
    structured reason, including the text DESIGN.md requires (the string
-   of `compile-error`, and the expected and actual values of a failed
-   `comptime-match`); (d) the full message text. *Recommended:* (b) in
+   of `compile-error`, and the expected constructor and actual value of
+   a failed `comptime-match`); (d) the full message text. *Recommended:* (b) in
    the main agreement theorem, with (c) available in the relation, and
    never (d). *Why:* DESIGN.md speaks of "whichever one the elaborator
    meets first" (§15), though only for which of two conflicting uses of

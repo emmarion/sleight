@@ -10,7 +10,7 @@ reference (`_build/default/bin/main.exe`) at commit 164fcf1;
 **[owner n]** is item n of the brief's "Owner decisions", which are an
 earlier session's paraphrases, not the owner's words; everything
 else is my own reading and is hedged as such. `bove_use.sl`, `fuel.sl`,
-`model.sl`, `fuel_run.sl` and `halts_reflect.sl` need `bove.sl` (the
+`model.sl`, `fuel_run.sl`, and `halts_reflect.sl` need `bove.sl` (the
 last two also `fuel.sl`, and `halts_reflect.sl` also `fuel_run.sl`)
 earlier on the same command line.
 
@@ -31,8 +31,10 @@ earlier on the same command line.
   oracle parameter, with T3 stated per oracle.
 - In my reading, T4 (every source is accepted or rejected) cannot be an
   unconditional Sleight function if the compiler is faithful (T1 to
-  T3): a diagonal argument rules out a total, sound, and complete
-  compiler or run-function for Sleight source written in Sleight. The
+  T3): if Sleight's functions terminate and its checking ends
+  (SOUNDNESS.md's (T), (C), and (E), argued there, not proved), a
+  diagonal argument rules out a total, sound, and complete compiler or
+  run-function for Sleight source written in Sleight. The
   self-reference can come from `read-file` in a macro (03 F6, whose
   mechanism `proto/fuel/diagonal.sl` compiles), so no quine is needed. Gödel's second
   theorem, if Sleight meets its conditions (unchecked), gives a related
@@ -42,8 +44,10 @@ earlier on the same command line.
   result carries a proof, also compiles [proto], but it uses fuel. The
   `Halts` shape is fuel-free but not callable in practice except under
   a proof: its caller must supply an erased `(Halts …)`, which takes
-  either a termination proof for that input or a fuel run that has
-  already done the work (§4.3).
+  either a termination proof (for that input, or for every input where
+  the step's termination is provable, as for a toy step in
+  `proto/review3/05_halts_uniform.sl`) or a fuel run that has already
+  done the work (§4.3).
 - Parameterizing the semantics works through erased `TyCtor`
   parameters and model records indexed by them [proto]. A signature
   cannot name a relation stored as a record's field, since a type has no
@@ -104,7 +108,10 @@ earlier on the same command line.
   from decrease proofs only, not from supplying a typed erased argument,
   so a caller of `run` needs a `(Halts R s)` from somewhere. I found
   three sources: a term written out, an `erased` function that proves
-  halting for that input, or a `comptime-match` on the result of a
+  halting (for that input, or for every input: for the toy step,
+  `proto/review3/05_halts_uniform.sl` proves `(Halts Dec s)` for every
+  `s` and calls `run` from a `many` function with no further argument,
+  printing `7`), or a `comptime-match` on the result of a
   fuel-bounded run (F5) whose finished case carries the run's
   derivation. The third compiles: [proto `halts_reflect.sl`] runs
   `fuel_run.sl`'s runner with fuel 10, `comptime-match`es `FDone`,
@@ -205,7 +212,9 @@ SOUNDNESS.md part 1 lists "(C) Checking terminates" and "(T) Totality
 … In the *full semantics* …, every function activation returns, apart
 from a crash" among "what is claimed", relative to the shipped prelude.
 Part 6 adds "Run-position forms run total code by (T)". If (T) holds,
-and, for a spec whose run strips erased positions, (E) too, then
+and, for a spec whose run strips erased positions, as §27 does ("its
+erased positions are stripped, the evaluator runs the code"), (E) too,
+then
 [owner 4]'s hypothesis H (every accepted compile-time form's spec run
 halts) holds, apart from host I/O (`read-file`, `native-compute`; 03
 F7) and except for `--no-prelude` programs with their own extern models
@@ -252,13 +261,16 @@ derivations and need no termination, so I expect them to be provable
 inside Sleight once the spec is deterministic given `o`. Across
 different oracles, T3 is false (§2.2).
 
-T3 matters for more than tidiness. A compiler that rejects everything
-satisfies T1 and T2. T3 plus T4 give a weak completeness: if
+T3 matters for more than tidiness. If the spec's `Fails` held of every
+source, a compiler that rejects everything would satisfy T1 and T2; T3
+rules such a spec out. T3 plus T4 give a weak completeness: if
 `Elab o src c` holds and `compile` halts, it cannot reject *under `o`*.
 It can still reject under another oracle it chose. If the oracle
-records crash points, as §4.2 option 1 proposes, a compiler that always
-picks "crash at once" rejects everything and satisfies T1 to T3, so the
-guard against a vacuous compiler is lost. §31 says "The semantics is
+records crash points, as §4.2 option 1 proposes, and a crash at
+compile time counts as a rejection (decision 4), a compiler that always
+picks "crash at once" rejects every source that runs any compile-time
+code and satisfies T1 to T3, so the guard against a vacuous compiler is
+lost. §31 says "The semantics is
 that of a machine with unlimited stack and heap" and treats a crash as
 something "A real run may" do, which I read as saying that a crash is
 not a behaviour of the spec. Completeness would then have to be stated
@@ -426,7 +438,8 @@ Options:
    of [owner 4(ii)] as a type. *Con:* it is not callable in practice
    except under a proof. Its caller must supply `h : (Halts o src)`,
    and the only sources I found (F4) are a derivation written out, an
-   `erased` halting proof for that input, or a fuel run whose result
+   `erased` halting proof (for that input, or for every input, which
+   the next sentence rules out for a faithful compiler), or a fuel run whose result
    carries the derivation, which has then already computed the
    verdict. The diagonal above is exactly why no Sleight code can supply
    `h` for every `src`. So, as a way to *run* the compiler, it still
@@ -485,7 +498,7 @@ Options:
 | Character literal bounds "asserted rather than decided" | §45 | Yes in principle: a lemma over the 256 codes, decided rather than asserted. |
 | Facts from stored values: `comptime-match` (§28, §29), `prove-literal-lt` (§45), `unary` (§49), the handle primitives (§64, §65) | §29 "relies on the evaluator having evaluated correctly"; OPEN.md 4 | Yes, if the checker's evaluator *is* the proved one (T5). OPEN.md 4 then reduces to OPEN.md 1. A proof that avoids run-position reflection does not depend on them. |
 | `native-compute` (§72) | §29, §72 | Only if T6 is proved for the compiled code and the OCaml toolchain is trusted. |
-| Extern implementations agree with their models, except `slot-eq` (§42) | §42; SOUNDNESS.md 11 | Yes, for programs checked and compiled with models only (`--no-extern`). Not for primitives without a model (`slot-eq`, `world-do`, the `def-prim`s at `lib/prelude.sl:1399–2250`). |
+| Extern implementations agree with their models, except `slot-eq` (§42) | §42; SOUNDNESS.md 11 | Yes, for programs checked and compiled with models only (`--no-extern`). Not for primitives without a model (`slot-eq`, `world-do`, the `def-prim`s at `lib/prelude.sl:1401–2250`). |
 | Prelude `def-prim`/`def-opaque` signatures and extern models | SOUNDNESS.md 1 | No: they are part of the spec. |
 | The elaborator implementation (`lib/elab.ml`, `self/elab*.sl`) and slc's interpreter | `self/README.md` "What it does not do" | Yes. This is the point of the project. |
 | The spec's faithfulness to DESIGN.md prose | — | No. It is irreducible, but T3 plus completeness guard against a vacuous spec. |
@@ -502,8 +515,8 @@ value is the only reference to it." My reading of its role:
   the compiled code stores into, any aliasing is reproduced step for
   step. The simulation relates heaps, not trees.
 - **It is what makes the heap machine agree with the tree reading** that
-  the fact table relies on. `is` facts treat values as immutable terms
-  (§7), and SOUNDNESS.md part 3 "assumes" that "a `unique` binder, a cell
+  the fact table relies on. `is` facts are rules over terms (§7), which
+  SOUNDNESS.md part 3 reads as immutable trees: it "assumes" that "a `unique` binder, a cell
   and an in-place update are read as an implementation of fresh
   immutable values" (OPEN.md 2's first step, OPEN.md 3). If a mutated
   block were still reachable through a `many` binder whose `is` fact
@@ -757,3 +770,62 @@ Unsure:
   two-block check.
 - Whether the oracle can be shaped so that completeness is not vacuous
   (decision 3); not attempted.
+
+## Third review notes
+
+A third adversarial reviewer read DESIGN.md in full, SOUNDNESS.md parts
+0 to 7, the brief, and OPEN.md items 1 to 4, and re-ran every prototype
+and the cited `review2` files with the reference at c236135. Each
+behaves as stated.
+
+Errors found and changed:
+
+1. Summary, the diagonal stated without its premise. §4.3 and 03 F6
+   condition it on termination; the summary now names SOUNDNESS.md's
+   (T), (C), and (E), since §27 strips erased positions before a run.
+2. §3 T3, "A compiler that rejects everything satisfies T1 and T2".
+   With a positive `Fails` (T1 + T2), `Rejected` must carry a `Fails`
+   derivation, so a reject-everything compiler meets T2 only if the
+   spec's `Fails` holds of every source. Reworded: T3 rules out such a
+   spec.
+3. §3 T3, the crash oracle. "Rejects everything" overclaimed: §29 says a
+   `def-fns`, `def-adts`, or `def-lvl` "involves no evaluation", so a
+   crash can reject only a source that runs compile-time code, and only
+   if a compile-time crash counts as a rejection, which is decision 4.
+   Both conditions added.
+4. Summary, F4, and §4.3 option 1, the sources of a `Halts` argument.
+   "A termination proof for that input" left out a proof for every
+   input. `proto/review3/05_halts_uniform.sl` (new) proves
+   `(Halts Dec s)` for every `s` by an erased function and calls `run`
+   from a `many` function with no further argument; it prints `7`. For
+   a faithful compiler the diagonal still rules that out, which option
+   1 now says.
+5. §2.3, "for a spec whose run strips erased positions". §27 says the
+   run strips them; quoted.
+6. §5 table, "the `def-prim`s at `lib/prelude.sl:1399–2250`". Line 1399
+   is the `def-opaque` of `Placed`; the first `def-prim` is line 1401.
+7. §6, "`is` facts treat values as immutable terms (§7)". §7 does not
+   say so; the immutable reading is SOUNDNESS.md part 3's. Reattributed.
+8. Header, a missing Oxford comma.
+
+Confirmed: F5's "first attempt" refusal reproduces in a minimal form
+(`proto/review3/05_det_param_bad.sl`: calling an erased `Fn M`
+parameter gives "`M` was not in scope when level `(level-of use-det)`
+was minted"); the `--goal proved` PASS and the one-level FAIL of F3;
+`halts_reflect.sl` with fuel 2 refused at the `comptime-match`; the §9,
+§21, §27, §31, §42, §65, §67, §71, and §72 quotes; OPEN.md 1 to 4 as
+cited. The §4.3 diagonal (run-position and macro forms) and the step
+"uniform H plus stripped-run safety gives internal consistency" hold as
+far as I can check, under the premises stated. Gödel II does apply to
+intuitionistic theories such as HA, and the CompCert flip does use a
+receptive source and a determinate target, both from memory.
+
+Unsure:
+- Stripped-run safety alone, proved uniformly inside Sleight, may
+  already give internal consistency: an inconsistency yields an
+  accepted program whose stripped run calls an `absurd` function
+  (`proto/review2/05_erased_to_many_false.sl`). That would need the run
+  to reach the call, so H for the forms before it. I did not work this
+  out, so T7 is unchanged.
+- Whether Gödel II's conditions hold for Sleight; unchecked by all
+  three passes.
