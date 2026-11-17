@@ -174,11 +174,16 @@ refused in `step-back` at `ExSeq` [ran, third review].
    strictly lower level"; §18: for `(prove-predates x L)`, "`x` must have
    an introduction order (§5) earlier than `L`'s", and "`L` must be an
    entry created by `def-lvl`, or a `let` binder forwarding from one".
-   My reading: the packed `L` is bound inside the stepper's body, after
-   the stepper's level, and a `Predates` proof packed beside it could not
-   be renewed at each step for a freshly minted `L2`, so this shape
-   cannot be applied by fixed-level code. Item 1's counter makes packing
-   the level unnecessary. The trace of F2 is the same closure
+   §18 also says: "A level created later is strictly higher than one
+   created earlier, so a function at a later level cannot be called from
+   code at an earlier level." Packing a `Predates` from `L` to a level
+   `S` minted first does not help: a function at `S` can then apply the
+   closure, but a step cannot prove its fresh `L2` below `S`: "`L2` was
+   not in scope when level `S` was minted"
+   (`proto/review3/06_packed_predates_bad.sl`) [ran, third review]. My
+   reading is that no fixed-level code can apply this shape. Item 1's
+   counter makes packing the level unnecessary. The trace of F2 is the
+   same closure
    defunctionalized: `step-back` is the code of each closure, and
    `Trace` is the list of them.
 3. **Numerals in an erased derivation** (`total_demo.sl`, first draft):
@@ -307,9 +312,10 @@ not being built at run time, which erasure (§14, §27) already implies.
    soundness; Q2.1 is cheaper for a toy.
 4. **Should the next spike use the unique `Array` heap and abstract
    addresses (Q3.2, Q3.3)?** Recommended: yes, before scaling, since 02
-   recommends one, and owner statement 6 of the brief (an earlier
-   session's paraphrase) says the owner suspects the spec's run should be
-   a mutating heap machine from the start.
+   recommends abstract addresses (its A1). Owner statement 6 of the
+   brief (an earlier session's paraphrase) says the owner suspects the
+   spec's run should be a mutating heap machine from the start; that
+   concerns the spec, while Q3.2 concerns the implementation's heap.
 
 ## 5. Rough edges in DESIGN.md (questions, not resolutions)
 
@@ -317,18 +323,22 @@ not being built at run time, which erasure (§14, §27) already implies.
    first-class data): a function stored in data whose level is packed
    beside it, as an erased `(Level)` field, can be held and extended but,
    as far as the spike found, not called by code whose level was minted
-   earlier (F4.2). §57 shows the factory pattern for one direction;
-   DESIGN.md does not say whether the other direction is meant to be
-   impossible. This did not block the spike: a fixed-level closure with a
-   decreasing erased argument works (F4.1).
+   earlier (F4.2). §18 says this outright for a level created later
+   ("a function at a later level cannot be called from code at an
+   earlier level"), so it is a consequence, not a gap; whether it is
+   wanted for packed levels is decision 2. This did not block the
+   spike: a fixed-level closure with a decreasing erased argument works
+   (F4.1).
 2. I found no contradiction in DESIGN.md while doing this spike.
 
 ## 6. Unverified claims
 
 - That Q1.3 (a derivation context) would work, and its size.
 - That no other placement of levels lets a stepper apply a packed-level
-  closure (F4.2); the two shapes above were tried, plus the fixed-level
-  counter of F4.1, which avoids packing.
+  closure (F4.2); two packed shapes were tried (`ho_exist_use_bad.sl`,
+  and `proto/review3/06_packed_predates_bad.sl` with a packed
+  `Predates`), plus the fixed-level counter of F4.1, which avoids
+  packing.
 - The `--build` timings of F6 were not re-run by the first review; the
   second review got 0.00 s and 0.06 s.
 - The Q2.1 line estimate.

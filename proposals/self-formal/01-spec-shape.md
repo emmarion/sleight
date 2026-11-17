@@ -111,10 +111,11 @@ depends on it.
    through gensym numbers, the expansion count, and which error comes
    first (§3.6). DESIGN.md fixes only part of it. *Recommended:* yes.
    The order would be the one both implementations follow, as tested
-   (§3.6): the head first; then every macro call among the list's
-   items, left to right, each call's output expanded before the items
-   after it; then the items left to right, depth first; each statement
-   before the code after it. It needs DESIGN.md wording, which is the
+   (§3.6): in an application, the head first; then every macro call
+   among the arguments, left to right, each call's output expanded
+   before the arguments after it; then the arguments left to right,
+   each nested application in the same way; and each statement before
+   the code after it. It needs DESIGN.md wording, which is the
    owner's to give.
 6. **How is `slot-eq` handled at compile time?** Under DESIGN.md, one
    program can be accepted by one conforming implementation and
@@ -233,7 +234,7 @@ physical store into memory" (§37). [A] This suggests a heap whose
 blocks change, rather than a map from entries to trees. Whether a
 value semantics would differ observably, given that a `unique` binder
 is the only reference to a mutable value (§13), has not been checked;
-`slot-eq`, `cell-same` and `fn-same` are where this agent would look.
+`slot-eq`, `cell-same`, and `fn-same` are where this agent would look.
 
 ### 3.4 Parameters DESIGN.md makes acceptance depend on
 
@@ -261,7 +262,8 @@ is the only reference to a mutable value (§13), has not been checked;
 
 - [D] "At most 10000 expansions run in one run, every file on the
   command line included" (§62). SOUNDNESS.md part 6 argues that checking
-  terminates from (T), and the end of its part 5 adds "Macro expansion
+  terminates, using (T) for the run-position runs only, and the end of
+  its part 5 adds "Macro expansion
   is bounded (§62)". [A] The
   bound carries real weight. Each macro function is total by levels,
   but a macro whose output calls itself expands without end
@@ -269,9 +271,10 @@ is the only reference to a mutable value (§13), has not been checked;
   10000 macro expansions").
 - [C] The reference never resets its counter (`lib/elab.ml:553`,
   `:683-684`), so in principle prelude expansions count. The prelude
-  defines two macros, `unary` and `prove-literal-lt`, the only
-  `MkMacro` applications in it (`lib/prelude.sl:2480`, `:2571`), and
-  calls neither after `:2571` (grep), so it seems to expand none.
+  defines two macros, `unary` and `prove-literal-lt`, bound at
+  `lib/prelude.sl:2480` by the only `MkMacro` applications in it, at
+  `:2571`, and calls neither after `:2571` (grep), so it seems to expand
+  none.
   `gensym_order.sl` [C] starts its numbering at 1.
 - [O] The owner was in general agreement, not agreement to exact
   statements, with framing compile-time termination as a hypothesis H
@@ -281,9 +284,21 @@ is the only reference to a mutable value (§13), has not been checked;
 ### 3.6 Elaboration order is visible [C]
 
 `proto/spec-shape/gensym_order.sl` prints `(MkPair _ _ 1 $ MkPair _ _ 2
-3)` on both implementations. The numbers go to the head's arguments
-left to right, depth first. A macro can branch on its number, so the
-order can decide acceptance. [D] DESIGN.md fixes "The head is elaborated
+3)` on both implementations. That test cannot tell a depth-first order
+from the one actually used. `proto/review3/gensym_depth.sl`, with the
+nested pair first, prints `(MkPair _ _ (MkPair _ _ 2 3) 1)`, and
+`review3/gensym_splice.sl` confirms the pattern one level deeper, on
+both implementations: every macro call among an application's
+arguments is expanded, left to right, before any argument is
+elaborated, and only then are the arguments elaborated left to right,
+each nested application in the same way. In the reference this is
+`splicing` (`lib/elab.ml:710-722`), called on a call's arguments before
+its head is checked (`:1380-1383`); a sequence of statements is
+expanded one item at a time instead (`expand_seq`, `:723`). A head that is a form is elaborated before
+the items are spliced (`settle_head`, `:1368`, `computed_head`):
+`review3/gensym_head.sl`, whose head is a macro call that takes a
+number, gives the head 1 and the arguments 2 and 3. A macro can branch
+on its number, so the order can decide acceptance. [D] DESIGN.md fixes "The head is elaborated
 first" (§6), that statements come before the code after them (§27), that
 "the forms inside a form run before it does" (§27), and hoisting (§15),
 which places hoisted bindings "just before the statement or final form
@@ -321,7 +336,7 @@ the items.
   (`after_error_call.sl`, `after_error_call2.sl`), and a macro bound
   after the error is not dispatched (`after_error_macro.sl`). Why, in
   slc's source, was not traced.
-- [C] The reference reads a whole file before elaborating it.
+- [C] Both implementations read a whole file before elaborating it.
   `reader_phase.sl` (a missing `)` on line 3) and `pragma_phase.sl` (an
   unknown pragma) print no earlier `compile-warn`. Reading is per file,
   though: with two files on the command line, where the second has a
@@ -383,7 +398,8 @@ DESIGN.md does not define the unit.
 - It keeps: the canonicalization and unification layer, structural and
   free of fuel (`mini/README.md:49-60`); the Ok/Err total judgments; ids
   that are never reused, with the context's `next` surviving `Leave`
-  (`mini/README.md:120-125`), which is Σ/Γ in embryo; and the
+  (`mini/README.md:120-125`, which names one exception, the entries a
+  telescope is elaborated with), which is Σ/Γ in embryo; and the
   relation-plus-deriving-function pairing.
 - Not compatible with the full language: keywords are reserved `RKey`s
   (`mini/elab.sl:8-38`; README:138), but §19 says special forms "may be
@@ -498,9 +514,12 @@ before one that only adds rules.
 
 ## 5. Rough edges, contradictions, and gaps in DESIGN.md
 
-1. The left-to-right order of items is not stated, but gensym ("counting
-   from 1 over the whole run", §65), the expansion count (§62), and the
-   first error (§15) make it observable.
+1. The order in which an application's arguments are elaborated and
+   their macro calls expanded is not stated, but gensym ("counting from 1 over the whole
+   run", §65), the expansion count (§62), and which error an
+   implementation reports first make it observable. (§15's "whichever
+   one the elaborator meets first" covers only two conflicting uses of
+   one unique binder.)
 2. `slot-eq`'s freedom (§67) reaches acceptance through `comptime-match`
    in run position (tested).
 3. A crash in run position: only §72 says "a run that crashes is an

@@ -88,7 +88,7 @@ proposal.
   around that (F2 in Q2); slc does not do it.
 - [C] `self/README.md:463-465` says macros are "Not modelled", "which the
   reference does not implement either". The macro expander at
-  `elab-main.sl:505-586` contradicts the first half, and the reference
+  `elab-main.sl:509-629` contradicts the first half, and the reference
   expands macros too: slc's own sources use the `and` and `or` macros of
   `std/macro.sl` (`self/README.md:61-62`), which the reference elaborates
   in `bootstrap.sh` step 1. The README line is stale.
@@ -550,6 +550,8 @@ embedded heap snapshot. Trust the emitter, `runtime.ml`, `ffi_core.ml`,
 **O2. Model the emitted OCaml subset.** [C] What is actually emitted:
 - `let`, `let rec ... and`, `fun`, and full application;
 - a `match` on variants with inline mutable records, and `r.fi <- e`;
+- `Array.make`, and `Array.unsafe_set` through `int array` casts (the
+  `imm` cell stores, 2.5) and `Ffi_core.word array` casts (`emit.sl:1252`);
 - tuples;
 - the `%identity` casts, `Obj.is_int`, `==`, `failwith`, `absurd ()`,
   and `exit`;
@@ -639,10 +641,11 @@ IR's call and constructor arguments syntactically atomic in either case.
     theorem is expected. `SOUNDNESS.md` argues relative soundness of
     `Type : Type` and is itself a session's argument;
   - the 103 + 7 extern agreement axioms;
-  - a world oracle for `world-do`, and the answers of `slot-eq`, which
-    §67 leaves free;
-  - the OCaml runtime internals the FFI relies on: the `-imm` barrier
-    bypass and the `Slots` address hashing (2.5);
+  - a world oracle for `world-do` and `read-file`, and the answers of
+    `slot-eq`, which §67 leaves free;
+  - the OCaml runtime internals the FFI and the emitted code rely on: the
+    barrier bypass of the `-imm` operations and the `imm` cell stores,
+    and the `Slots` address hashing (2.5);
   - the emitter plus about 830 lines of OCaml runtime plus the templates
     (dropped by O2 + O4);
   - OCaml 4.14 (with flambda if `-O3`) and zarith.
@@ -680,7 +683,7 @@ IR's call and constructor arguments syntactically atomic in either case.
    makes the spec run nondeterministic, so "the same value" is too strong
    (2.6). Two sub-questions:
    - does running out of an implementation's evaluator fuel count as a
-     §31 crash (MANUAL.md:157-158 says so)?
+     §31 crash (MANUAL.md:158-159 says so)?
    - what is a crash during a run-position form? An error, a third
      outcome, or nothing? (See 5.2.)
 
@@ -705,11 +708,17 @@ IR's call and constructor arguments syntactically atomic in either case.
    does fix inner before outer, since the inner call's argument bindings
    go before the statement that binds the outer call's argument, and §31
    says "Evaluation is eager". §27's "the forms inside a form run before
-   it does" is said of run position, not of evaluation in general. DESIGN.md does not say whether
+   it does" is said of run position, not of evaluation in general. §61
+   does take the statements of a body to run in written order: "The write
+   stores `h` before the call: left to the invocation, that store would
+   follow the call". DESIGN.md does not say whether
    order is meant to be *unobservable*. [P] It may be. `World` is unique,
    so effects are data-ordered, and a crash and divergence both produce
    no value, though the order still decides whether a form with one
-   crashing and one diverging argument crashes or runs forever. Question
+   crashing and one diverging argument crashes or runs forever. That case
+   needs an argument that diverges, which §17's levels ("Termination rests
+   on levels") are meant to rule out; whether they do is not settled here.
+   Question
    for the owner: is order intended to be
    unobservable, so that any order is correct?
 2. **A crash at compile time.** §31: "A real run may crash where the host
@@ -742,21 +751,23 @@ IR's call and constructor arguments syntactically atomic in either case.
 
 Not DESIGN.md, but found:
 - `self/README.md:463-465` ("Not modelled: ... macros") is stale
-  against `elab-main.sl:505-586` and the reference (2.1).
+  against `elab-main.sl:509-629` and the reference (2.1).
 - slc's `show-at` depth fuel prints a wrong value (2.3), reproduced in
-  both reviews, against `self/README.md:254-258`. The emitted OCaml
-  printer does not have the defect.
+  all three reviews. `self/README.md` does not mention it: its "never a
+  wrong answer silently" (`:254-258`) is said of the interpreter and the
+  emitted printer. The emitted OCaml printer does not have the defect.
 
 ## 6. Unverified claims
 
 - The lemma-line percentages come from a crude heuristic (2.2). The
   "15–20% reusable" figure is my judgment.
 - That OCaml's argument evaluation order is right-to-left in general:
-  only one two-argument test on 4.14.1 (2.5). Today's emitted code does
-  not depend on it.
+  only one two-argument test on 4.14.1 (2.5). That today's emitted code
+  does not depend on it: shown for two tests only, and resting on the
+  untyped atom invariant.
 - Whether flambda shares more constants than plain ocamlopt does: not
   tried (plain ocamlopt already shares, 2.5).
-- That the `-imm` barrier bypass is GC-safe on 4.14 or OCaml 5: not
+- That the `-imm` and `imm`-store barrier bypass is GC-safe on 4.14 or OCaml 5: not
   checked on either.
 - That a `many` `Bytes` is never mutated after `bytes-str` (2.5): argued
   from §13/§16, not tested adversarially.
@@ -970,3 +981,76 @@ Points I am unsure of:
 - Whether the theorem shape proposed in item 6 ("values some spec run
   gives, for the same `slot-eq` and world answers") is the right one is
   itself a proposal, not a finding.
+
+## Third review notes
+
+A third adversarial review read the brief, CLAUDE.md, and all of
+DESIGN.md, opened the cited lines, and re-ran `deep.sl` under
+`slc --interpret`, `04-deep-fn.sl` built by slc, `slot_eq_share.sl` in
+all four modes, `order.sl`, `ord2.sl`, `share.ml`, `argorder.ml`,
+`tc3.ml`, `tc4.ml`, and `04-tc-direct.ml`. All [T] results held.
+
+1. 2.5 said a cell write is emitted as `r.fi <- arg`, so slc mutates
+   only through the field syntax. A store marked `(imm o n)` (§37) is
+   emitted as `Array.unsafe_set (of_any cell : int array) k ...` on the
+   constructor's block (`emit.sl:863-868`, `:876`); slc compiling
+   `std/immediate.sl tests/cell_imm.sl` emits five. So the barrier
+   bypass is in emitted code too, not only in the FFI and its templates
+   (`ffi_templates.txt:51-52`). Summary, 2.5, O2's list, the trusted
+   base, and section 6 updated.
+2. 2.3 and section 5 said the `show-at` defect contradicts
+   `self/README.md:254-258`. That sentence is about "the interpreter and
+   the generated printer", the emitted one (`README:363-367`);
+   `README:369-370` names `elab.sl`'s compile-time printer separately.
+   Reworded: the README is silent on the defect.
+3. 2.1's [P] said the interpreter "would need fuel even with more steps",
+   which contradicts F2 (no fuel, the work spread over bounded steps).
+   Reworded to "inside one step". Also added that `--interpret` turns the
+   interpreted program's `Continue` steps into slc's (`interp.sl:95-114`).
+4. 2.3's [P] said the only fuel a theorem must face is the interpreter's
+   and `show-at`'s. It left out `heap-strs-fuel`, whose zero case cuts a
+   request's string list short silently (`eval.sl:1020`), and the
+   unrefuted zero cases of `str-split-fuel` and the sugar budget, which
+   would be proof obligations. Reworded.
+5. 2.6 said two built-ins make the semantics nondeterministic. §65's
+   `read-file` also answers from the host, like `world-do`. Added there
+   and to the trusted base's oracle.
+6. Decision 5 cited `MANUAL.md:157-158` for the §31 crash; the sentence
+   is at 158-159.
+7. Rough edge 1 did not cite §61, which takes a body's statements to run
+   in written order ("The write stores `h` before the call: left to the
+   invocation, that store would follow the call"). Added. Its [P] about a
+   diverging argument now notes that §17 means levels to rule divergence
+   out ("Termination rests on levels"), unsettled here.
+8. 2.5 named the tuple bindings `tup_a0`; the emitted names are
+   `tupN_a0`, `N` a depth. The paragraph also said "two tests" twice.
+9. 2.1 and section 5 cited `elab-main.sl:505-586` for the macro
+   expander; 505 is inside an earlier function, and the expander runs
+   from `env-expand` at 509 to `splice-call` at 629.
+10. 2.1's list of files embedded into slc left out `lib/specials.txt`
+    and `lib/prelude.sl` (`bootstrap.sh:26`).
+11. The summary labelled "Under §42 each one is an agreement axiom" [C];
+    it is a reading, now [P].
+12. `show-typed` also feeds `entry-value` (`elab.sl:4890`). Added.
+13. Section 6's "Today's emitted code does not depend on it" was stated
+    flatly in a list of unverified claims; now hedged to the two tests
+    and the atom invariant.
+
+Re-checked and found right: the file sizes and the 12 files, `Code`'s 17
+constructors at `core.sl:604-622`, the 20 `"internal:` sites, the 103
+FFI functions, 7 extern types, and 21 request kinds, `show-at`'s cutoff
+(49,999 `Cons _ 0`, then `Cons _ _ _)`), the emitted printer printing all
+100003 elements (also under an 8 MB stack), `(BTrue)` native and
+`(BFalse)` under `--byte`, `--interpret`, and the reference, the
+`mini/` citations and sizes, the §15, §29, §42, §45, §62, §67, §69,
+and §72 quotations, and the lib and template line numbers.
+
+Points I am unsure of:
+
+- Whether `README:254-258`'s "1000000 or 100000" and the interpreter's
+  10^9 default (`MANUAL.md:162`, `core.sl:3614`) disagree; I did not
+  settle which fuel the README's 1000000 names.
+- Whether `Array.unsafe_set` through an `int array` cast on a variant
+  block is as GC-safe as on an array when both words are immediates; it
+  is the same [P] as for the `-imm` operations, unchecked against the
+  runtime sources.

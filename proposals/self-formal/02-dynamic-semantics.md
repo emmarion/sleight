@@ -14,19 +14,20 @@ Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
 
 - DESIGN.md already places its compile-time run on stripped code: a
   run-position form "is elaborated, its erased positions are stripped,
-  the evaluator runs the code" (§27), and §19, §36 and §39 speak of the
+  the evaluator runs the code" (§27), and §19, §36, and §39 speak of the
   post-erasure code at runtime. DESIGN.md defines no run on unstripped
   code; §35 says "An erased variable has no word". (reading) So a heap
   machine would run stripped code, and the stripped-mode concern (which
   owner statement 6 says goes away with a mutable heap) becomes a
-  type-soundness obligation over stripped code with a heap typing. (slc's
-  interpreter does give an erased position a placeholder: `CErased`
-  evaluates to a `BToken` block, `self/elab-main.sl:173-176`.)
+  type-soundness obligation over stripped code with a heap typing. (Both
+  interpreters do give an erased position a placeholder: slc's `CErased`
+  evaluates to a `BToken` block, `self/elab-main.sl:173-176`, and the
+  reference's to `VToken`, `lib/eval.ml:22`.)
 - Proposal: a small-step machine whose words are `Imm n | Ptr a`, with
   `a` an abstract address that can only be compared. Blocks are mutable.
   The step function is total, and an explicit continuation stack holds
   the rest of the run. Proposal B's abstract addresses are enough, once
-  immediates and the representation identities of §33, §35 and §41 are
+  immediates and the representation identities of §33, §35, and §41 are
   added. A prototype (`proto/dyn/machine.sl`) compiles and runs a total
   step looped by the `Program` driver with no fuel counter; as committed,
   its finite oracle tape bounds the run (2.6).
@@ -42,8 +43,9 @@ Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
   conflicts with §15 depends on whether A applies before or after
   hoisting (2.2).
 - (reading, unproved conjecture) In the abstract machine, order seems
-  observable only through crashes, stuck states, divergence, and cost
-  (which a program can itself read through the `Measure` request):
+  observable only through crashes, stuck states, and divergence (cost,
+  which a program can read through the `Measure` request, becomes part
+  of the world's answers once those are inputs, 2.3):
   world effects are totally ordered by the unique `World`, and mutation
   goes only through unique references. Recommendation: fix one order in the spec (no
   confluence proof needed), and leave order-independence as an optional
@@ -60,7 +62,8 @@ Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
 - Externs: §35 gives literal tag slots only "with externs", and §33's
   extern-`Nat` requirement is stated only "With externs on", so acceptance
   depends on the extern mode by DESIGN.md's own text [compiled]. A spec
-  that runs the `Nat` model must still choose a word for each tag slot.
+  that runs the `Nat` model must either give up the extern-only facts or
+  choose a word for each tag slot (E1).
   Recommendation: make `Nat` a machine primitive (immediate words) and
   run every other extern's model.
 
@@ -161,7 +164,7 @@ Fixed by DESIGN.md:
    statements are sequential"). §6 item 1: "The head is elaborated
    first" and "A head that is a form is `Settled` in run position, since
    it runs as soon as it is elaborated (§29)"; §28: in run position each
-   call, match, constructor application and `coerce` "runs as soon as it
+   call, match, constructor application, and `coerce` "runs as soon as it
    is elaborated". (reading) So in run position a head that is a form
    runs before the argument forms are elaborated, so before they run.
 4. Skipped calls and at-matches still evaluate their arguments and

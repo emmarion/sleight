@@ -7,7 +7,7 @@ and DESIGN.md disagree, DESIGN.md is right.
 Tags: **[D]** DESIGN.md, quoted; **[C]** compiled or run. Unless marked
 otherwise, files are under `proto/roundtrip/` and were run with
 `_build/default/bin/main.exe` at commit 669b328 (no change to `bin/`,
-`lib/`, `src/`, or `self/` since, up to ad07c35 and 07692f2), and also with slc
+`lib/`, `src/`, or `self/` since, up to ad07c35, 07692f2, and c236135), and also with slc
 (`_build/release/slc`; `slc --interpret`, `slc --goal`).
 **[A]** marks my own reading or proposal. The only owner item mentioned
 is the brief's statement 3, in decision 4, and it is an earlier
@@ -23,8 +23,9 @@ session's paraphrase.
   value). The spec has an inductive `Elab` with evaluation premises, a
   positive `Fails`, and a small-step `Step` relation. The checker emits
   "evaluate this" by moving into a `Waiting` state. Each `Program`
-  step is one checker step: one machine step while `Waiting`, and
-  otherwise one statement, or the resumption after a run halts. The
+  step is one checker step: one machine step while `Waiting` (the step
+  whose machine step halts also resumes the checker), and otherwise one
+  statement. The
   final `Verdict p` carries an erased `Elab [] p` or `Fails [] p`.
   Exclusivity (`Elab ∧ Fails → False`) is proved. Its proof uses
   determinism of evaluation (`step-det`, `runs-det`, `evals-det`) and
@@ -128,7 +129,7 @@ where `how` 0 is the zipper and 1 is replay):
 
 | which | program | zipper | replay |
 |---|---|---|---|
-| 0 | two lets, one reading the first's entry, asserts and needs | accepted, 26 steps | accepted, 22 steps |
+| 0 | two lets (one reading the first's entry), asserts, and needs | accepted, 26 steps | accepted, 22 steps |
 | 1 | `Let 3; Need 0 Succ` (no assert) | rejected: fact not known, 4 | same, 4 |
 | 2 | `Let 0; Assert 0 Succ` | rejected: other constructor, 4 | same, 4 |
 | 3 | stuck run `(App (Num 1) (Num 2))` | rejected: stuck, 6 | same, 7 |
@@ -215,9 +216,12 @@ uses `impl.sl`'s lookups and `mstep`, and fails without it), and for
   the spec's run were big-step, or a different machine (02's heap
   machine), a simulation between the two would be the largest single
   proof. I did not attempt it.
-- The reference forced and refuted every cross-constructor case on its
-  own. Examples are `let-match` on `Step` derivations whose indices
-  differ, and `(match erased e _)` on `Eq (Out) (Halt …) (Go …)`. The
+- The reference forced and refuted on its own every cross-constructor
+  case whose indices clash. Examples are `let-match` on `Step`
+  derivations whose indices differ, and `(match erased e _)` on
+  `Eq (Out) (Halt …) (Go …)`. Cases whose indices do not clash needed a
+  proof: `SVar` against `SVarNo` in `step-det` is refuted by `nth-nonth`
+  (`det.sl:40`, `:44`). The
   author reports that most lemmas were accepted on the first compile;
   that history was not re-checked.
 
@@ -287,8 +291,9 @@ returns, from any state, is a correct one, and accept and reject cannot
 both hold. It does not say that the loop reaches a verdict when the
 spec has one. The reason string of `Rejected` is free text, so a
 `step` may give any reason with a correct `Fails`. Nor does it cover
-`drive.sl`: the driver, which calls `cstep` and `rstep` directly rather
-than through a `Certified` value, and the text it prints for each
+`drive.sl`: the driver, which reaches `cstep` and `rstep` through its
+own wrappers `zipper` and `replay` rather than through a `Certified`
+value, and the text it prints for each
 verdict, are outside the proved statement. Program 6
 has a diverging run, so (by my reading, not proved) it has neither
 derivation, since `Evals` and `Sticks` both need a finite `Runs`; the
@@ -354,9 +359,12 @@ levels"), see §5 below.
   through.**
   - Pros: the evaluator side of the proof is a list of step proofs
     (F4).
-  - Cons: the spec reads as a machine.
+  - Cons: the spec reads as a machine. [A] DESIGN.md's own wording is
+    a machine too (§31: "The semantics is that of a machine with
+    unlimited stack and heap"), though not a small-step relation.
 - **(b) Big-step, or a different machine.**
-  - Pros: it reads closer to DESIGN.md's prose.
+  - Pros [A]: big-step may read closer to §27's "the evaluator runs the
+    code".
   - Cons: it needs a simulation proof from the implementation's
     machine. [A] I expect that proof to dominate the effort.
 
