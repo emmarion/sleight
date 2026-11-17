@@ -7,8 +7,9 @@ Where it and DESIGN.md disagree, DESIGN.md is right.
 Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
 **[ran]** is a run tonight of the reference (`_build/default/bin/main.exe`,
 commit d6644d9; the first review re-ran everything at ad07c35, the
-second at 07692f2, the third at c236135, and the fourth at e0aaf2c, with
-no change to `bin/`, `lib/`, `src/`, `self/`, or `std/` in between) and, where said, of `_build/release/slc`. The
+second at 07692f2, the third at c236135, the fourth at e0aaf2c, and the
+fifth at fb2c533, with no change to `bin/`, `lib/`, `src/`, `self/`, or
+`std/` in between) and, where said, of `_build/release/slc`. The
 prototype is `proto/stepper/`. Every command line starts with the
 repository's `std/list.sl`, then `spec.sl machine.sl`.
 
@@ -175,7 +176,9 @@ refused in `step-back` at `ExSeq` [ran, third review].
    on `n`, a subterm of `(Succ n)`. The stepper, at a level minted after
    `L`, applies it at a halt. `ho_counter.sl` is accepted by the
    reference, under `--no-extern`, and by `slc --interpret`, and halts a
-   small loop with `Halted` [ran in review].
+   small loop with `Halted` [ran in review]. Its loop, `fin`, is a test
+   driver bounded by a fuel of 1000, not a `Program` driver; the closure
+   itself takes no fuel.
 2. **A closure invariant at a packed level.** If the state packs
    `(erased (Level) L)` with `inv` at `L`, each step can `def-lvl` a fresh
    `L2` and build `inv2` at `L2` calling `inv`: accepted
@@ -200,9 +203,12 @@ refused in `step-back` at `ExSeq` [ran, third review].
    and extending the closure at its own packed level rather than at a
    fresh one, is accepted, applied at a halt, and halts the same small
    loop (`proto/review4/06_packed_counter.sl`; reference, `--no-extern`,
-   and `slc --interpret`) [ran, fourth review]. The packed level is then
-   one minted before the stepper's, so this is item 1 with the level
-   hidden; item 1's counter makes packing the level unnecessary. The
+   and `slc --interpret`) [ran, fourth review]; its loop is the same
+   fuel-bounded test driver as item 1's. Here the packed level is `L0`,
+   minted at the top level before the stepper's `S`, and as I read §18
+   any level with a `Predates` to `S` was minted before `S`, so this is
+   item 1 with the level hidden; item 1's counter makes packing the level
+   unnecessary. The
    trace of F2 is the same closure
    defunctionalized: `step-back` is the code of each closure, and
    `Trace` is the list of them.
@@ -250,13 +256,14 @@ fields) are the main readability cost; patterns are counted by hand.
 
 ### F6. Cost of checking and running
 
-[ran, one machine, single runs]: the reference takes 0.38–0.44 s on a
-one-line file, 0.48–0.53 s on `std/list.sl spec.sl machine.sl complete.sl`;
-`slc --interpret` 0.24–0.26 s and 0.31–0.33 s. The long runs are `run.sl` with
-both loop bounds `5` replaced by `300` (7821 steps) and by `1000`
-(26021 steps). 7821 steps take 1.5 s in the reference interpreter,
-0.56 s under `slc --interpret`, and under 0.01 s compiled (`--build`);
-26021 steps take 11.9 s, 3.6 s, and 0.05 s. The growth is probably the
+[ran, one machine, single runs; ranges are across the author's run and
+the reviews]: the reference takes 0.38–0.44 s on a one-line file,
+0.48–0.53 s on `std/list.sl spec.sl machine.sl complete.sl`;
+`slc --interpret` 0.24–0.27 s and 0.31–0.33 s. The long runs are `run.sl`
+with both loop bounds `5` replaced by `300` (7821 steps) and by `1000`
+(26021 steps). 7821 steps take 1.3–1.5 s in the reference interpreter,
+0.48–0.58 s under `slc --interpret`, and under 0.01 s compiled
+(`--build`); 26021 steps take 10.8–12.1 s, 3.3–3.6 s, and 0.05–0.07 s. The growth is probably the
 list heap, which every allocation, read, and write walks. Peak memory
 of the interpreters stays 22–41 MB, consistent with the erased trace
 not being built at run time, which erasure (§14, §27) already implies.
@@ -282,7 +289,9 @@ not being built at run time, which erasure (§14, §27) already implies.
    per spec rule with a pending premise, and a plug lemma per frame.
    *Untested.*
 4. **Small-step as the spec.** Take `Step`/`Star` as the spec and drop
-   `Runs`. *Pro:* soundness is immediate (the trace is the derivation).
+   `Runs`. *Pro:* soundness is immediate if the spec's closure is the
+   snoc-list `Trace` itself (the trace is then the derivation); with the
+   cons-list `Star` as the spec, it needs a `Trace`-to-`Star` lemma.
    *Con:* determinism and composition are then lemmas about `Star`.
    For runs that end on the empty stack I expect the two to agree here
    (`runs-star` one way; `trace-back` the other, `Trace` being `Star`
@@ -298,9 +307,13 @@ not being built at run time, which erasure (§14, §27) already implies.
 
 ### Q2. Total correctness ("never stuck")
 
-1. **Positive failure evidence**: `NthNo` carries a `NoNth` derivation,
-   and each failure site in `run-op` and `pick` refutes the given step
-   with `nth-fn` or a like lemma for the other relations. There are 26
+1. **Positive failure evidence**: `NthNo` carries evidence that the
+   index is out of range, for example a `NoNth` relation like the one in
+   07's `proto/roundtrip/spec.sl` (neither `std/list.sl` nor the prelude
+   has one), and each failure site in `run-op` and `pick` refutes the
+   given step: a missing index with a lemma like 07's `nth-nonth`, a value
+   of the wrong shape with `nth-fn` and a constructor clash, and the
+   other relations with like lemmas. There are 26
    failure sites (24 `OpNo` in `run-op`, 2 `PickNo` in `pick`). *Cost:* perhaps 60–80 lines.
 2. **A well-formedness invariant** (register count, pointer validity,
    value shapes) carried in the state, under which failure sites are
@@ -374,13 +387,15 @@ not being built at run time, which erasure (§14, §27) already implies.
   fixed-level counter of F4.1, and `proto/review4/06_packed_counter.sl`,
   which packs that level.
 - The `--build` timings of F6 were not re-run by the first review; the
-  second review got 0.00 s and 0.06 s.
+  second review got 0.00 s and 0.06 s, and the fifth 0.00 s and 0.07 s.
 - The Q2.1 line estimate.
 - That the prelude's `Array` API would carry these proofs over (Q3.2).
 - That the technique scales to Sleight's own machine: rule count, frame
   kinds, `at`/cell reading-back, and the oracle of 02 were not modelled.
-- Timings are single runs on one machine; `_build/release/slc` was used
-  as found, without checking which commit it was built from.
+- Timings are single runs on one machine. `_build/release/slc` was used
+  as found; its file is dated after the last change to `self/`
+  (0bbc5e4), so it is probably built from the current source, but its
+  build was not checked.
 
 ## Review notes
 
