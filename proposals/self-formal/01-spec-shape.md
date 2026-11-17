@@ -729,3 +729,48 @@ Unsure, not changed:
   a call was not traced in its source.
 - Whether an empty prelude text should behave as `--no-prelude` is a
   question for the owner (item 4).
+
+## Third review notes
+
+Added by a third, independent review. Every test under
+`proto/spec-shape/` and the `proto/review2/` tests this file cites were
+rerun on the reference and on `_build/release/slc --interpret`; the
+outputs quoted above reproduce. New tests are under `proto/review3/`.
+
+1. §3.6 and decision 5 said the numbers go "left to right, depth first",
+   and decision 5 recommended that order as "the reference's order, as
+   tested". `gensym_order.sl` cannot tell depth first from other orders.
+   `review3/gensym_depth.sl` (`(MkPair _ _ (MkPair _ _ (gs) (gs)) (gs))`)
+   prints `(MkPair _ _ (MkPair _ _ 2 3) 1)` on both implementations, and
+   `review3/gensym_splice.sl` confirms it one level deeper: every macro
+   call among an application's arguments expands before any argument is
+   elaborated (`lib/elab.ml:710-722`, `:1380-1383`).
+   `review3/gensym_head.sl` shows a head form still goes first. §3.6,
+   decision 5, and section 5 item 1 rewritten to the observed order.
+2. Decision 2 recommended (a) "stated so that (b) is a corollary". The
+   implication runs the other way: the fuelled version needs no
+   hypothesis, and (a) would follow from it under H plus a fuel
+   monotonicity lemma. Reworded.
+3. Decision 4: §28 requires "the expected constructor and the actual
+   value", not "the expected and actual values". Fixed. Also added that
+   on `fuel.sl` under `--eval-fuel 5` the two implementations differ in
+   the first message's position (the reference names the file alone),
+   which bears on recommendation (b).
+4. §3.5 still cited `lib/prelude.sl:2480` as an `MkMacro` application,
+   contradicting second review note 9; line 2480 is the `let` that binds
+   both macros, and the applications are at `:2571`. Fixed.
+5. §3.5 said SOUNDNESS.md part 6 argues termination "from (T)"; part 6
+   uses (T) only for run-position runs. Narrowed.
+6. §3.10 said mini/'s ids are never reused; the cited README lines name
+   one exception (telescope entries). Added.
+7. Section 5 item 1 cited §15 for "the first error" in general, the
+   overreach that the first review fixed in decision 4. Reworded.
+8. §3.7 attributed reading a whole file first to the reference alone;
+   `reader_phase.sl` and `pragma_phase.sl` show it for slc too.
+9. Oxford comma in §3.3.
+
+Unsure, not changed:
+- Only constructor applications and a macro head were tested for the
+  splicing order. Special forms splice their operands through their own
+  paths (`lib/elab.ml:922`, `:1079`, `:1740`), not checked one by one.
+- The summary is still far beyond the brief's 15 lines.

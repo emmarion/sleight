@@ -843,3 +843,63 @@ Unsure, not changed:
   run-position `(MkBox 5)`) answers `ENone` in the reference and slc,
   built and interpreted, so no such sharing was seen.
 - The summary is still longer than the brief's 15 lines.
+
+## Third review notes
+
+Added by a third, independent review. All five files under `proto/dyn/`
+were rerun on the reference (with and without `--no-extern`) and on
+`_build/release/slc --interpret`; `imm_eq.sl` under `--build` on both,
+and under the reference's `--no-extern --build`; `order1.sl` and
+`order2.sl` under `--extract`; the OCaml order test on 4.14.1; and
+`machine.sl` with an all-false tape and with a 3-bit tape (the latter
+prints nothing, confirming that the tape bounds the run). The outputs
+quoted above reproduce. New tests are under `proto/review3/`.
+
+1. Section 6 listed "the reference interpreter evaluates arguments
+   before the head" as a plausible unverified claim. Observably it does
+   not: the elaborator binds a non-variable head and arguments to
+   anonymous entries in elaboration order (`lib/elab.ml:2268-2272`), so
+   `CApp` sees variables. `review3/head_arg_order.sl` (a head form 50
+   calls deep, an argument that crashes allocating) gives "out of fuel"
+   under `--eval-fuel 20`, so the head runs first. Rewritten.
+2. C4 said SOUNDNESS.md part 6 argues the rest of elaboration
+   terminates "from (T)"; part 6 uses (T) only for the runs. Fixed. C4
+   also left "a depth bound seems to bound the steps of each run" as
+   unproved; a short count (no loop form, branching at most the largest
+   number of call sites in a body, depth at most D) gives it. Added,
+   marked as reading.
+3. The summary counted cost among the observers of order, while 2.3
+   says `Measure` is absorbed once the world's answers are inputs.
+   Aligned with 2.3.
+4. The summary said a spec running the `Nat` model "must still choose a
+   word for each tag slot"; E1 gives the alternative of dropping the
+   extern-only facts. Fixed.
+5. 2.6 described the prototype's words as if its addresses were
+   abstract; `alloc` uses the heap list's length, so they are natural
+   numbers (A2), compared only for equality, and a block is replaced by
+   a functional `set-nth`. Stated.
+6. A3 cited `self/eval.sl:43-52` (from the second review) while 2.4
+   cited `:44-53`; `word-of-block` is at 44-53. Fixed in A3 (second
+   review note 2 keeps the old range as history).
+7. 2.4's ranges for slc's cell write and copy were off by up to three
+   lines; now `self/elab-main.sl:251-269` and `:271-288`.
+8. R1 did not mention SOUNDNESS.md's route, a "full semantics" in which
+   erased positions run (part 3) with (E) relating the stripped run to
+   it through (T) (part 7). Added to R1's cons.
+9. Decision 2 recommends a total step function without noting that
+   MINIMAL.md lists "Evaluation and typing are relations, not
+   functions" under "Decided about the semantics". Noted, with mini/'s
+   relation-plus-deriving-function pairing as the reading.
+10. The summary named only slc's erased placeholder; the reference's
+    `CErased` evaluates to `VToken` (`lib/eval.ml:22`). Added.
+11. 2.3 now records the tested elaboration order of macro calls among
+    arguments (01, §3.6).
+12. Oxford commas in the summary, 2.2 item 3, 2.3, 2.5, and decision 1.
+
+Unsure, not changed:
+- slc's runtime order of a head form against an argument form was not
+  observed: `slc --interpret` overflows its stack on
+  `head_arg_order.sl` whatever the depth.
+- The OCaml manual's wording on the order of `let ... and` is still from
+  memory.
+- The summary is still longer than the brief's 15 lines.
