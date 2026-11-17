@@ -1,8 +1,8 @@
 # 00. At a glance
 
 Written by Claude agents overnight. Proposals and agents' readings only; nothing is approved or decided.
-Every line condenses the 00-summary section it cites; where they differ, 00-summary (and its Review notes and
-Second review propagation) is right.
+Every line condenses the 00-summary section it cites; where they differ, 00-summary (and its Review notes,
+Second review propagation, and Third review notes) is right.
 "Owner statement n" items are an earlier session's paraphrases, not the owner's words (00-summary header).
 
 ## What was done
@@ -22,21 +22,23 @@ Second review propagation) is right.
   `compile : Src -> Verdict` with no further evidence can be faithful on every source; only the mechanism is
   tested. It does not refute owner statement 4(ii) as mathematics, nor a `compile` taking erased evidence of H
   for its one source. slc does not escape it: its compile is one `Program` step bounded by fuel, and its `World`
-  blocks only the literal construction (03's reading). 05 now agrees it needs T1–T4, not T5, and no quine
-  (00-summary §2 item 2).
+  blocks only the literal construction (03's reading). 05 now agrees it needs T1–T4 and determinism, not T5,
+  and no quine in its `read-file` macro form (00-summary §2 item 2).
 - **Spikes.** The intrinsic-derivation plus `Program`-driver pattern compiles and runs at toy scale, fuel-free, on both
   implementations, but proves partial correctness only: an always-"stuck" (06) or never-answering (07) step passes,
-  and 07's `Rejected` reason text is unconstrained. Without determinism, 07's exclusivity fails (now compiled).
-  Neither models Sleight's own machine (00-summary §2 items 16, 17).
+  and 07's `Rejected` reason text is unconstrained. With one nondeterministic rule added, 07's exclusivity fails
+  (compiled). Neither models Sleight's own machine (00-summary §2 items 16, 17).
 - **`slot-eq`.** §67 lets answers differ between runs, so acceptance can depend on the implementation; answers already
-  differ (interpreters vs `--build` binaries on `imm_eq.sl`; slc's native build vs `--byte`, `--interpret`, and the
-  reference on `slot_eq_share.sl`). That an `ENone` answer rejects is inferred. The output theorem therefore cannot be
-  "the same values, up to crash"; 04 makes `slot-eq` a second oracle beside `world-do` (§2 items 5, 18).
+  differ (interpreters vs `--build` binaries with externs on `imm_eq.sl`; slc's native build vs `--byte`,
+  `--interpret`, and the reference on `slot_eq_share.sl`). That an `ENone` answer rejects is inferred. The output
+  theorem therefore cannot be "the same values, up to crash"; 04 makes `slot-eq` a second oracle beside `world-do`
+  (§2 items 5, 18).
 - **Evaluation order.** DESIGN.md fixes eagerness and some run-position order, but not body statements, sibling arguments,
   `values` entries, or several §15 bindings in general; elaboration order is visible through gensyms (00-summary §2 item 6).
 - **slc printer defect.** `slc --interpret` on a 100003-element list prints 49,999 `Cons _ 0` then `Cons _ _ _)`:
-  a wrong value, not a §31 crash. It is confined to `show-at` (`--interpret`'s final printer and `comptime-match`
-  mismatch messages); compiled slc output and the reference print all elements (00-summary §2 item 10).
+  a wrong value, not a §31 crash. It is confined to `show-at` (`--interpret`'s final printer, `comptime-match`
+  mismatch messages, and `dump-context` reports); compiled slc output and the reference print all elements
+  (00-summary §2 item 10).
 
 ## Decisions, at a glance (00-summary §3)
 
@@ -50,7 +52,7 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 | 2 | What does "parameterized the semantics" mean? | (b) generic over a model record (05); 04: extern table | 9, 16 | no |
 | 3 | Is the order of elaboration part of the language? | (a) fix it: head, then items left to right (01) | 5, 13 | part |
 | 4 | Is the runtime evaluation order fixed? | fix it, O1/O3 (02); 04 asks if order is unobservable | — | part |
-| 5 | How is `slot-eq`'s nondeterminism handled? | (a) oracle parameter (01, 02, 05; 04 treats it as one); shapes differ | 8, 14 | part |
+| 5 | How is `slot-eq`'s nondeterminism handled? | (a) oracle parameter (01, 02, 05; 04 treats it as one); shapes differ | 8 | part |
 | 6 | What is a compile-time crash or fuel exhaustion? | tracks disagree; 01 and 02 opposite, now cross-referenced | 5, 14 | part |
 | 7 | Does the spec run post-erasure code? | R1, as §27 and §29 say (02) | — | no (R3 departs from §37, §39) |
 | 8 | Machine state and addresses? | A1: `Imm n \| Ptr a`, abstract never-reused addresses (02) | 5 | no, unless sharing goes in |
@@ -86,13 +88,19 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 2. **Decision 2** (what "parameterized" means): bears on 9 and 16 (§3 decision 2).
 3. **Decision 3** (elaboration order): bears on T3, 13's error content, and the oracle (5) (§3 decision 3).
 4. **Decision 6** (compile-time crashes): bears on 14 and 5, and on whether slc conforms (§3 decision 6).
-5. **Decision 4** (runtime order): decides lock-step versus confluence for the compiler theorem (§3 decision 4).
-6. **Decision 17** (route), with 18: everything in group E depends on 17, and 04 says its F2 must be
+5. **Decision 4** (runtime order): bears on lock-step versus confluence for the compiler theorem (§3 decision 4).
+6. **Decision 17** (route), with 18: everything in group E depends on 17, and 04 says its F2, if wanted, must be
    decided before R3 starts (§3 decisions 17, 18).
 
 ## What the second reviews changed most (00-summary Second review propagation)
 
 - Retracted: slc escaping the diagonal; "slc stops running compile-time code after an error"; the
   printer defect possibly reaching compiled output (items 1, 7, 11).
-- Now compiled: exclusivity failing without determinism (07); generic matching on a parameter relation (05);
-  the column unit as bytes (01) (items 10, 11, 19).
+- Now compiled: exclusivity failing for one nondeterministic variant (07); generic matching on a parameter
+  relation (05); the column unit as bytes (01) (items 10, 11, 19).
+
+## Third review notes
+
+- Twelve corrections, listed in 00-summary's Third review notes. Among them: the printer defect also reaches
+  `dump-context` reports (`proto/review2/00_dump_deep.sl`); rough edge 17 now includes `settled-val-apply`;
+  rough edge 12 no longer makes §33's `Nat` identity conditional.

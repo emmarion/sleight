@@ -548,8 +548,10 @@ source whose compile-time run diverges has no derivation.
 ## 6. Unverified claims
 
 - F6 beyond its mechanism. `diagonal.sl` checks the mechanism with a toy
-  `compile`, but no Q holds a faithful compiler. slc's elaborator cannot
-  play that part (it needs a `World`). The steps marked as inference in
+  `compile`, but no Q holds a faithful compiler. slc as it stands cannot
+  play that part, since it is not faithful (its fuel can reject) and its
+  elaborator carries a `World`, though, as F6 now says, a version taking
+  the files from `Src` would need none. The steps marked as inference in
   F6 (that recursion on an erased halting derivation scales from 05's toy
   to a compiler, and H not provable) are untested.
 - That the per-item expansion parameter (F3 row 2) never binds before
@@ -736,3 +738,10 @@ Unsure:
   check every path.
 - F6 and F7 still rest on SOUNDNESS.md's (T) and on the logic's
   soundness, neither proved.
+
+## Coordinator note
+
+1. §6's first item still gave "it needs a `World`" as the reason slc
+   cannot stand in for the faithful `compile`, which the second review's
+   correction of F6 had superseded. Reworded to match F6; flagged by the
+   third review of 00-summary.

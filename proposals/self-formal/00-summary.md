@@ -6,7 +6,8 @@ is a design decision (CLAUDE.md rules 1 and 11). This file only combines
 the five track files and the two spike files: each claim's source,
 evidence, and hedges are in the file and section it cites, and where this
 file and a cited file disagree, the cited file (as corrected by its review
-notes and second review notes) is right.
+notes and second review notes) is right; this file's own corrections
+are listed at its end.
 Where either disagrees with DESIGN.md, DESIGN.md is right.
 
 Citations: `01 §3.6` is section 3.6 of `01-spec-shape.md`; `02`
@@ -30,6 +31,7 @@ are the only owner positions this file reports.
 7. Spikes
 8. Review notes
 9. Second review propagation
+10. Third review notes
 
 ## 1. The picture in one page
 
@@ -54,7 +56,7 @@ disagree, the decision listed says so.
   addresses compared only for equality; blocks are mutable; the step is
   total, with an explicit continuation stack; one fixed evaluation order;
   `Nat` is a machine primitive; `slot-eq` reads an oracle. (02 §3 Q1, Q2,
-  Q3, Q4, Q6; decisions 3, 4, 7, 8, 9.)
+  Q3, Q4, Q6; decisions 4, 5, 7, 8, 9.)
 - **Fuel.** If Sleight's functions terminate (SOUNDNESS.md's (T), argued
   there, not proved; 03 §1), no hypothesis-free,
   non-erased Sleight `compile` on source text can be faithful for every
@@ -222,7 +224,8 @@ where stated, on slc.
    bound were too short, which 03 believes it is not, unproved (03 §1,
    second review note 5). The reference has no bound by default (03 F3). The
    10000-expansion cap of §62 carries real weight: a macro whose output
-   calls itself expands without end otherwise (tested, 01 §3.5).
+   calls itself is refused at the cap (tested), and in 01's reading would
+   otherwise expand without end (01 §3.5).
 9. **slc has no spec relation to retrofit against.** About 6% of its
    ~18,650 lines are erased lemmas, almost all in the libraries; the
    elaborator, interpreter, and emitter are trusted plain code for
@@ -238,7 +241,10 @@ where stated, on slc.
     this is a wrong value, not a §31 crash ("A crash produces no value,
     never a different one") (04 §2.3, review note 2). `show-at` feeds
     `slc --interpret`'s final printer and, through `show-typed`, the
-    `comptime-match` mismatch message (`elab.sl:4784`). The OCaml printer
+    `comptime-match` mismatch message (`elab.sl:4784`) (04 §2.3) and the
+    entries `dump-context` reports (`entry-value`, `elab.sl:4890`; found
+    by this file's third review, which saw the same cut in
+    `proto/review2/00_dump_deep.sl`, a 60000-element list). The OCaml printer
     slc emits has no value-depth bound (its `show-fuel` bounds only
     printer generation, falling back to `?`): compiled slc output
     (`deep.sl`, and `proto/review2/04-deep-fn.sl`) and the reference
@@ -261,7 +267,7 @@ where stated, on slc.
     `elab-program` can answer `ProgramStuck`; keywords are reserved `RKey`s
     though §19 says special forms "may be shadowed"; `Sexp` has no `Pos`
     (01 §3.7, §3.10; 04 §2.4). 04 reads owner statement 3 as needing
-   `Stuck` refuted.
+    `Stuck` refuted.
 13. **Parameterization works by indexing.** A relation can be an erased
     `TyCtor` parameter, and a `(Model R)` record indexed by it is accepted;
     a field can be used in types inside a body after `let-match`, but not
@@ -317,9 +323,9 @@ where stated, on slc.
     (06 F2, second review note 3; 07 F7, second review note 4). A `step`
     that itself loops is refused (07 review note 3). 07's exclusivity
     proof uses determinism of evaluation and of every lookup, and without
-    it exclusivity fails, now compiled: `proto/review2/07_nondet_spec.sl`
-    (07's spec plus one nondeterministic rule `SNumUp`) with
-    `07_nondet_both.sl` builds both derivations for one program, and 07's
+    it exclusivity can fail, as compiled for one nondeterministic variant:
+    `proto/review2/07_nondet_spec.sl` (07's spec plus one rule `SNumUp`)
+    with `07_nondet_both.sl` builds both derivations for one program, and 07's
     `det.sl` against that spec is refused at `step-det` (07 §1, F4, second
     review note 3).
 18. **The output theorem cannot be "the same values, up to crash".**
@@ -349,13 +355,14 @@ Options: (a) source bytes, with a small reader function in front of a
 relation over `Raw`; (b) `Raw`, with the reader trusted; (c) a core
 language after dispatch and expansion; (d) the reader as a parameter
 satisfying a `Parses text raw` law (05 §4.4.3).
-Recommended (01, 04): (a), with the reader proved early. Why: owner
-statement 3 speaks of "source code"; positions are observable; a core start
-leaves out head dispatch and macros, which (01's reading) DESIGN.md's
-opening paragraph makes central. 05 offers (d) if the syntax is to be
-separated.
-Depends on it: the statement of theorem 3, whether `Pos` is in the
-judgment, and whether a trusted front end (route R2) can serve owner
+Recommended (01, 04): (a); 04 adds that the reader be proved early. Why:
+owner statement 3 speaks of "source code"; positions are observable; a
+core start leaves out head dispatch and macros, which (01's reading) the
+paragraph of DESIGN.md on the language's aims makes central. 05 offers (d)
+if the syntax is to be separated.
+Depends on it: the statement of theorem 3 (decision 14), whether `Pos` is
+in the judgment, and whether a trusted front end (route R2, decision 17)
+can serve owner
 statement 3. 04 now reads owner statement 3's wording as asking only
 totality, which a total but unproved front end could give; a claim that
 the verdict is the spec's verdict on the text needs the reader and the
@@ -583,8 +590,9 @@ is allowed (05).
 Recommended: 02 recommends S1; 05 states W1 and W2 without recommending
 one, and expects stripped-run safety to stay a meta-theorem either way.
 See cross-file item 9. 06 asks whether "never stuck" is a target for the
-spec's own machine; if so, it recommends a typing invariant (06 Q2.2),
-the route that also serves type soundness (06 decision 3).
+spec's own machine; if so, it names a typing invariant (06 Q2.2) as the
+route that also serves type soundness, and positive failure evidence
+(Q2.1) as cheaper for a toy, without recommending either (06 decision 3).
 Depends on it: T6, T7.
 Formal-spec choice; DESIGN.md does not say what reaching absurd code at
 runtime does (02 rough edge 6). Context: 02 decision 7, Q7; 05 decision
@@ -881,7 +889,9 @@ Merged and phrased as questions. None is resolved here.
     program the same values" suggests the models. (03 §5; 04 §5.5; 05
     §8.3.)
 12. **`Nat`'s word under models.** §33's "the word of the `Nat` of its
-    position" is stated "With externs on", and §35's tag slots for
+    position" presupposes one word per `Nat`, which the model's `Succ`
+    blocks do not obviously have, and §33 requires the extern `Nat`'s
+    FFI to meet it only "With externs on"; §35 gives tag slots for
     literals only "with externs too", so acceptance depends on extern
     mode (tested). Then §42's "the same values" has nothing to compare
     for a program refused under the models. Intended? (02 §5.4.)
@@ -900,8 +910,11 @@ Merged and phrased as questions. None is resolved here.
     a formal spec? (04 §5.3.)
 17. **Where `Settled` comes from.** §29: "Nothing else creates a
     `Settled`". Are the built-in `Special` entries (§42), which §6 needs
-    `Settled`, and the entries `mint-settled`, `mint-settled-erased`, and
-    `settled-ty-apply` mint (§65), among its three sites? (01 §5.12.)
+    `Settled`, and the fresh entries that `mint-settled` and
+    `mint-settled-erased` mint and that `settled-ty-apply` and
+    `settled-val-apply` give a handle to (§65), among its three sites? A literal's entries are "as if minted by
+    run-position forms" (§45), which ties them to site 1. (01 §5.12,
+    second review note 12.)
 18. **The expansion cap.** §62: "At most 10000 expansions run in one
     run, every file on the command line included." Does the prelude
     count? Is the 10001st an error? Are §62 and §49's "at most 1024"
@@ -1136,9 +1149,8 @@ From the tracks' own "Unverified" sections and review notes.
   application but gives no `Settled` result for a call (not traced; 01
   §3.7, second review); whether its per-item expansion parameter never
   binds before the global count (03 second review: each decrement seems
-  to accompany a global increment, not every path checked), whether its
-  store can hold cycles, and whether `show-fuel` exhaustion only degrades
-  printing (03 §6); whether `merge-opens`'s bound is never short (03 §1);
+  to accompany a global increment, not every path checked), and whether
+  its store can hold cycles (03 §6); whether `merge-opens`'s bound is never short (03 §1);
   whether the macro primitives' callbacks into the elaborator never
   evaluate, which 03's (e) needs (03 §6); whether slc's checkpoint rolls
   back the expansion and gensym counters (03 Q1), and whether a failed
@@ -1444,3 +1456,75 @@ behind it. Nothing below is a decision.
     replay-loop point; 04's theorem shape being a proposal; slc
     unknowns from 03's second review. "That the prelude calls no macros"
     was removed, now checked by grep (01 second review note 9).
+
+## Third review notes
+
+A third review checked each claim here and in 00-glance.md against the
+cited track-file section as it now stands, after both of its reviews,
+read DESIGN.md in full, and re-ran: `diagonal.sl` (969 bytes accepted,
+one byte added rejected, reference and `slc --interpret`); the
+`--eval-fuel 1000` pair (93025 steps finish as `Program` steps; one call
+is out of fuel, reference and slc); `slot_eq_share.sl` (`(BTrue)` only
+from slc's native build); `imm_eq.sl` (`ENone` interpreted on both, `ESome`
+from both `--build` binaries); `tagslot.sl` (`3`, refused under
+`--no-extern`); `07_nondet_both.sl` (`(MkBoth _ _ _)` on both) and
+`det.sl` against `07_nondet_spec.sl` (refused at `det.sl:48`, inside
+`step-det`); `pos_bytes.sl` (column 41); `machine_fn_oracle.sl` (`imm 1`);
+`gensym_order.sl`; and 07's `--goal proved` sets for the vacuous
+stepper (reference) and the replay variant (slc, compiled; slc refuses
+`--goal` with `--interpret`). All matched.
+
+Errors found and corrected:
+
+1. Key finding 10 (and 00-glance) said the `show-at` defect is
+   confined to `slc --interpret`'s final printer and the
+   `comptime-match` mismatch message. `show-typed` also feeds
+   `entry-value` (`elab.sl:4888-4891`), which `dump-context` reports
+   use: `proto/review2/00_dump_deep.sl` (a 60000-element list, then
+   `(dump-context xs)`) prints 49,999 `Cons _ 0` and then `Cons _ _ _)`
+   under `slc --interpret`. Added; the claim is this review's, not 04's.
+2. Rough edge 17 left out `settled-val-apply` and §45's literal entries,
+   which 01's second review note 12 added. Added.
+3. Decision 1 still cited DESIGN.md's "opening paragraph", which 01's
+   second review note 6 corrected to the paragraph on the language's
+   aims; and "with the reader proved early" was 04's alone (the first
+   review's open point). Both fixed.
+4. Rough edge 12 said §33's "the word of the `Nat` of its position" is
+   stated "With externs on". §33 states it unconditionally; only the
+   extern `Nat` FFI's obligation to meet it is "With externs on" (02
+   §5.4). Fixed.
+5. The picture's "The run" item cited decision 3 (elaboration order)
+   and left out decision 5 (the `slot-eq` oracle it describes). Now
+   decisions 4, 5, 7, 8, and 9.
+6. Key finding 17 (and 00-glance, twice) said that without determinism
+   exclusivity fails. 07 F4 compiled it for one nondeterministic
+   variant ("for at least one"). Narrowed.
+7. Key finding 8 marked "expands without end otherwise" as tested; the
+   test shows only the refusal at the cap (01 §3.5). Reworded.
+8. Section 6 still listed "whether `show-fuel` exhaustion only degrades
+   printing" as unknown, while key finding 10 reports 04's second review
+   settling it (its zero case emits a printer that prints `?`). Removed.
+9. Decision 11 said 06 "recommends" a typing invariant; 06 decision 3
+   names it as the route that also serves type soundness and Q2.1 as
+   cheaper, recommending neither. Fixed.
+10. Decision 1's "Depends on it" named theorem 3 and route R2 without
+    their decision numbers, though 00-glance's "Linked" column listed
+    14 and 17 for it; numbers added. 00-glance's row 5 listed 14, which
+    decision 5's line does not name; removed there.
+11. 00-glance: the diagonal bullet said 05 needs "no quine" unqualified
+    (05 still assumes one for its run-position variant) and omitted
+    determinism through T3; "`--build` binaries" lacked "with externs"
+    (the reference's `--no-extern --build` answers `ENone`); decision 4
+    "decides" lock-step versus confluence where §3 says it bears on it;
+    04's F2 must be decided before R3 starts only "if it is wanted".
+    Fixed.
+12. Key finding 12: one line's indentation broke the list item. Fixed.
+
+Unsure, not changed:
+- Whether `dump-context` reports, which DESIGN.md defines only by
+  reference to MANUAL.md (§27, §54), are held to §45's printing rules;
+  they are at least a wrong answer given silently, against
+  `self/README.md:254-258`.
+- 03's own section 6 still says slc's elaborator "needs a `World`" as
+  the reason it cannot play Q, which its revised F6 no longer relies
+  on; that file is outside this review.
