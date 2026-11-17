@@ -1906,3 +1906,76 @@ Seen in the track files, outside this check's remit, not changed:
 
 Unsure, not changed:
 - 00-summary is now 630 lines, above the ~620 target; the restorations above account for the excess.
+
+## Fifth review propagation
+
+Each track and spike file now ends with "Fifth review notes", 01 and 02 included. This pass read all
+seven of those sections and the body text they point to, and changed 00-summary.md and 00-glance.md
+to match. 00-summary.md's header now defines `r5.N`. New citations are to `proto/review5/`; this
+pass re-ran `05_stripped_absurd_final.sl` (`--no-prelude`) on the reference and `slc --interpret`,
+`03_detour.sl` (after `std/macro.sl`) on both, and `04_effect_vs_crash.sl` on the reference; each
+behaved as its file says. Nothing below is a decision.
+
+1. Key finding 2, section 6's diagonal item, and 00-glance's diagonal bullet (03 F6, r5.1): (T) and
+   (E) reach a possibly rejected Q through an accepted detour P with the call of `compile` in a
+   final value (`proto/review5/03_detour.sl`), reading part 5 as covering the driver's call; (C) is
+   not needed for Q. The earlier reading of parts 5 and 6 is replaced. The premise list still names
+   (C), as 03's unsure point leaves it.
+2. Section 6's Gödel item (05 §4.3, r5.1): the program whose stripped run reaches absurd code now has
+   `(lift p)` in a final `Fn` body and is accepted (`proto/review5/05_stripped_absurd_final.sl`); the
+   run-position version is refused. "So the program is refused" is gone.
+3. Key finding 2, section 6, and cross-file 10 (05 r5.2): 05's quine variant now has its call in Q's
+   final value, so "run-position variant" became "quine form".
+4. Decision 5 (05 §3 T3, r5.5): with the shipped prelude every source runs compile-time code
+   (`lib/prelude.sl:354` runs `pow2`), so a crash oracle can reject every source. "Only sources that
+   run compile-time code" replaced.
+5. Decision 5 (02 N1, r5.1): 02's "some oracle exists" needs `Nat` words immediate (E2) as well as a
+   shared store.
+6. Key finding 6, 00-glance's order bullet (04 §2.5, r5.2): slc's compiled code runs a head form
+   before an argument in one test in a body (`proto/review5/04_head_arg_compiled.sl`, native and
+   `--byte`). "Compiled order is untested" is gone from key finding 6 and section 6; section 6 keeps
+   only the one-test scope and `slc --interpret`'s memory and overflow.
+7. Key finding 6, decision 4, rough edge 5, 00-glance's order bullet and row 4 (04 §5.1, r5.3): order
+   is observable without divergence (`proto/review5/04_effect_vs_crash.sl`); rough edge 5 now asks
+   whether order is meant to be fixed. Cross-file 2 ("Is order observable?") is resolved, since 04
+   no longer suggests it may not be, and is deleted, its number left as a gap.
+8. Decision 8 and rough edge 7 (04 §5.4, r5.4): §33 fixes the shared word only for a type not marked
+   `extern` ("an unspecified word otherwise"); §37's "a fresh block" and "a fresh copy" added.
+9. Key finding 8 and section 6's slc-internals item (03 F3, r5.5; 04 §2.3, r5.5): about twenty
+   zero-case sites for the per-form bound, and `run-toplevel`'s own bound, 10000 per file.
+10. Key finding 5 (04 §2.5, r5.6): `bootstrap.sh`'s `--byte` test builds would not show the sharing,
+    its ocamlopt-built `native-compute` runs could.
+11. Key finding 11 (04 r5.1, r5.7): arguments are variables or literals, literals not let-bound;
+    ocamlopt 4.14.1 emits no `caml_modify` for an `int array` store (`proto/review5/04_barrier.ml`),
+    safety still unchecked.
+12. Key finding 4, decision 18c, section 6's closures item, and 00-glance row 18c (06 F4.2, r5.3; 03
+    r5.3): a closure extended at a level minted during the run is built but not applied; "extending
+    it fails" was a misstatement. `06_packed_counter.sl`'s packed level is `L0`, minted before the
+    stepper's. Key finding 4 says the demos' test loop takes a fuel of 1000 (06 r5.4).
+13. Decision 8a (06 Q1.4, r5.2): big- and small-step agreeing is 06's expectation, the
+    `Star`-to-`Trace` direction uncompiled.
+14. Section 7's 06 timings (06 F6, r5.5): ranges, 26021-step rows added.
+15. Decision 3 (07 r5.4): in 07's toy the premise order can decide whether a verdict exists (`Let 3;
+    Need 0 Succ; Let omega`). The section 6 question it answers is removed.
+16. Section 6's spike-completeness item (07 F7, r5.1): both directions of "no verdict iff a run
+    diverges" are read from the zipper's code, neither proved.
+17. Rough edge 1 (07 §5, r5.2): §50's "given the arguments before it" as the nearest text.
+18. Key finding 15 and new rough edge 31 (01 §3.7, §5.14, r5.1): with a first file's `Program`
+    final and an error in a later file, the reference runs the `Program` and exits 0, slc rejects.
+19. Decision 16 (01 §4.5, r5.2): under (c), where the spec captures `Nat`, `Char`, and `String` is
+    open, since the prelude uses literals before it ends.
+20. Rough edges 20 and 21 (01 r5.4, r5.7): §4's "Warnings ... do not stop elaboration" may imply
+    errors do; DESIGN.md defines some warnings itself (§4, §69).
+21. To stay near the length target: key finding 10's sentence on the README's "1000000" and printer
+    `?` (04 §5, r4.5) and section 6's `00_arg_head_order.sl` detail (cited in key finding 6) are
+    dropped; rough edges 5, 7, and 12 are condensed.
+
+Checked against the track files and not changed: 05 §2.3's restored qualifiers match key finding 2's
+"in a form a function can recurse on", "for all sources", and "assuming soundness"; neither summary
+file mentions 06's `NoNth` or `nth-fn` (06 r5.1). Not carried into 00-summary: 03 F5's re-run timing
+rows (12–17 ns per batched step and 6–12 ns per `Continue` compiled, about 1.4 µs under `slc
+--interpret`) and the confirmed 22 MB, which it never reported; 02 r5.2's 2^63 `slot-eq` test; and
+01 r5.3's `finals`.
+
+Unsure, not changed:
+- 00-summary.md is 647 lines, above the ~640 target; the additions above account for it.

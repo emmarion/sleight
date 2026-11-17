@@ -19,8 +19,9 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
   not proved), no non-erased `compile : Src -> Verdict` with no further evidence can be faithful on every source;
   only the mechanism is tested. It does not refute owner statement 4(ii) as mathematics, nor a `compile` taking
   erased evidence of H for its one source, though, if Sleight is sound, the diagonal source cannot produce that
-  evidence for itself, while code outside it may (03's reasoning). That SOUNDNESS.md's claims, stated for accepted
-  programs, cover the diagonal source's run is 03's reading. slc does not escape it: its compile is one `Program`
+  evidence for itself, while code outside it may (03's reasoning). SOUNDNESS.md's claims are stated for accepted
+  programs; 03 carries them to the diagonal source through an accepted detour with the call of `compile` in a final
+  value (compiled with a toy `compile`), reading part 5 as covering the driver's call. slc does not escape it: its compile is one `Program`
   step bounded by fuel, and its `World` blocks only the literal construction (03's reading). 05's version needs
   T1–T4, determinism through T3 (not T5), and soundness of the logic; its `read-file` macro form needs no quine,
   and with `slot-eq` it applies to the all-`ENone` copy (00-summary §2 item 2).
@@ -39,8 +40,9 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
 - **Evaluation order.** DESIGN.md fixes eagerness and some run-position order, but not body statements, sibling arguments,
   `values` entries, or several §15 bindings in general. Elaboration order is visible through gensyms; both
   implementations elaborate a head that is a form, then expand an application's argument macro calls, then elaborate
-  a head that is a name, then the arguments, left to right. At runtime the reference and `slc --interpret` run a
-  head form before an argument; slc's compiled order is untested (00-summary §2 item 6).
+  a head that is a name, then the arguments, left to right. At runtime the reference, `slc --interpret`, and, in one
+  test, slc's compiled code run a head form before an argument. Order is observable without divergence: an
+  argument's write precedes another's crash, though §15 allows either order (00-summary §2 item 6).
 - **slc printer defect.** `slc --interpret` on a 100003-element list prints 49,999 `Cons _ 0` then `Cons _ _ _)`:
   a wrong value, not a §31 crash. It lies in `show-at`, which feeds `--interpret`'s final printer, `comptime-match`
   mismatch messages, `entry-value`, and `dump-context` reports; compiled slc output and the reference print all
@@ -57,7 +59,7 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 | 1 | Where does the spec start? | (a) source bytes, small reader before a `Raw` relation (01, 04) | 14, 17 | no |
 | 2 | What does "parameterized the semantics" mean? | (b) generic over a model record (05); 04: extern table | 9, 16 | no |
 | 3 | Is the order of elaboration part of the language? | (a) fix it: form head, argument macro calls, name head, then arguments, left to right (01) | 5, 13 | part |
-| 4 | Is the runtime evaluation order fixed? | fix it, O1/O3 (02); 04 asks if order is unobservable | — | part |
+| 4 | Is the runtime evaluation order fixed? | fix it, O1/O3 (02); 04 asks if order is meant to be fixed | — | part |
 | 5 | How is `slot-eq`'s nondeterminism handled? | (a) oracle parameter (01, 02, 05; 04 treats it as one); shapes differ | 8 | part |
 | 6 | What is a compile-time crash or fuel exhaustion? | tracks disagree; 01 and 02 opposite, cross-referenced | 5, 14 | part |
 | 7 | Does the spec run post-erasure code? | R1, as §27 and §29 say (02) | — | no (R3 departs from §37, §39) |
@@ -76,7 +78,7 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 | 18 | How is fuel kept out of results and theorems? | tracks disagree | 17 | no |
 | 18a | Resumable checker: derivation zipper or replay? | zipper for a new kernel; replay only retrofitting slc (07) | 17, 18 | no |
 | 18b | Certified stepper invariant: erased trace or counter closure? | erased trace, as a working hypothesis (06) | — | no |
-| 18c | Apply a closure whose level is packed beside it? | no change proposed; it works with packed `Predates`, except, on 06's reading of §18, extending at a level minted during the run (06) | — | only if changed |
+| 18c | Apply a closure whose level is packed beside it? | no change proposed; it works with packed `Predates`, except, on 06's reading of §18, applying one extended at a level minted during the run (06) | — | only if changed |
 | 19 | Judgment shape and staging? | 01 §4.2 layers (Γ/Σ home of run-position facts open); run relation as a parameter (01) | — | no |
 | 20 | Where does the proof stop at the output end? | O1 now, O2 + O4 later (04) | — | no |
 | 21 | `native-compute`? | N3, same trust as the output end (04) | — | no, unless 6 changes §72 |
