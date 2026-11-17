@@ -7,10 +7,10 @@ and DESIGN.md disagree, DESIGN.md is right.
 Tags: **[D]** DESIGN.md, quoted; **[C]** compiled or run. Unless marked
 otherwise, files are under `proto/roundtrip/` and were run with
 `_build/default/bin/main.exe` at commit 669b328 (no change to `bin/`,
-`lib/`, `src/`, or `self/` since, up to ad07c35, 07692f2, and c236135), and also with slc
+`lib/`, `src/`, or `self/` since, up to ad07c35, 07692f2, c236135, and e0aaf2c), and also with slc
 (`_build/release/slc`; `slc --interpret`, `slc --goal`).
-**[A]** marks my own reading or proposal. The only owner item mentioned
-is the brief's statement 3, in decision 4, and it is an earlier
+**[A]** marks my own reading or proposal. The only owner item the body
+mentions is the brief's statement 3, in decision 4, and it is an earlier
 session's paraphrase.
 
 ## 1. Summary
@@ -25,7 +25,7 @@ session's paraphrase.
   "evaluate this" by moving into a `Waiting` state. Each `Program`
   step is one checker step: one machine step while `Waiting` (the step
   whose machine step halts also resumes the checker), and otherwise one
-  statement. The
+  statement, or the acceptance once no statement is left. The
   final `Verdict p` carries an erased `Elab [] p` or `Fails [] p`.
   Exclusivity (`Elab ∧ Fails → False`) is proved. Its proof uses
   determinism of evaluation (`step-det`, `runs-det`, `evals-det`) and
@@ -50,8 +50,8 @@ session's paraphrase.
   - `Reach (Ev t env []) m`: "a run from `m` extends to a run from the
     initial state".
   [A] One `Ctx` serves both `Elab` and `Fails`. That works because
-  `Fails` mirrors `Elab`: each rule has a "fails later" form with the
-  same earlier premises.
+  `Fails` mirrors `Elab`: each rule with a recursive premise has a
+  "fails later" form with the same earlier premises.
 - [C] A second implementation compiles too. It keeps the elaborator in
   direct style and replays from the start with a proof-carrying oracle
   of answers (the replay half of 03's option (e), without its inline
@@ -64,8 +64,9 @@ session's paraphrase.
   alone: it mentions no part of the implementation. A stepper that
   always returns `More` also passes the goal (`spin_vacuous.sl`), and
   the `why` string a `Rejected` carries is unconstrained. A
-  `step` that itself never returns is refused (a same-level self-call
-  "decreases no subterm argument", §17, §48). Completeness, or
+  `step` that calls itself is refused (a same-level self-call
+  "decreases no subterm argument", §17, §48;
+  `proto/review4/07_loop_step_bad.sl`). Completeness, or
   termination under H, is the main missing piece.
 
 ## 2. Findings
@@ -402,8 +403,10 @@ levels"), see §5 below.
      in 05.
 3. **Should `Fails` mirror `Elab` premise by premise ("fails at premise
    k after 1..k−1 hold")?**
-   - Recommended: yes. One context then serves both, and exclusivity is
-     a plain induction.
+   - Recommended: yes. One context then serves both. Exclusivity is a
+     plain induction with or without the mirror shape: 05's
+     `proto/theorems/t1_toy.sl` has an order-free `FPlusR`, which needs
+     no `Elab` of the left operand, and the same induction.
    - Consequence: the spec then fixes the order of premises, which is
      01's decision 5.
 4. **Must the packaged theorem include completeness?**
@@ -444,7 +447,9 @@ levels"), see §5 below.
 - DESIGN.md does not mention a diverging run-position form. §27 says
   the form "runs as soon as it has been elaborated, before the code
   after it is checked", and §17 says "Termination rests on levels"
-  ("Every call decreases a lexicographic order"); §42 calls an
+  ("Every call decreases a lexicographic order"); §33 says an erased
+  proof function "is checked for termination like any other (§17)";
+  §20 says "no function body can call into" the top level; §42 calls an
   unbounded interaction "the driver's loop over total functions"; §62
   caps expansions ("At most 10000 expansions run in one run"). These
   suggest that functions are meant to halt, but I could not find text
@@ -666,3 +671,58 @@ Points I am unsure of:
 - The `p0` refusal of F5 was reproduced only as "`src`, declared
   `erased`, used in a non-erased position" (`src` made erased); the
   quoted `p0` wording is the author's.
+
+## Fourth review notes
+
+A fourth adversarial review read DESIGN.md in full, every file in
+`proto/roundtrip/` and `proto/review2/07_*`, and re-ran at e0aaf2c (no
+code change since 669b328): programs 0 to 5 in both variants under the
+reference and `slc --interpret` (outputs, exit codes, and step counts as
+in F2; program 0's 26 zipper steps are 6 statements, 19 machine steps,
+and the acceptance, and its 22 replay steps are 3 replays and 19 machine
+steps); program 6 (22 MB at 4 s and at 10 s, both variants); the three
+`--goal proved: PASS` sets and the replay set without `impl.sl` (FAIL)
+under both checkers; the four refusals under both, with the quoted
+messages; a looping `step-top` (refused, now saved); both bare-`ne`
+refusals; the three `predates` variants of `drive.sl`; `07_nondet_both.sl`
+under the reference and `slc --interpret`, and `det.sl` against
+`07_nondet_spec.sl` (refused at `det.sl:48`); the line and rule counts;
+the `goal.sl` and `Waiting` excerpts; and `self/elab-main.sl:159` and
+`443-462`. All matched. Errors found and changes made:
+
+1. §1 said a `Program` step that is not a machine step is "one
+   statement". The last step of an accepted program handles no
+   statement: it is `cstep` on an empty list, giving `Accepted`
+   (program 0: 6 + 19 + 1 = 26). Added.
+2. §1 said "A `step` that itself never returns is refused". What was
+   compiled is a `step` that calls itself; that no accepted `step` can
+   fail to return is §17's intent, not something this test shows. Now
+   "calls itself", with the test saved as
+   `proto/review4/07_loop_step_bad.sl` (earlier reviews did not save
+   it).
+3. Decision 3 gave "exclusivity is a plain induction" as a reason for
+   the mirror-shaped `Fails`. 05's `t1_toy.sl` has an order-free
+   `Fails` (`FPlusR` needs no `Elab a`) and its `exclusive` is the same
+   plain induction (re-run: accepted). Reworded, so the reason left is
+   the shared context.
+4. §1: "each rule has a 'fails later' form"; `ElNil` has none, having
+   no premise. Now "each rule with a recursive premise".
+5. §5, last rough edge: added §33 ("checked for termination like any
+   other (§17)") and §20 ("no function body can call into" the top
+   level) to the evidence; neither says outright that a compile-time
+   run halts (searched `diverg`, `halts`, `infinite`, `loop`, and
+   `terminat`: the only matches are §17, §18, §33, and §42, all
+   quoted).
+6. Header: "the only owner item mentioned" is statement 3, but the
+   second review notes mention statement 1; now "the body mentions".
+
+Points I am unsure of:
+
+- That nothing other than the two vacuities found (a `step` answering
+  `More` forever, and free reason text) passes the goal; I found no
+  third.
+- Whether a mirror-shaped `Fails` fixes an order the toy can observe:
+  every premise in the toy depends on the one before it, so no two
+  premises can fail independently. With independent premises and a
+  diverging run (F7), the chosen order would decide whether a verdict
+  exists; that is a reading, not compiled.

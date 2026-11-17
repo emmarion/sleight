@@ -81,17 +81,24 @@ depends on it.
    02's C4 proposes for a depth bound. (c) A coinductive "diverges" outcome.
    *Recommended:* (a), obtained from (b): a fuelled deriving function
    is total with no hypothesis, and (a) would follow from it under H
-   together with a lemma that more fuel never changes an answer other
-   than `OutOfFuel` (reading; not checked). *Not analysed
+   together with two lemmas: that more fuel never changes an answer
+   other than `OutOfFuel`, and that a spec run which halts is reached
+   by the fuelled function at some finite fuel, so that H, applied to
+   the finitely many runs one program makes (finitely many given the
+   expansion limit), yields one fuel that suffices (reading; not
+   checked). *Not analysed
    here:* whether statement 2's idea, a fuel-free deriving function run
    as steps of the driver's `Program` loop (§27, §42), changes this;
    such a loop computes without fuel but by itself proves no
    termination. *Depends on it:* whether the deriving function for
    elaboration takes fuel, and where.
-3. **Does the spec keep the expansion limit?** *Recommended:* yes, as a
-   parameter `N` (10000 by default). Without it, theorem 3 fails even
-   under H (§3.5). *Depends on it:* theorem 3, and determinism, because
-   the count is global.
+3. **Is the expansion limit a parameter?** DESIGN.md already fixes it:
+   "At most 10000 expansions run in one run" (§62), so the spec keeps
+   it as written. The question is only whether the spec generalizes it
+   to a parameter `N`, which would be a change to DESIGN.md's wording.
+   *Recommended:* no change unless the owner wants `N`. Without some
+   limit, theorem 3 fails even under H (§3.5). *Depends on it:*
+   theorem 3, and determinism, because the count is global.
 4. **What does a rejection carry?** *Options:* (a) only "rejected";
    (b) the first error's position and macro-call trace; (c) also a
    structured reason, including the text DESIGN.md requires (the string
@@ -111,11 +118,12 @@ depends on it.
    through gensym numbers, the expansion count, and which error comes
    first (§3.6). DESIGN.md fixes only part of it. *Recommended:* yes.
    The order would be the one both implementations follow, as tested
-   (§3.6): in an application, the head first; then every macro call
-   among the arguments, left to right, each call's output expanded
-   before the arguments after it; then the arguments left to right,
-   each nested application in the same way; and each statement before
-   the code after it. It needs DESIGN.md wording, which is the
+   (§3.6): in an application, a head that is a form first; then every
+   macro call among the arguments, left to right, each call's output
+   expanded before the arguments after it; then a head that is a name,
+   whose errors therefore come after the arguments' expansions; then
+   the arguments left to right, each nested application in the same
+   way; and each statement before the code after it. It needs DESIGN.md wording, which is the
    owner's to give.
 6. **How is `slot-eq` handled at compile time?** Under DESIGN.md, one
    program can be accepted by one conforming implementation and

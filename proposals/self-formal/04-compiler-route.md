@@ -43,7 +43,7 @@ proposal.
   invocation or `cell-write` marked `(imm o n)` in emitted code, bypass
   OCaml's write barrier, and the `Slots` implementation hashes raw heap
   addresses.
-  `slot-eq` compiles to OCaml `==`, and ocamlopt shares equal immutable
+  `slot-eq` compiles to OCaml `==`, and ocamlopt can share two equal immutable
   constants, so a native compiled run can answer `ESome` where
   `slc --interpret` and the reference answer `ENone` (2.5).
 - [C] There are 103 FFI implementations and 7 extern types. [P] Under §42
@@ -62,7 +62,7 @@ proposal.
   (3398 lines). The main block starts at `elab-main.sl:158`. It is one
   mutually recursive `def-fns` that holds the compile-time interpreter
   (`eval`, `apply`, `run-code`, `elab-main.sl:158-445`), the macro
-  expander (`splice-go`, `elab-main.sl:577-586`, with the 10000-expansion
+  expander (`splice-go`, `elab-main.sl:577-590`, with the 10000-expansion
   limit at `:511` and `:560`), and the elaborator proper.
 - [C] Post-erasure IR: `Code ctx ms` (`core.sl:604-622`), indexed by its
   frames and by the multiplicities of its results. Its constructors are
@@ -142,7 +142,7 @@ definition whose header is `(erased name :`.
 | `str-split-fuel` (`base.sl:100-109`) | fuel equal to the string's length | unreachable but not refuted |
 | sugar budget (`elab-main.sl:1871`, `README:385-394`) | budget sized by the form | "internal" error, not refuted |
 | `Steps n` (`elab-main.sl:1243...`) | budget | zero case refuted by type |
-| macro expansions ≤ 10000 (`elab-main.sl:511, 560`: the run's count, `env-expansions`, is checked at `:560`. The elaborator group's first `subterm` parameter, named `fuel` (`elab-main.sl:752`), starts at the same limit for each top-level form (`:3379-3391`), loses one per expansion along a nesting path, and its zero case gives the same message at `:586, 766, 781, 1126, 1258, 1266, 1501, 1541`) | **specified**: [D] §62 "At most 10000 expansions run in one run, every file on the command line included." | refusal, as §62 requires |
+| macro expansions ≤ 10000 (`elab-main.sl:511, 560`: the run's count, `env-expansions`, is checked at `:560`. The elaborator group's first `subterm` parameter, named `fuel` (`elab-main.sl:752`), starts at the same limit for each top-level form (`:3379-3391`), loses one per expansion along a nesting path, and its zero case gives the same message at `:766, 781, 1126, 1258, 1266, 1501, 1541`; `splice-go` keeps a separate counter, started at the limit at `:593` and checked at `:586`) | **specified**: [D] §62 "At most 10000 expansions run in one run, every file on the command line included." | refusal, as §62 requires |
 
 - [P] So the fuel a correctness theorem must face is the interpreter's;
   `show-at`'s and `heap-strs-fuel`'s, whose zero cases give a wrong answer
@@ -458,7 +458,7 @@ canonicalization and unification invariants, adapted.
   contexts, canonicalization, unification, and evaluation. It covers a
   language without multiplicities, `Matchable`, slots, macros, run
   position, literals, externs, or the `_` sugar (MINIMAL.md's
-  "What is removed"). Scaling that by DESIGN.md's size is
+  "What is removed" and "What remains"). Scaling that by DESIGN.md's size is
   guesswork. Tens of thousands of lines seems likely.
 - *Risk:*
   - the formal spec is wrong, which no proof catches;
@@ -1075,3 +1075,83 @@ Points I am unsure of:
   block is as GC-safe as on an array when both words are immediates; it
   is the same [P] as for the `-imm` operations, unchecked against the
   runtime sources.
+
+## Fourth review notes
+
+A fourth adversarial review read the brief, CLAUDE.md, and all of
+DESIGN.md, opened the cited lines, and re-ran `order.sl`, `ord2.sl`,
+`slot_eq_share.sl` in all four modes, `share.ml`, `argorder.ml`,
+`tc3.ml`, `tc4.ml`, `04-tc-direct.ml`, `deep.sl` under
+`slc --interpret`, `04-deep-fn.sl` built by slc, and the `imm` stores
+of `std/immediate.sl tests/cell_imm.sl`. All [T] results held.
+`proto/review4/04_deep_interp_tail.txt` keeps the end of the
+`--interpret` output.
+
+1. The 2.3 row on macro expansions said the elaborator group's first
+   `subterm` parameter "is this budget". It is a separate bound: it
+   starts at the same limit for each top-level form
+   (`elab-main.sl:3379-3391`) and loses one per expansion along a
+   nesting path, while §62's per-run count is `env-expansions`, checked
+   at `:560`. Of the cited checks, `:586` is `splice-go`'s own counter
+   (started at `:593`), and `764`/`779` are the `let-match` lines whose
+   zero cases are at `:766`/`:781`; the list also left out five sites.
+   Rewritten; 2.1's `splice-go` range is `577-590`, not `577-586`.
+2. F1 said failed attempts under doubling step fuel cost "at most about
+   as much as the last one". With the last attempt using `W > 2^(k-1)`
+   steps, the failed ones use at most `2^k - 1 < 2W`. Corrected to "less
+   than twice".
+3. Rough edge 4 said DESIGN.md does not say whether two separately
+   built immutable values may share one word. §33 fixes the word of a
+   value with no non-erased field "however the value was built", so
+   those do. The gap is narrowed to values with a non-erased field and
+   extern values (the `String`s of `slot_eq_share.sl`).
+4. Rough edge 5 said DESIGN.md does not say whether the evaluator runs
+   the models or the implementations. §42 describes the prototype
+   running the implementations unless `--no-extern` "runs the models
+   instead", and §24/§29 make an extern type's `Matchable` the FFI's
+   wrapper. What DESIGN.md leaves open is which of the two is the
+   meaning. Reworded.
+5. 2.3 cited `README:363-367` for "the generated printer" being the
+   emitted one; `README:143-146` says so directly ("a generated printer
+   per type for a final function's result"). Added. The third review's
+   open point is settled: `README:254-258`'s "1000000" matches no
+   interpreter or printer fuel in `self/` (the interpreter's default is
+   10^9, `core.sl:3614`; the only 1000000 is `heap-strs-fuel`), and the
+   same sentence's "returns an error value" does not hold for
+   `show-fuel`'s zero case, which emits `show_any` (`?`). Both added to
+   section 5's README list.
+6. `self/README.md:385-386` places the sugar budget as the group's
+   "first `subterm` parameter"; in `elab-expr-demand`
+   (`elab-main.sl:752`) the first is `fuel` and `sugar` is the fourth.
+   Added to section 5's README list.
+7. R3 listed `mini/`'s language as lacking "multiplicities, slots,
+   macros, or run position". MINIMAL.md also removes `Matchable`,
+   literals, `extern`, and the `_` sugar, which bears on how far `mini/`
+   is from the full language. Added.
+8. The summary said ocamlopt "shares equal immutable constants"; one
+   tuple test shows that it can. Hedged to "can share".
+9. Section 5's README bullet said the `show-at` defect was reproduced in
+   "all three reviews"; it is four now.
+
+Re-checked and found right: the 12 files and their line counts, the
+lemma-line heuristic (1,084), `Code`'s 17 constructors at
+`core.sl:604-622`, the 20 `"internal:` sites, `show-at`'s cutoff (49,999
+`Cons _ 0`, then `Cons _ _ _)`) and the slc-built `04-deep-fn.sl`
+printing all 100003 elements under an 8 MB stack, byte for byte as the
+reference prints `04-deep-fn.sl` (re-run here, under 15 minutes), `(BTrue)` native and
+`(BFalse)` under `--byte`, `--interpret`, and the reference, the five
+`int array` stores, the `caml_apply20` `jmp` in `tc3.ml` and the direct
+`jmp` in `04-tc-direct.ml`, `tc4.ml` overflowing a 1 MB stack, the
+quotations from §15, §17, §19, §27, §29, §31, §36, §38, §42, §45, §54,
+§61, §62, §66, §67, §69, and §72, the `mini/` citations, and the
+`lib/ffi_core.ml`, `lib/ffi_templates.txt`, and `lib/prelude.sl` lines.
+
+Points I am unsure of:
+
+- Whether ocamlopt shares constants beyond tuples of immutable data,
+  for example the mutable inline records emitted for ADT blocks; I did
+  not test it, and I expect not, since OCaml does not share mutable
+  blocks.
+- The [P] that the `imm` and `-imm` stores are GC-safe when both words
+  are immediates is still unchecked against the runtime sources (none
+  are installed here).

@@ -1,6 +1,7 @@
-; Fourth review of 06: a closure state that packs its level L, a Predates from L to a stepper level S minted
-; first, and an erased step counter. A step at S extends the closure at the same packed level L, and a function
-; at S applies it. Needs std/list.sl, spec.sl and machine.sl first.
+; Accepted (fourth review of 06): a closure state that packs its level L with a Predates from L to the
+; stepper's level S and one from step-back's level to L, plus an erased step counter. A step at S extends the
+; closure at the same packed L, and S applies it at a halt. Needs std/list.sl, spec.sl and machine.sl first.
+(def-lvl L0)
 (def-lvl S)
 (def-adts $ (PState : ((Cmd) c0) ((Mem) m0) -> Type)
   enum
@@ -22,3 +23,17 @@
     (let-match erased e (Refl _ _))
     (inv n (Refl _ n) mf (step-back (predates pb) k k2 m m2 mf s a)))
   (PNext _ _ (PSt c0 m0 k2 m2 (Succ n) L pr pb inv2)))
+(def-fns _ $ (many fin : (erased (Cmd) c0) (erased (Mem) m0) (many (PState c0 m0) st) (subterm many (Nat) fuel) -> (many (Nat) r))
+  (let-match many fuel (Succ f) ((Zero) 99))
+  (let-match many (adv-p c0 m0 st) (PNext _ _ st2) ((PEnd _ _ o) (match many o _ ((Halted _ _ mf d) 0) ((Stuck _ _) 1))))
+  (tail (fin c0 m0 st2 f)))
+(let ((many prog)) (CSeq (COp $ OSet 0 3) (CWhile 0 $ COp $ OPred 0 0)))
+(let ((many mem0)) (MkMem (Cons _ (VNum 9) $ Nil _) (Nil _)))
+(let ((erased pr0)) (prove-predates L0 S))
+(let ((erased pb0)) (prove-predates (level-of step-back) L0))
+(def-fns L0 $ (erased inv0 : (subterm erased (Nat) j) (erased (Eq (Nat) j (Zero)) e) (erased (Mem) mf)
+   (erased (RunsAll mem0 (Cons _ prog $ Nil _) mf) a) -> (erased (Runs mem0 prog mf) d))
+  (let-match erased a (RACons _ m1 _ _ _ d a1))
+  (let-match erased a1 (RANil _))
+  d)
+(fin prog mem0 (PSt prog mem0 (Cons _ prog $ Nil _) mem0 (Zero) L0 pr0 pb0 inv0) 1000)

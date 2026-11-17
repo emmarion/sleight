@@ -7,8 +7,8 @@ Where it and DESIGN.md disagree, DESIGN.md is right.
 Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
 **[ran]** is a run tonight of the reference (`_build/default/bin/main.exe`,
 commit d6644d9; the first review re-ran everything at ad07c35, the
-second at 07692f2, and the third at c236135, with no change to `bin/`,
-`lib/`, `src/`, `self/`, or `std/` in between) and, where said, of `_build/release/slc`. The
+second at 07692f2, the third at c236135, and the fourth at e0aaf2c, with
+no change to `bin/`, `lib/`, `src/`, `self/`, or `std/` in between) and, where said, of `_build/release/slc`. The
 prototype is `proto/stepper/`. Every command line starts with the
 repository's `std/list.sl`, then `spec.sl machine.sl`.
 
@@ -18,8 +18,9 @@ repository's `std/list.sl`, then `spec.sl machine.sl`.
   read, and write-in-place, `if`, and `while`) has a big-step spec `Runs m c
   m2` (`spec.sl`). A total, non-recursive `step` over an explicit command
   stack and memory, driven one `Program` continuation per step, runs it
-  with no fuel. The reference accepts all of it and runs it [ran]; so do
-  `--no-extern`, `--build`, `slc --interpret`, and `slc --build` [ran].
+  with no fuel. The reference accepts `run.sl` and
+  `complete.sl total_demo.sl` and runs them [ran]; so do `--no-extern`,
+  `--build`, `slc --interpret`, and `slc --build` [ran].
 - The theorem is the type of `advance`: its `Halted` result carries
   `(erased (Runs m0 c0 mf) d)`, for the `c0` and `m0` that the erased
   trace argument starts from, so a run started with `TNil` gets it for
@@ -38,12 +39,16 @@ repository's `std/list.sl`, then `spec.sl machine.sl`.
   works at one fixed level if it takes an erased step counter, which
   each extension's call to the previous closure decreases
   (`ho_counter.sl`, added in review) [ran]. Without that counter it is
-  refused at a fixed level, and with its level packed in the state it
-  can be built but not applied (§18) [ran].
+  refused at a fixed level. With its level packed in the state it can be
+  built but not applied (§18); with a `Predates` to the stepper's level
+  packed too, it can be applied but not extended at a fresh level [ran].
+  Packing the level with its `Predates` proofs and the counter, and
+  extending at that same packed level, is accepted
+  (`proto/review4/06_packed_counter.sl`) [ran, fourth review].
 - Missing: refuting "stuck" (progress), an in-place (unique) heap in the
   implementation, and abstract addresses. Proof is about 210 lines
   against 90 lines of stepper code and 67 lines of spec. Checking all of
-  it adds about 0.1 s to the prelude's 0.44 s [ran].
+  it adds about 0.1 s to the prelude's 0.4 s [ran].
 
 ## 2. Findings
 
@@ -69,7 +74,8 @@ Every premise of a rule is a field of the derivation, so all inductions
 below are plain `subterm` recursion on derivations (§21: "Subterm
 recursion (§17) may go through an erased field."), not on commands:
 `ExWhile`'s premise is about a larger command. This holds for any rule
-set; the unfolding does not create it.
+set whose premises are plain fields rather than function-typed ones; the
+unfolding does not create it.
 
 Determinism, `runs-fn : (Runs m c m1) (Runs m c m2) -> (Eq (Mem) m1 m2)`,
 is accepted [ran]. It uses `runop-fn` and `pick-fn`, which use
@@ -142,13 +148,18 @@ refused in `step-back` at `ExSeq` [ran, third review].
 - `AgreeStuck` is still a possible result. Refuting it needs progress:
   the helpers return `NthNo`, `SetNo`, `OpNo`, and `PickNo` with no
   evidence, so nothing connects a failure to the derivation. I did not
-  do this (§3 Q2). So as built, the completeness half proves only "if
-  this machine halts, it halts with `mf`, and it halts or sticks within
-  the derivation's step count" (the bound is read from `finish`'s
-  recursion, not from a type); a machine that always sticks satisfies
-  it too, and so do an `advance` that always answers `Ended` with
-  `Stuck` and a `run-total` that always answers `AgreeStuck`
-  (`proto/review3/06_vacuous.sl`, accepted) [ran, third review].
+  do this (§3 Q2). So as built, the types of `complete.sl` add only
+  `runs-star`, `step-det`, and that an `AgreeHalted` result is `mf`.
+  "If this machine halts, it halts with `mf`" already follows from
+  `advance`'s type and `runs-fn`. That `run-total` runs this machine,
+  and halts or sticks within the derivation's step count, is read from
+  its code (`finish` calls the real `advance` and recurses on the
+  `Star`), not from a type: an `advance` that always answers `Ended`
+  with `Stuck` and a `run-total` that always answers `AgreeStuck` have
+  the same types (`proto/review3/06_vacuous.sl`, accepted) [ran, third
+  review]. That `finish` stops at run time also rests on the erased
+  `Star` being a real, finite derivation (second review notes, second
+  uncertain point).
 
 ### F4. What the checker refused, and why
 
@@ -180,10 +191,19 @@ refused in `step-back` at `ExSeq` [ran, third review].
    `S` minted first does not help: a function at `S` can then apply the
    closure, but a step cannot prove its fresh `L2` below `S`: "`L2` was
    not in scope when level `S` was minted"
-   (`proto/review3/06_packed_predates_bad.sl`) [ran, third review]. My
-   reading is that no fixed-level code can apply this shape. Item 1's
-   counter makes packing the level unnecessary. The trace of F2 is the
-   same closure
+   (`proto/review3/06_packed_predates_bad.sl`) [ran, third review].
+   Inside a closure defined at a packed level, even a call to a lower-level
+   function such as `step-back` needs a packed `Predates`: without one,
+   "`L` is not a level minted by `def-lvl`" (§18: "`L` must be an entry
+   created by `def-lvl`, or a `let` binder forwarding from one") [ran,
+   fourth review]. Packing both `Predates` proofs and item 1's counter,
+   and extending the closure at its own packed level rather than at a
+   fresh one, is accepted, applied at a halt, and halts the same small
+   loop (`proto/review4/06_packed_counter.sl`; reference, `--no-extern`,
+   and `slc --interpret`) [ran, fourth review]. The packed level is then
+   one minted before the stepper's, so this is item 1 with the level
+   hidden; item 1's counter makes packing the level unnecessary. The
+   trace of F2 is the same closure
    defunctionalized: `step-back` is the code of each closure, and
    `Trace` is the list of them.
 3. **Numerals in an erased derivation** (`total_demo.sl`, first draft):
@@ -230,9 +250,9 @@ fields) are the main readability cost; patterns are counted by hand.
 
 ### F6. Cost of checking and running
 
-[ran, one machine, single runs]: the reference takes 0.44 s on a
-one-line file, 0.53 s on `std/list.sl spec.sl machine.sl complete.sl`;
-`slc --interpret` 0.26 s and 0.33 s. The long runs are `run.sl` with
+[ran, one machine, single runs]: the reference takes 0.38–0.44 s on a
+one-line file, 0.48–0.53 s on `std/list.sl spec.sl machine.sl complete.sl`;
+`slc --interpret` 0.24–0.26 s and 0.31–0.33 s. The long runs are `run.sl` with
 both loop bounds `5` replaced by `300` (7821 steps) and by `1000`
 (26021 steps). 7821 steps take 1.5 s in the reference interpreter,
 0.56 s under `slc --interpret`, and under 0.01 s compiled (`--build`);
@@ -249,9 +269,13 @@ not being built at run time, which erasure (§14, §27) already implies.
    order, accepted, and the per-rule lemma is local and non-recursive
    once the spec is lifted to stacks. *Con:* the erased trace is, as a
    proof term, as long as the run; being erased, it is not built at run
-   time [F6]. *Cost:* 41 lines here.
-2. **Closure invariant with a packed level.** *Con:* cannot be applied
-   by the stepper (F4.2). Not viable as far as I can see.
+   time (§14; F6's memory figures are consistent with that). *Cost:* 41
+   lines here.
+2. **Closure invariant with a packed level.** *Con:* with no packed
+   `Predates`, it cannot be applied by the stepper; with one, it cannot
+   be extended at a fresh level (F4.2). With the `Predates` proofs and
+   option 5's counter packed, it works, but only at one level minted
+   before the stepper's, so it is option 5 with the level hidden.
 3. **A first-order "derivation under construction"**: an erased context
    of `Runs` frames, filled as commands finish, so the halt reads off the
    derivation with no fold. *Pro:* no trace. *Con:* needs one frame type
@@ -260,15 +284,17 @@ not being built at run time, which erasure (§14, §27) already implies.
 4. **Small-step as the spec.** Take `Step`/`Star` as the spec and drop
    `Runs`. *Pro:* soundness is immediate (the trace is the derivation).
    *Con:* determinism and composition are then lemmas about `Star`.
-   For runs that end on the empty stack the two agree here (`runs-star`
-   one way; `trace-back` the other, `Trace` being `Star` read backwards,
-   though no lemma converting a `Star` to a `Trace` is written), so this
-   looks like a presentation choice.
+   For runs that end on the empty stack I expect the two to agree here
+   (`runs-star` one way; `trace-back` the other, `Trace` being `Star`
+   read backwards, though no lemma converting a `Star` to a `Trace` is
+   written, so that direction is not compiled), so this looks like a
+   presentation choice.
 5. **Closure invariant at a fixed level with an erased step counter**
    (F4.1, `ho_counter.sl`, added in review). *Pro:* no `Trace` type and
    no fold; the halt applies the closure to `RANil`. *Con:* a ghost
    counter and an `Eq` argument in the closure type; it still uses
-   `step-back` and `RunsAll`. *Cost:* about the same as option 1.
+   `step-back` and `RunsAll`. *Cost:* about the same as option 1 (an
+   estimate from `ho_counter.sl`, which builds no full stepper).
 
 ### Q2. Total correctness ("never stuck")
 
@@ -297,16 +323,19 @@ not being built at run time, which erasure (§14, §27) already implies.
 1. **Is "spec as relation, stepper returns an erased derivation at halt,
    invariant as an erased trace" the pattern to scale up?** Recommended:
    yes, as a working hypothesis: it is first order, and by the author's
-   report (F4) it compiled at first attempt apart from F4's items. A fixed-level closure with an erased counter (Q1.5) is an
-   accepted alternative, so the choice between them is one of
-   presentation. Everything in the compiler-route proposals that relies
-   on a certified stepper depends on one of the two.
+   report (F4) it compiled at first attempt apart from F4's items. A
+   fixed-level closure with an erased counter (Q1.5) is an alternative
+   the checker also accepts, so the choice between them looks like one
+   of presentation. A certified stepper in the compiler-route proposals
+   would use one of these two, or an untested shape such as Q1.3.
 2. **Should the level rules allow a function to apply a closure whose
    level is packed in its argument?** I do not propose a change. As
    DESIGN.md stands (§17, §18), such a closure can be built but not
-   applied (F4.2). A closure at a fixed level with a decreasing erased
-   argument works instead (F4.1), so certified steppers do not depend
-   on this.
+   applied unless a `Predates` from its level to the caller's level is
+   packed with it, and, as I read §18, a closure at a level minted
+   after the caller's can never have one (F4.2). A closure at a fixed level with a
+   decreasing erased argument works instead (F4.1), so certified
+   steppers do not depend on this.
 3. **Is "never stuck" a target for the formal spec's own machine?** If
    yes, Q2.2 (a typing invariant) is the route that also serves type
    soundness; Q2.1 is cheaper for a toy.
@@ -323,9 +352,13 @@ not being built at run time, which erasure (§14, §27) already implies.
    first-class data): a function stored in data whose level is packed
    beside it, as an erased `(Level)` field, can be held and extended but,
    as far as the spike found, not called by code whose level was minted
-   earlier (F4.2). §18 says this outright for a level created later
-   ("a function at a later level cannot be called from code at an
-   earlier level"), so it is a consequence, not a gap; whether it is
+   earlier, unless a `Predates` to that code's level is packed beside it
+   (F4.2). For a level created later, §18 says this outright ("a
+   function at a later level cannot be called from code at an earlier
+   level"). For a packed level of unknown origin it follows from §18's
+   rule for `prove-predates` ("`x` must have an introduction order (§5)
+   earlier than `L`'s"): the packed level is a binder introduced after
+   the caller's level. So it is a consequence, not a gap; whether it is
    wanted for packed levels is decision 2. This did not block the
    spike: a fixed-level closure with a decreasing erased argument works
    (F4.1).
@@ -334,11 +367,12 @@ not being built at run time, which erasure (§14, §27) already implies.
 ## 6. Unverified claims
 
 - That Q1.3 (a derivation context) would work, and its size.
-- That no other placement of levels lets a stepper apply a packed-level
-  closure (F4.2); two packed shapes were tried (`ho_exist_use_bad.sl`,
-  and `proto/review3/06_packed_predates_bad.sl` with a packed
-  `Predates`), plus the fixed-level counter of F4.1, which avoids
-  packing.
+- That no placement of levels lets a stepper apply a closure extended
+  at a fresh level each step (F4.2); two packed shapes were tried
+  (`ho_exist_use_bad.sl`, and `proto/review3/06_packed_predates_bad.sl`
+  with a packed `Predates`). Two shapes that keep one level do work: the
+  fixed-level counter of F4.1, and `proto/review4/06_packed_counter.sl`,
+  which packs that level.
 - The `--build` timings of F6 were not re-run by the first review; the
   second review got 0.00 s and 0.06 s.
 - The Q2.1 line estimate.
@@ -528,3 +562,70 @@ Points I am unsure of:
   stepper's level. My reading of §18 (`prove-predates` needs a level
   "created by `def-lvl`", not a parameter) says no; not compiled.
 - Timings remain single runs; `_build/release/slc` was used as found.
+
+## Fourth review notes
+
+A fourth adversarial review read DESIGN.md in full, every file in
+`proto/stepper/` and `proto/review3/06_*`, and re-ran at e0aaf2c (no code
+change since d6644d9): `run.sl` under the reference, `--no-extern`,
+`--build`, `slc --interpret`, and `slc --build`; `complete.sl
+total_demo.sl` under the same five; `ho_counter.sl` under the reference,
+`--no-extern`, and `slc --interpret`; `ho_exist_build.sl`; the three bad
+files (messages and positions as quoted); `06_vacuous.sl`; all three
+teeth checks (refused at `SNext` argument 5, at `ExSeq`, and at
+`ExWhile`); a wrong `runs-fn` step; the numeral refusal; the F5 line
+counts, the 47-line `runop-fn`, the 15-line `step-back`, and `RWrite`'s
+15 fields; the 24 + 2 failure sites; the `lib/prelude.sl` and
+`std/list.sl` citations; and the 7821-step run (1.33 s reference,
+0.48 s slc, peak 22–32 MB). All matched. Errors found and changes made:
+
+1. The summary, F4.2, Q1.2, decision 2, and §6 said a closure whose
+   level is packed in the state "can be built but not applied" and is
+   "not viable". With a `Predates` from its level to the stepper's
+   packed too, the stepper applies it: `06_packed_predates_bad.sl` cut
+   after its line 13 is accepted. What fails is extending it at a fresh
+   level. And packing the level with both `Predates` proofs it needs
+   plus F4.1's counter, extending at that same packed level, is
+   accepted and halts a loop with `Halted`
+   (`proto/review4/06_packed_counter.sl`, new; reference,
+   `--no-extern`, and `slc --interpret`). Without the second `Predates`,
+   the packed-level closure cannot even call `step-back`: "`L` is not a
+   level minted by `def-lvl`". All five places now say this, and that
+   this shape is F4.1's with the level hidden.
+2. §5 rough edge 1 cited §18's "a function at a later level cannot be
+   called from code at an earlier level" as saying outright that a
+   packed-level closure cannot be called. A packed level need not have
+   been created later; what refuses `ho_exist_use_bad.sl` is §18's
+   introduction-order rule for `prove-predates`, the packed level being
+   a binder introduced after the stepper's level ("`L` was not in scope
+   when level `(level-of adv-ho)` was minted"). Reworded.
+3. F3 said that as built "the completeness half proves only" a halt with
+   `mf` within the step count. No type in `complete.sl` says that: the
+   halt-with-`mf` part already follows from `advance`'s type and
+   `runs-fn`, and the bound is read from the code. Rewritten to say
+   which part is a type and which is read from the code, and that
+   `finish` stopping at run time rests on the erased `Star` being real.
+4. F1: "This holds for any rule set" overclaimed. A function-typed
+   premise is a field, but recursion through it is not subterm
+   recursion (§18: `prove-subterm` "treats a type former (production 4)
+   as opaque"). Qualified to plain fields.
+5. Q1.4 stated that `Star` and `Trace` runs "agree" when only one
+   direction is compiled; now an expectation.
+6. Decision 1 called Q1.5 "an accepted alternative", which reads as
+   approved; it is accepted by the checker. "Everything ... depends on
+   one of the two" ignored the untested Q1.3. Reworded.
+7. Summary: "the reference accepts all of it" while three files are
+   meant to be refused; it now names the files it runs.
+8. Q1.1 cited F6's memory figures for what §14 implies; Q1.5's cost is
+   now marked as an estimate. Timings in the summary and F6 now give
+   the range across reviews (the one-line file took 0.38 s today).
+
+Points I am unsure of:
+
+- That no arrangement lets a stepper apply a closure that each step
+  extends at a level minted during the run; my reading of §18 is that a
+  level minted after the stepper's can never be proved below it, and
+  `predates-trans` and `predates-subterm` only chain existing proofs.
+- `06_packed_counter.sl` mints its packed level at the top level, before
+  the stepper's; I did not try packing a level that is itself passed in
+  from a caller.
