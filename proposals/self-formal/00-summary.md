@@ -77,13 +77,14 @@ Each item is the tracks' recommendation, not a decision.
    `Program` steps and runs out as one call, on both (03 F5). Recursion on an erased `Halts` is
    accepted, but a caller must supply it: a written term, a fuel run's result, or an erased proof,
    per input or, for a terminating toy step, for every input (`proto/review3/05_halts_uniform.sl`);
-   the diagonal rules out the uniform one for a faithful compiler (05 F4, r3.4). Tested limits:
-   fixed-level continuation closures cannot call one another without a decreasing argument, and can
-   with an erased counter (03 F4.1, r14; 06 F4.1); a packed-level closure can be built but, as far
-   as 06 found, not applied by the stepper, also with a packed `Predates` (06 F4.2, r3.2); a
-   function cannot iterate `Program` steps (03 F4.2); every function a step calls must be minted
-   before the program's level (03 F4.3, 05 F6); a driven run's result reaches only its own later
-   steps, never compile-time code or `qed` (05 F6, r2.5).
+   under key finding 2's premises the diagonal rules out the uniform one for a faithful compiler (05
+   F4, r3.4). Tested limits: fixed-level continuation closures cannot call one another without a
+   decreasing argument, and can with an erased counter (03 F4.1, r14; 06 F4.1); a packed-level
+   closure can be built but, as far as 06 found, not applied by the stepper; packing a `Predates` to
+   the stepper's level lets the stepper apply it, but then a step cannot prove its fresh level below
+   the stepper's (06 F4.2, r3.2); a function cannot iterate `Program` steps (03 F4.2); every
+   function a step calls must be minted before the program's level (03 F4.3, 05 F6); a driven run's
+   result reaches only its own later steps, never compile-time code or `qed` (05 F6, r2.5).
 5. **`slot-eq` makes acceptance implementation-dependent.** §67: "which one a call answers may
    differ between runs". A run-position `comptime-match` on `ESome` is accepted by both; that
    `ENone` would reject is inferred, not observed (01 §3.8; 05 §2.2). Answers differ today:
@@ -99,9 +100,11 @@ Each item is the tracks' recommendation, not a decision.
    macro call among an application's arguments, left to right, then elaborate the arguments left to
    right (`proto/review3/gensym_*.sl`; special forms' operands unchecked; 01 §3.6, r3.1). At runtime
    the reference runs a head form before an argument form in a body
-   (`proto/review3/head_arg_order.sl`); slc's order is untested (02 §6, r3.1; section 6). Observers:
-   crashes, stuck states, and divergence, `Measure` cost being absorbed once the world's answers are
-   inputs; order-independence otherwise is a conjecture (02 §2.3, r3.3).
+   (`proto/review3/head_arg_order.sl`; 02 §6, r3.1), and so does `slc --interpret`
+   (`proto/review3/00_arg_head_order.sl`, this summary's own check, as 02 reads
+   `self/elab-main.sl:178-182`); slc's compiled order is untested (section 6). Crashes, stuck
+   states, and divergence can observe order; `Measure`'s cost readings are absorbed once the world's
+   answers are inputs; that nothing else does is a conjecture (02 §2.3, r3.3).
 7. **Extern mode changes acceptance by DESIGN.md's text.** §35: "with externs too, `(slot-of k)` is
    tag slot `k`"; `proto/dyn/tagslot.sl` is refused under `--no-extern` (02 §2.5, Q6).
 8. **Compile-time fuel and crashes.** DESIGN.md does not mention fuel (03 F1). Both implementations
@@ -121,8 +124,9 @@ Each item is the tracks' recommendation, not a decision.
     reference print every element. `heap-strs-fuel` also cuts a request's string list short silently
     past 10^6 elements; 04 reads both as plain bugs (04 §2.3, r3.4).
 11. **Output-end risks in slc.** The emitter needs atom call and constructor arguments, which
-    nothing types; the `-imm` operations and `(imm o n)` stores, emitted as `Array.unsafe_set`
-    (`emit.sl:863-868`), bypass OCaml's write barrier (safety unchecked; 04 r3.1); the `Slots`
+    nothing types; the FFI's `-imm` operations, and the `(imm o n)` stores slc emits as
+    `Array.unsafe_set` (`emit.sl:863-868`; five for `tests/cell_imm.sl`), bypass OCaml's write
+    barrier (safety unchecked; 04 r3.1); the `Slots`
     implementation hashes raw addresses rather than searching with `slot-eq` as §69's models do, and
     its detection of GC moves is checked only by tests; `Bytes.unsafe_to_string` in `bytes-str`
     relies on uniqueness; 20-argument tail calls were checked only on amd64, OCaml 4.14.1, no
@@ -139,8 +143,9 @@ Each item is the tracks' recommendation, not a decision.
     heap spec; it links that machine to the tree reading the fact table relies on (05 §6, a
     reading).
 15. **Source details are observable.** Columns are 1-based bytes in both (01 §3.9, r2.5). In two
-    tests the reference reported only the first error and slc later ones too (01 §3.7); after a
-    compile-time crash (`fuel.sl`, `--eval-fuel 5`) the first message's position differs (01 r3.3).
+    tests the reference reported only the first error and slc later ones too (01 §3.7); when
+    compile-time fuel runs out (`fuel.sl`, `--eval-fuel 5`) the first message's position differs (01
+    r3.3).
     After an error slc still runs some run-position code but gives a call no `Settled` result; why
     is untraced (01 §3.7, r2.1). The reference prints a first file's value before a second file's
     syntax error, then exits 1 (01 r2.11).
@@ -203,9 +208,9 @@ before their statement, inner before outer, head, arguments, `values` left to ri
 before branch; (O2) only what DESIGN.md fixes, the spec a relation over orders, with a diamond proof
 about as big as type soundness; (O3) O1 now, order-independence later. *Rec.* (02): O1/O3.
 Sub-question: does §15's "behaves as if" fix timing (rough edge 4)? 02's variant "a form head, then
-the §15 bindings" fits the reference, which runs a head form first (tested in a body; slc untested,
-key finding 6), and §6 with §27; the brief's proposal A fits hoisting only if applied after it (02
-§2.2). 04 asks whether order is meant to be unobservable (cross-file 2). *Deps:* lock-step versus
+the §15 bindings" fits the reference and `slc --interpret`, which run a head form first (tested in
+a body; key finding 6), and §6 with §27; the brief's proposal A fits hoisting only if applied after
+it (02 §2.2). 04 asks whether order is meant to be unobservable (cross-file 2). *Deps:* lock-step versus
 confluence for the compiler theorem; slc's emitter vs O1. *Wording:* O1, O3 need it. (02 decision 3,
 Q3; 04 rough edge 1.)
 
@@ -319,8 +324,8 @@ outcome of one total relation; 05 separate `Elab`, `Fails`, and an exclusivity l
 exclusivity is plain induction, fixing premise order (3) (07 F3). (iii) Content: (a) "rejected"; (b)
 first error position and macro trace; (c) also a structured reason, including §4's text and §28's
 expected constructor and actual value; (d) full text. 01: (b) in the theorem, (c) in the relation,
-never (d), noting the implementations differ even on the first message's position after a
-compile-time crash (key finding 15); 05 carries a `Diag`; 07's mismatch rule carries the value, and
+never (d), noting the implementations differ even on the first message's position when
+compile-time fuel runs out (key finding 15); 05 carries a `Diag`; 07's mismatch rule carries the value, and
 free reason text is outside its theorem (07 r2.4). Malformed syntax must be a positive error (01
 §3.7). *Deps:* every pass's architecture; how much of 3 is pinned. *Wording:* none. (05 decisions 1,
 2; 01 decision 4, §4.3; 07 decision 3.)
@@ -333,7 +338,7 @@ free reason text is outside its theorem (07 r2.4). Malformed syntax must be a po
   H(src); or three outcomes. Rec.: the first.
 - 05: (a) meta only; (b) Bove–Capretta `compile-h` on an erased `Halts` (one reading of 4(ii), in
   practice not callable without a proof or prior fuel run; a uniform proof exists for a terminating
-  toy step, ruled out for a faithful compiler; key finding 4); (c) fuel whose `OutOfFuel` proves the
+  toy step, ruled out for a faithful compiler under key finding 2's premises; key finding 4); (c) fuel whose `OutOfFuel` proves the
   spec run unfinished after `f` steps (one reading of 4(i)); (d) a step machine giving T1/T2. Rec.:
   (d) plus (b) or (c), uniform totality meta; alternative: a compile-time resource budget in the
   language, making statement 3 literal (a language change).
@@ -399,7 +404,8 @@ presentation. *Wording:* none. (06 decision 1, Q1, F4.1.)
 
 **18c. Should a function apply a closure whose level is packed beside it?** §18: "a function at a
 later level cannot be called from code at an earlier level". 06 built such a closure and could not
-apply it, nor with a packed `Predates`; other arrangements are untried (06 F4.2, r3.1, r3.2). 06
+apply it; with a packed `Predates` to the stepper's level the stepper applies it, but a step cannot
+prove its fresh level below the stepper's; other arrangements are untried (06 F4.2, r3.1, r3.2). 06
 proposes no change, since a counter closure works. *Wording:* only if changed. (06 decision 2.)
 
 **19. Judgment shape and staging.** *Rec.* (01): 01 §4.2's layers and Σ/Γ split, the run a parameter
@@ -440,7 +446,7 @@ decision 9, §6.)
 3. **§15's bindings.** §29 mentions binders for "head, arguments and scrutinee (§15)", but §15 names
    only arguments; how are several ordered? (02 §5.2, §5.3; 04 §5.1.)
 4. **§15's "behaves as if" and time**: if temporal, `((pick) (h n))` runs `(h n)` first, against §6
-   with §27 and against the reference (key finding 6). (02 §5.10.)
+   with §27 and against the reference and `slc --interpret` (key finding 6). (02 §5.10.)
 5. **Is evaluation order meant to be unobservable?** 04 notes it decides between a crash and
    divergence when one argument does each, a case §17's levels are meant to rule out ("Termination
    rests on levels"), unsettled. (04 §5.1, r2.20, r3.7; 02 §2.3.)
@@ -565,10 +571,13 @@ Open ones; numbers follow the review log, gaps being resolved items.
   many-argument tail calls; GC safety of `-imm` operations and of `Array.unsafe_set` through an `int
   array` cast on a variant block; `Slots` hashing across GC moves; `bytes-str` input never mutated
   (02 §6; 04 §2.5, §6, r3.1).
-- **slc's runtime head-versus-argument order**: `slc --interpret` overflows its stack on
-  `proto/review3/head_arg_order.sl` at any depth (02 §6, r3). This summary's own check: also at
-  depth 0, and not with a small array, so it seems to be slc's crash on the oversized `array-new`;
-  §31 leaves "How a crash is reported" open, so whether it is a defect is unsure (cause untraced).
+- **slc's runtime head-versus-argument order**: compiled output is untested. `slc --interpret`
+  overflows its stack on `proto/review3/head_arg_order.sl` at any depth, including 0, and not with
+  a small array (02 §6, r3; this summary's own check), so the overflow seems to be its crash on the
+  oversized `array-new`. `proto/review3/00_arg_head_order.sl` puts that allocation in the head and
+  a fuel-exhausting call in the argument: under `--eval-fuel 20` both implementations crash on the
+  allocation, and with the allocation removed both report out of fuel. §31 leaves "How a crash is reported" open,
+  so whether the overflow is a defect is unsure (cause untraced).
 
 ## 7. Spikes
 **06, a certified fuel-free stepper** (`proto/stepper/`). A register and mutable-heap language with

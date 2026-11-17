@@ -1680,3 +1680,69 @@ Unsure, not changed:
   (line ranges, attributions inside the track files); nothing here was changed for them.
 - Key finding 10 drops 04's remark that the unrefuted zero cases of `str-split-fuel` and the sugar
   budget would be proof obligations, for length.
+
+## Propagation check (third round)
+
+A check of the third-round propagation against the track files as they now stand (all three review
+sections), against the previous commit's 00-summary.md, and of 00-glance.md against 00-summary.md row
+by row. Re-run on the reference and `_build/release/slc --interpret`: `proto/review3/gensym_depth.sl`,
+`gensym_head.sl`, and `gensym_splice.sl` (outputs as 01 §3.6 quotes, both); `head_arg_order.sl`
+(reference "out of fuel" under `--eval-fuel 20`, `Array.make` crash without it and at depth 0; slc a
+stack overflow at depths 50 and 0, `1` with a small array); `06_vacuous.sl` after `std/list.sl` and
+06's `spec.sl`, `machine.sl`, and `complete.sl` (accepted, both); `06_packed_predates_bad.sl`
+(refused at 18:22 with "`L2` was not in scope when level `S` was minted", both; its first 13 lines,
+through `use`, accepted); `05_halts_uniform.sl` after `proto/theorems/bove.sl` (prints `7`, both);
+slc compiling `std/immediate.sl tests/cell_imm.sl` (five `Array.unsafe_set (of_any cell3 : int
+array)` stores; `imm-stores` is `emit.sl:863-868`). Nothing below is a decision.
+
+1. Key finding 4 and decision 18c said a packed-level closure could not be applied "also with a
+   packed `Predates`" / "nor with a packed `Predates`". 06 F4.2 and r3.2 say the opposite for the
+   application: with the `Predates` packed, a function at the stepper's level `S` applies the
+   closure (the first 13 lines of `06_packed_predates_bad.sl` are accepted); what is refused is a
+   step proving its fresh level `L2` below `S`. Both reworded.
+2. Key finding 4 and decision 14 (05's (b)) said the diagonal rules out a uniform `Halts` proof for a
+   faithful compiler with no premise; 05 F4 and §4.3 hold it only under the diagonal's premises and
+   "if the logic is sound". Hedged by reference to key finding 2's premises.
+3. New test `proto/review3/00_arg_head_order.sl`: the oversized `array-new` in the head form and a
+   50-deep `tail` recursion in the argument form. Under `--eval-fuel 20` the reference crashes
+   (`Array.make`) and `slc --interpret` overflows its stack, while with the allocation removed both
+   report "out of fuel"; so `slc --interpret` too runs the head form first, as 02 §2.2 reads
+   `self/elab-main.sl:178-182`. Key finding 6, decision 4, rough edge 4, section 6, and 00-glance's
+   order bullet said slc's order was untested; now only slc's compiled order is listed as untested.
+4. Key finding 11 read two ways: "the `-imm` operations and `(imm o n)` stores, emitted as
+   `Array.unsafe_set`" made the FFI's `-imm` operations emitted code. 04 §2.5 places them in
+   `lib/ffi_core.ml` and the templates and only the `(imm o n)` stores in emitted code. Reworded,
+   with the re-run count of five.
+5. Key finding 6's "Observers: crashes, stuck states, and divergence, `Measure` cost being absorbed
+   ..." read as listing `Measure` among the observers. Reworded to 02 §2.3: crashes, stuck states,
+   and divergence can observe order; `Measure` is absorbed once world answers are inputs; that
+   nothing else does is the conjecture.
+6. Key finding 15 and decision 13 called the `fuel.sl` `--eval-fuel 5` case "a compile-time crash".
+   What happens there is fuel exhaustion, and whether that is a §31 crash is decision 6's open
+   question. Reworded to "when compile-time fuel runs out". (01 decision 4 itself says "On a
+   compile-time crash"; 01 is outside this check.)
+7. 00-glance's diagonal bullet said "no source can produce that evidence for itself"; 03 F6 and
+   r3.5 say no diagonal program Q can, while code outside Q may, and other sources may prove their
+   own H (05 §4.3: "H for one particular program ... by an `erased` proof"). Narrowed to the
+   diagonal source, with the outside-code clause restored.
+8. 00-glance's printer bullet said the defect is "confined to `show-at`", which no file claims and
+   which sits beside key finding 10's second silent cut in `heap-strs-fuel`. Now "lies in `show-at`,
+   which feeds ...", with the `heap-strs-fuel` cut added.
+9. Rewrapped key finding 4, decision 4, and two 00-glance bullets that the propagation left with
+   a stray short line or over-long lines.
+
+Checked and found consistent: the header's `r3.N` definition; key findings 2, 10, 16, 17, and 18;
+decisions 3, 5, 6 (02's C4), 7, 8, 8a, 8b, 9, and 14 (01) against 01 to 07 as they now stand; rough
+edges 1, 2, 5, and 27; section 6's diagonal, Gödel, and spike-completeness items; section 7.
+00-glance's decision table agrees with 00-summary §3 row by row (recommendations, "Deps" numbers,
+and wording marks), and its suggested order with the "Deps" entries. Nothing the previous commit
+stated was dropped without a counterpart: its key finding 2 remark on 05's Gödel-II conditions is
+in section 6, and its "arguments before head per `lib/eval.ml:24`" item was false (02 r3.1).
+No narration, past-tense history, or missing Oxford comma was found in either file beyond the above.
+
+Unsure, not changed:
+- slc's compiled (`--build`) runtime order is still untested; no observable that distinguishes it
+  without fuel was tried.
+- Why `slc --interpret` overflows on the oversized `array-new` (FFI or model run) is untraced.
+- Key finding 4's "per input or, for a terminating toy step, for every input" compresses 05 F4's
+  three sources; 05 itself lists a uniform `erased` proof only as the second source's variant.
