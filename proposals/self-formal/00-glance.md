@@ -1,8 +1,7 @@
 # 00. At a glance
 
 Written by Claude agents overnight. Proposals and agents' readings only; nothing is approved or decided.
-Every line condenses the 00-summary section it cites; where they differ, 00-summary (and its Review notes,
-Second review propagation, and Third review notes) is right.
+Every line condenses the 00-summary section it cites; where they differ, 00-summary is right.
 "Owner statement n" items are an earlier session's paraphrases, not the owner's words (00-summary header).
 
 ## What was done
@@ -11,10 +10,8 @@ Second review propagation, and Third review notes) is right.
   04 compiler route, and 05 theorems (00-summary header, §1).
 - Two compiled spikes on toy languages: 06 a certified fuel-free stepper and
   07 the §29 round trip with a suspendable checker (00-summary §7).
-- Each file was adversarially reviewed twice ("Review notes", then "Second review notes"), and 00-summary was
-  reviewed and then updated to the second reviews (00-summary Review notes, Second review propagation).
-- Prototypes are under `proto/` (e.g. `proto/fuel/`, `proto/stepper/`, `proto/roundtrip/`, and the second
-  reviews' `proto/review2/`) (00-summary §2, §7).
+- Prototypes are under `proto/` (e.g. `proto/fuel/`, `proto/stepper/`, `proto/roundtrip/`, and
+  `proto/review2/`) (00-summary §2, §7).
 
 ## Five things worth knowing first
 
@@ -22,12 +19,12 @@ Second review propagation, and Third review notes) is right.
   `compile : Src -> Verdict` with no further evidence can be faithful on every source; only the mechanism is
   tested. It does not refute owner statement 4(ii) as mathematics, nor a `compile` taking erased evidence of H
   for its one source. slc does not escape it: its compile is one `Program` step bounded by fuel, and its `World`
-  blocks only the literal construction (03's reading). 05 now agrees it needs T1–T4 and determinism, not T5,
-  and no quine in its `read-file` macro form (00-summary §2 item 2).
+  blocks only the literal construction (03's reading). 05's version needs T1–T4 and determinism through T3, not
+  T5, and no quine in its `read-file` macro form (00-summary §2 item 2).
 - **Spikes.** The intrinsic-derivation plus `Program`-driver pattern compiles and runs at toy scale, fuel-free, on both
   implementations, but proves partial correctness only: an always-"stuck" (06) or never-answering (07) step passes,
-  and 07's `Rejected` reason text is unconstrained. With one nondeterministic rule added, 07's exclusivity fails
-  (compiled). Neither models Sleight's own machine (00-summary §2 items 16, 17).
+  and 07's `Rejected` reason text is unconstrained. For one variant with a nondeterministic rule added, both
+  derivations exist (compiled). Neither models Sleight's own machine (00-summary §2 items 16, 17).
 - **`slot-eq`.** §67 lets answers differ between runs, so acceptance can depend on the implementation; answers already
   differ (interpreters vs `--build` binaries with externs on `imm_eq.sl`; slc's native build vs `--byte`,
   `--interpret`, and the reference on `slot_eq_share.sl`). That an `ENone` answer rejects is inferred. The output
@@ -42,7 +39,7 @@ Second review propagation, and Third review notes) is right.
 
 ## Decisions, at a glance (00-summary §3)
 
-"Linked" copies each decision's "Depends on it" line in §3; that line names dependents in most entries
+"Linked" copies each decision's "Deps" entry in §3; that entry names dependents in most entries
 but sometimes the decisions an entry itself rests on (e.g. 6 lists 14 and 14 lists 6), so read it as "linked to".
 Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 
@@ -53,14 +50,14 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 | 3 | Is the order of elaboration part of the language? | (a) fix it: head, then items left to right (01) | 5, 13 | part |
 | 4 | Is the runtime evaluation order fixed? | fix it, O1/O3 (02); 04 asks if order is unobservable | — | part |
 | 5 | How is `slot-eq`'s nondeterminism handled? | (a) oracle parameter (01, 02, 05; 04 treats it as one); shapes differ | 8 | part |
-| 6 | What is a compile-time crash or fuel exhaustion? | tracks disagree; 01 and 02 opposite, now cross-referenced | 5, 14 | part |
+| 6 | What is a compile-time crash or fuel exhaustion? | tracks disagree; 01 and 02 opposite, cross-referenced | 5, 14 | part |
 | 7 | Does the spec run post-erasure code? | R1, as §27 and §29 say (02) | — | no (R3 departs from §37, §39) |
 | 8 | Machine state and addresses? | A1: `Imm n \| Ptr a`, abstract never-reused addresses (02) | 5 | no, unless sharing goes in |
 | 8a | Compile-time run small-step over the compiler's machine? | (a) yes, to keep the evaluator proof small (07) | 8 | no |
 | 8b | Next spike on unique `Array` heap, abstract addresses? | yes, before scaling (06) | — | no |
 | 9 | Externs in the spec? | tracks disagree (02: E2; 04, 05: parameterize) | 2 | no |
-| 10 | Where may a compiled run crash? | C2, named resource events; C3 later (02); 04: "a value some spec run gives, or a crash" | — | no (review unsure) |
-| 11 | What happens when the spec goes wrong? | 02: S1 defined `abort`; 05: no recommendation | — | no (review unsure) |
+| 10 | Where may a compiled run crash? | C2, named resource events; C3 later (02); 04: "a value some spec run gives, or a crash" | — | no (unsure) |
+| 11 | What happens when the spec goes wrong? | 02: S1 defined `abort`; 05: no recommendation | — | no (unsure) |
 | 12 | Compile-time values in output: trees or heap graphs? | V1 trees, unless a reason for V2 (02) | — | no |
 | 13 | Intrinsic theorems, positive `Fails`, rejection contents? | intrinsic, positive `Fails`; tracks disagree on its shape | 3 | no |
 | 14 | Form of theorem 3 and hypothesis H? | tracks disagree | 6, 18 | part (budget option) |
@@ -77,8 +74,8 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 | 22 | Which checker's PASS is the trust root? | B1 (04); 05 no recommendation | — | no |
 | 23 | Prove sole-reference and full-semantics safety inside Sleight? | plausible and worth it (05) | — | no |
 
-"—" means the entry's "Depends on it" line names no decision number, or there is none.
-17's line reads "everything in this group" (decisions 17 to 23).
+"—" means the entry's "Deps" names no decision number, or there is none.
+17's reads "all of group E" (decisions 17 to 23).
 
 ## Suggested order to decide
 
@@ -92,15 +89,4 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 6. **Decision 17** (route), with 18: everything in group E depends on 17, and 04 says its F2, if wanted, must be
    decided before R3 starts (§3 decisions 17, 18).
 
-## What the second reviews changed most (00-summary Second review propagation)
-
-- Retracted: slc escaping the diagonal; "slc stops running compile-time code after an error"; the
-  printer defect possibly reaching compiled output (items 1, 7, 11).
-- Now compiled: exclusivity failing for one nondeterministic variant (07); generic matching on a parameter
-  relation (05); the column unit as bytes (01) (items 10, 11, 19).
-
-## Third review notes
-
-- Twelve corrections, listed in 00-summary's Third review notes. Among them: the printer defect also reaches
-  `dump-context` reports (`proto/review2/00_dump_deep.sl`); rough edge 17 now includes `settled-val-apply`;
-  rough edge 12 no longer makes §33's `Nat` identity conditional.
+Review history, corrections, and re-runs: 00-summary-review-log.md.

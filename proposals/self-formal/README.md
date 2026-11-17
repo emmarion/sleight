@@ -9,3 +9,4 @@ Read `00-glance.md` first (one page), then `00-summary.md`, which combines
 the numbered files: tracks 01 to 05 and spikes 06 and 07, each reviewed
 adversarially, with its corrections listed in its "Review notes".
 Prototypes are under `proto/`.
+`00-summary-review-log.md` keeps the longer pre-condensation summary.
