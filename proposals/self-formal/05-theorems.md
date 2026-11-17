@@ -685,3 +685,75 @@ Uncertain points, not changed:
   they are a session's paraphrases.
 - I did not re-check the "first attempt was refused" claims in F3 and
   F5, only that the final versions behave as described.
+
+## Second review notes
+
+A second adversarial reviewer read DESIGN.md in full and SOUNDNESS.md
+parts 1, 3, 5 to 7, and 9 to 11, and re-ran every prototype with the
+reference (unchanged since 164fcf1, as are `self/` and `bin/`): each
+accepts, refuses, or prints as stated, and `halts_reflect.sl` with
+fuel 2 is refused at the `comptime-match` (`expected FDone, got FOut`).
+
+Errors found and changed:
+
+1. Summary, "if the compiler is faithful (T5)". The diagonal needs T1 to
+   T4 and determinism through T3; T5 is not needed when Q branches on
+   the verdict through `compile-error`, as 03 F6 does. §4.3 said T5 was
+   needed; fixed there too.
+2. §4.3 and section 9 treated a quine as a premise. 03 F6 gets the
+   self-reference from `read-file` in a macro, with its mechanism
+   compiled (`proto/fuel/diagonal.sl`). Added; the quine is now needed
+   only for the run-position variant.
+3. §4.3, "Which half is the provable one is my guess". The diagonal in
+   the same section, and option 1 ("no Sleight code can supply `h` for
+   every `src`"), already rule out uniform H in a recursable form if
+   the logic is sound. Now says so; only full-semantics safety stays a
+   guess. Section 9 updated.
+4. F7 and §4.4.2, "generic code cannot take apart a derivation of a
+   parameter relation". With the relation's constructors and an erased
+   `Matchable` passed in, `open-adt` then `let-match` works
+   (`proto/review2/05_generic_match.sl`, accepted). Narrowed.
+5. F6 and §4.3 option 3, "no Sleight code, compile-time or otherwise,
+   can obtain the result of a driven run" (from review note 13). The
+   run's own later steps hold it, as `drive.sl`'s `Done` branch does
+   with `g`. Now: no compile-time code and no `qed`.
+6. Section 9, "I found no test or section that names the pattern" of a
+   `many` function recursing on an erased `subterm`. `tests/erased_subterm.sl`
+   is exactly that, citing §21. Fixed.
+7. §3 T6, CompCert. As I recall it, the forward-to-backward flip needs
+   a deterministic target and a receptive source, not a deterministic
+   spec. Reworded, hedged as from memory.
+8. §2.3, H from SOUNDNESS.md. Added host I/O and part 1's exclusion of
+   `--no-prelude` programs with their own models or `def-prim`s.
+9. Header, `halts_reflect.sl` also needs `fuel_run.sl` on the command
+   line.
+10. Summary, `read-file` called a source of "choice". It is a dependence
+    on the file system, an input. Reworded.
+11. Decision 4 stated "§31 puts crashes outside 'the semantics'" flatly;
+    §3 T3 gives it as a reading. Hedged.
+12. T6, "DESIGN.md has no coinductive data" cited SOUNDNESS.md for a
+    DESIGN.md claim. DESIGN.md does not mention it; reworded.
+13. F3, the one-block constraint is specific to `Certified`'s single
+    level: an ADT with a level per field accepts two blocks
+    (`proto/review2/05_spec_two_levels.sl` + `05_tb_two_level.sl`
+    PASS; two blocks against `spec.sl`, `05_tb_one_level.sl`, FAIL).
+    Added.
+
+Confirmed: the §9, §21, §67, §71, and §72 quotes; SOUNDNESS.md's "(C)",
+"(T)", "a sketch", "Without (T) this step fails", "Values are finite
+trees", part 5's "outside the claim", and part 6's "Run-position forms
+run total code by (T)"; README.md's anticlassicality and IΣ₂ text;
+`self/README.md`'s "What it does not do"; `prelude.sl:67` and the
+`def-prim` range (1401 to 2250). The Gödel step (uniform H plus
+stripped-run safety gives consistency) holds as far as I can see,
+since an erased `(False)` yields a `many` one through an `absurd`
+function (`proto/review2/05_erased_to_many_false.sl`, accepted), so
+inconsistency gives an accepted `many` run-position `(False)` form.
+
+Unsure:
+- Whether Gödel II's conditions hold for Sleight; unchecked by all
+  three passes.
+- The "first attempt was refused" claims in F3 and F5 beyond my
+  two-block check.
+- Whether the oracle can be shaped so that completeness is not vacuous
+  (decision 3); not attempted.

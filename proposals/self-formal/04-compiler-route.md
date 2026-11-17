@@ -407,7 +407,8 @@ a checker, an evaluator, and a code generator.
   - Macro expansion need not be re-run. [D] §62: "The forms are elaborated
     and checked as if they had been written there". [P] But then the
     theorem speaks of the *expanded* program. The source-to-expanded step
-    is trusted, which sits uneasily with [O]3, which speaks of source text.
+    is trusted, which sits uneasily with a correctness theorem about
+    source text; [O]3 speaks of source text.
     Closing that gap means proving the expander, which runs the evaluator
     on macro functions and reads elaborator state (§64-65 handles,
     `resolve`, `settled-eq`).
@@ -643,10 +644,13 @@ IR's call and constructor arguments syntactically atomic in either case.
 
    Everything below depends on this choice.
 2. **Does the theorem start at source text or after the reader (or after
-   macro expansion)?** [O]3 suggests source text. If so, the reader and the
-   macro expander must be proved. That rules out R2's "trusted front end"
-   for [O]3. Recommended: text, with the reader proved early, since it is
-   small (742 lines in slc).
+   macro expansion)?** [O]3 suggests source text. [P] [O]3's wording by
+   itself asks only that every source text gets one of the two verdicts,
+   which a total but unproved front end could give. If the theorem is
+   also to say that the verdict is the spec's verdict on the text, the
+   reader and the macro expander must be proved, which R2's trusted front
+   end does not do. Recommended: text, with the reader proved early,
+   since it is small (742 lines in slc).
 3. **Fuel: F1 (iterative deepening; fuel in the code, not in the theorem)
    or F2 (explicit-stack compiler; no fuel anywhere)?** Recommended: F1
    first. F2 changes how every elaboration function is written, so it

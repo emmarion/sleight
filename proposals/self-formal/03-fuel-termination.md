@@ -663,3 +663,76 @@ Uncertain points:
   inference. That rests on SOUNDNESS.md's (T), which is the sessions'
   argument, not an owner decision.
 - The compiled timing rows and the 22 MB figure were not re-run.
+
+## Second review notes
+
+A second adversarial reviewer read DESIGN.md in full, SOUNDNESS.md parts
+1, 3, 5, 6, 7, and 9 to 11, the cited code, and re-ran `diagonal.sl`
+(and a one-byte-longer copy) under the reference and `slc --interpret`,
+`fr/a.sl` to `fr/d.sl` (reference, `--no-extern`, `slc --interpret`),
+`suspend.sl` 0/1/2 under both and 0/2 built by both, 3 under a timeout,
+and the `--eval-fuel 1000` pair under both. All behave as the body says.
+
+Errors found and changed:
+
+1. F6, "slc already takes this escape" (introduced by review note 2).
+   slc's whole compile runs in one `Program` step (F2), and it is total
+   through its fuel (F3 row 1), not through the driver. Holding a
+   `World` does stop a source from calling it at compile time, but a
+   `compile` that uses its `World` only for file reads has a World-free
+   version taking the files from `Src`, to which F6 applies (my
+   reasoning). Rewritten; review note 2's conclusion no longer stands.
+2. F6, "as slc's `eval` recurses on `(subterm erased (Nat) xf)`" (also
+   review note 5). In `elab-main.sl:159-190` `eval` passes `xf`
+   unchanged; it drops only at macro expansion (`elab-main.sl:509-511`,
+   where it is `many`), and evaluation recursion is bounded by the
+   `many` `fuel`. Replaced the precedent with `tests/erased_subterm.sl`
+   and 05's `proto/theorems/bove.sl`, both accepted, which also test the
+   "erased relation returned with each step" point in toy form. Section 6
+   updated.
+3. F6, the argument assumed `compile` answers the same on Q inside and
+   outside Q's run. A `compile` that calls `slot-eq` need not (§67).
+   Added that the argument then applies to its copy with every
+   `slot-eq` answered `ENone`, which §67 permits.
+4. Summary, the diagonal bullet stated the conclusion without the body's
+   condition that Sleight's functions terminate. Added it, attributed to
+   SOUNDNESS.md's (T), which that note argues but does not prove.
+5. Summary, "one fuel that can change a verdict". F3 row 6's
+   `merge-opens` returns an early `UOk` on exhaustion (`elab.sl:1988`),
+   which would accept if its bound (opens + 1, `elab.sl:2004`) were
+   short. Now "known to", with that caveat.
+6. F7, H from SOUNDNESS.md. Added (E) for a stripped spec run, and that
+   part 1 excludes `--no-prelude` programs with their own models or
+   `def-prim`s ("the claims do not cover such a program").
+7. F7, "an external toolchain" was attributed to §72, which does not say
+   it. Now cited to MANUAL.md:195.
+8. F3 citations: MANUAL.md:158-162 → 163-165 (the refusal text) and
+   MANUAL.md:163 → 162 (the default); `elab.sl:1242` → 1241-1244 (`Steps`;
+   review note 10's 1245 is also off: `SS` is line 1244); and
+   `elab-main.sl:143-159` → 147-159 (143-146 are `native-cids`).
+9. Q1(a), "about 3240 lines" counted to the end of the file. The block
+   is `elab-main.sl:158-3234`, about 3080 lines; 95 functions confirmed.
+10. F4.3, "the driver's level must come last in the file order"
+    overstated the constraint. Now: `P` after the level of every
+    function a step calls.
+11. Header: the owner items cited as "owner item" and "decision 3" are
+    the brief's paraphrases. Said so.
+
+Confirmed: §4's "fires wherever it is elaborated" with a compiled check
+(`proto/review2/03_untaken_ce.sl`: a run-position `match` whose untaken
+branch holds `compile-error` is refused); `diagonal.sl` is 969 bytes and
+`macro-fail` expands to a `compile-error` form (`std/macro.sl:28-36`);
+the `fr/` errors as quoted; `interp.sl:109` passes the same `fuel` to
+each step; Brown and Palsberg, POPL 2016, F_ω (from memory). Rough
+re-timing: about 7 µs per batched reference step and 2 µs extra per
+`Continue`, the same order as F5.
+
+Unsure:
+- Whether Q1(b)'s claim that a failed depth-fuel attempt is a prefix of
+  the successful run survives effects and counters; (b) already lists
+  them as needing rollback.
+- Whether F3 row 2's per-item parameter can bind first; each `xf`
+  decrement seems to accompany a global-count increment, but I did not
+  check every path.
+- F6 and F7 still rest on SOUNDNESS.md's (T) and on the logic's
+  soundness, neither proved.

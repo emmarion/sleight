@@ -381,3 +381,72 @@ Uncertain:
   were compiled.
 - The `--build` timings and "accepted as first written" were not
   re-checked.
+
+## Second review notes
+
+A second adversarial review read DESIGN.md in full and every file in
+`proto/stepper/`, and re-ran at 07692f2 (no code change since d6644d9):
+`run.sl`, `complete.sl total_demo.sl`, `ho_counter.sl`, and
+`ho_exist_build.sl` under the reference, `--no-extern`, and
+`slc --interpret`; `run.sl` under `--build` and `slc --build`; both
+bad files; the two teeth checks, and the wrong `runs-fn` step; the
+numeral refusal; the line counts; the 26 failure sites; the checking
+times; and the 7821- and 26021-step runs, `--build` included. All
+matched except as below. Errors found and changes made:
+
+1. F1: the body still said the list is summed "from register 1",
+   while first-review note 6 said it had been reworded to register 2.
+   `run.sl` copies register 1 to register 2 and walks register 2. The
+   body now says so.
+2. F2 said "the only trace a caller can start with is `TNil`". A caller
+   may pass any erased `Trace` whose type fits, for example one with a
+   step already taken; the soundness claim holds for every such trace,
+   since a `Trace` is a chain of `Step` derivations from
+   `(c0 :: nil, m0)`. Reworded.
+3. F2: added that `drive`'s type says nothing about `advance`'s
+   outcome, so the driver and its printed text are outside the theorem
+   (as 07 F7 says of its driver).
+4. F2: `step-back`'s cases are one to four lines, not "two or three".
+5. F3: "On the empty stack the derivation's `StarRefl` case is refuted"
+   had it backwards: in the `Running` case, `StarRefl` would force the
+   stack empty, and the step `s` refutes that. Reworded.
+6. F6: the long-run program was not identified; it is `run.sl` with
+   both loop bounds set to 300 and 1000 (the step counts reproduce
+   exactly). "Every step walks" the heap was an overclaim: only
+   allocation, read, and write do. The `--build` times were re-run
+   (0.00 s and 0.06 s); §6 updated.
+7. Q1.4: no lemma turns a `Star` into a `Trace`; added.
+8. Q2.1: refuting failures needs lemmas beyond `nth-fn` (for example
+   for `SetNth` and the value-shape tests); the 26-site count was
+   confirmed by the first review and is now stated with its split, and
+   dropped from §6.
+9. Decision 1's "compiled at first attempt" is the author's report and
+   F4 lists exceptions; hedged.
+10. Oxford commas in several lists; header names the second review's
+    commit and that the command lines take `std/list.sl` from the
+    repository root.
+
+The theorem's type was checked against the claims: `advance`'s
+`Halted` carries `(erased (Runs m0 c0 mf) d)` for the trace's `c0`,
+`m0`; `run.sl` starts it with `TNil` at `(prog :: nil, mem0)`;
+`run-total`'s `AgreeHalted` carries `(many mf is r)`. Vacuous
+implementations that pass every type: a `step` that answers `SStuck`
+on any or all states. A `step` cannot answer `SHalt` on a non-empty
+stack (its type is indexed by `Nil`), and every `SNext` carries a real
+`Step`, which is deterministic.
+
+Points I am unsure of:
+
+- Whether some arrangement with a `Predates` packed beside the level
+  would let F4.2's packed-level closure be applied. My reading: the
+  stepper's level is minted first, and §18's `prove-predates` needs
+  the lower level introduced earlier, so a level minted at each step
+  cannot be proved below it, and `predates-trans` and
+  `predates-subterm` only chain proofs that already exist. Not
+  compiled.
+- Every claim that an erased derivation is "real" rests on Sleight's
+  erased logic having no closed proof of `False`; with §10's
+  `Type : Type` and no positivity, nothing here shows that. The
+  brief's owner statement 1 (an earlier session's paraphrase) says no
+  consistency theorem is expected.
+- "Accepted as first written" (F4) remains the author's report.

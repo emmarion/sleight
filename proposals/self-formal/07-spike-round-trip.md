@@ -29,18 +29,18 @@ session's paraphrase.
   Exclusivity (`Elab ∧ Fails → False`) is proved. Its proof uses
   determinism of evaluation (`step-det`, `runs-det`, `evals-det`) and
   of every lookup the rules use; with one extra, nondeterministic
-  `Step` rule, exclusivity is false (F4).
+  `Step` rule, some program has both derivations (F4).
 - [C] Both the reference and slc accept the whole thing, run it, and
   report `--goal proved: PASS` for the packaged statement. Four
   deliberately wrong versions of single components are refused at the
   faulty proof term. Each is a standalone function, not wired into the
   checker: two have the signature of `check-assert` and `check-need`,
-  and two stand for one case of `mstep` and one transition of `cstep`. Example: skipping the
-  fact check in `Need` gives "expected
+  and two stand for one case of `mstep` and one transition of `cstep`.
+  Example: skipping the fact check in `Need` gives "expected
   `(Nth (Ent) es i (MkEnt v (KIs ct)))`, got `(Nth (Ent) es i (MkEnt v k))`".
 - How the suspended state is represented (the spike's key question). A
   suspended checker records "I am deriving
-  `Elab [] p0`, waiting on `Eval` of `t`" as two nested,
+  `Elab [] p0`, waiting on `Evals` of `t`" as two nested,
   defunctionalized derivation contexts. They are both erased fields of
   the `Waiting` state.
   - `Ctx p0 es p`: "a derivation for `es ⊢ p` plugs into one for
@@ -207,7 +207,7 @@ uses `impl.sl`'s lookups and `mstep`, and fails without it), and for
     spec to be deterministic".
 - The proof-carrying checker. Each lookup returns its relation (`Find`
   carries `Nth` or `NoNth`, `head` returns `Head`, and `ctor-dec`
-  returns `CSame` or `CNe`). The suspension machinery (`Ctx`, the two
+  returns `CSame` or a `CDiff` carrying `CNe`). The suspension machinery (`Ctx`, the two
   `plug` functions, `Reach`, and `reach-runs`) is about 45 lines.
 - The evaluator proof is trivial here, because the spec's evaluation
   relation is the same machine as the implementation's `mstep`: `mstep`
@@ -587,14 +587,17 @@ below. Errors found and changes made:
 7. §5, last rough edge: §42's "the driver's loop over total functions"
    was missing; it, with §17, suggests that functions are meant to
    halt. Added; the gap is now "not said outright".
-8. Header: Oxford comma; noted the second review's commit.
+8. Header: Oxford comma; noted the second review's commit. §1:
+   "`Eval` of `t`" named no relation; now `Evals`. F4: `ctor-dec`
+   returns `CSame` or `CDiff` (which carries a `CNe`), not `CNe`.
 
 Points I am unsure of:
 
 - Every "by construction" claim (F3) rests on Sleight's erased logic
   having no closed proof of `False`; with §10's `Type : Type` and no
-  positivity, nothing in DESIGN.md or this spike shows that. Brief item
-  1 says no consistency theorem is expected.
+  positivity, nothing in DESIGN.md or this spike shows that. The
+  brief's owner statement 1 (an earlier session's paraphrase) says no
+  consistency theorem is expected.
 - F5's "first version" histories (the bare `ne`, the erased `p0`) were
   reproduced by editing today's files, not from the original drafts.
 - That the replay variant cannot loop on a mismatched head answer: it
