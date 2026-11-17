@@ -218,8 +218,9 @@ uses `impl.sl`'s lookups and `mstep`, and fails without it), and for
   refused; with today's `det.sl` edited back that way, the message is
   "expected `(False)`, got `(CNe c2 c2)`". The fix is
   `(match erased ne _)`, a match whose every constructor is refuted,
-  which "produces its declared result" (§25, §21). `exclusive` is not
-  an `absurd` function, so §51's refutation rule is not what applies.
+  which "produces its declared result" (§25, §21). As I read §51, its
+  refutation rule covers absurd bodies only, and `exclusive` is not
+  `absurd`.
 - `replay.sl`, first version. "`p0`, declared `erased`, used in a
   non-erased position." Replay re-elaborates the whole source, so its
   state must hold the source at runtime: `(many p0 is src)`. The zipper
@@ -227,8 +228,9 @@ uses `impl.sl`'s lookups and `mstep`, and fails without it), and for
 - `drive.sl`. Calling the step parameter from `drive`'s body with a
   `Predates M P` gave "value mismatch: expected `PA`, got `P`", since
   the current level is `PA`. With no annotation the call is accepted:
-  §48 builds `(predates _)`, and an explicit one draws "unnecessary
-  `(predates _)`".
+  §48 builds `(predates _)`. Written out, either `(predates _)` or
+  `(predates p)` with a `Predates M PA` draws the warning "unnecessary
+  `(predates _)`; drop it" (re-checked).
 - Intended refusals:
   - `need_bad.sl` skips the fact check (shown in §1).
   - `assert_bad.sl` skips the constructor check: "expected `(Head v ct)`,
@@ -239,7 +241,8 @@ uses `impl.sl`'s lookups and `mstep`, and fails without it), and for
   - `settle_bad.sl` settles a `Let` to `0` without running it:
     `RunHalt` expected `(Step (Ev t env (Nil (Frame))) (Halt (RVal (VNum 0))))`.
 - Warnings (fixed): "lopsided `match`" (flattened to `let-match`), and
-  "same-level call … is unmarked; mark it `notail`".
+  "same-level call … is unmarked; mark it `notail`". Not re-checked;
+  the current files run with no warnings.
 
 ### F6. The replay variant [C]
 
@@ -255,8 +258,10 @@ direct-style structural recursion on the program, like `t1_toy.sl`.
   `RElab d → ElLet …`, `RFails f → FLetRest …`, and `RAsk` passed
   through. This is one more case per call site than t1_toy.
 - `rstep` runs `elab-r` from the start on each `Replay`. On `RAsk` it
-  runs the machine (with `Reach`) and appends the answer. The work is
-  quadratic in the number of runs.
+  runs the machine (with `Reach`) and appends the answer. [A] So the
+  elaboration work is about (number of runs) × (program length), plus
+  the equality checks: quadratic when the runs grow with the program.
+  This is an estimate from the code, not a measurement.
 - About 50 of its 127 lines are the decidable equality.
 - [A] In full Sleight a request is roughly (stripped code, the store
   Σ), so this equality covers code and heap. The alternative is to
