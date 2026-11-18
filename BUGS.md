@@ -274,10 +274,20 @@ is a design decision. Remove an entry when it is fixed.
     `proposals/self-formal/proto/review6/08_blit_many_imm_interp.sl`
     does the same with `array-blit-many-imm`: a segmentation fault in
     both runs tried, the same message under `OCAMLRUNPARAM=s=4k`, and
-    `0` under `slc --interpret`;
-    `array-move-imm`, which shares their implementation, was not run.
+    `0` under `slc --interpret`.
+    `proposals/self-formal/proto/bugs/move_imm_interp.sl` does it with
+    `array-move-imm`, moving two placed `U62`s into an older array of
+    `Vacant` slots: a segmentation fault in every run tried, three with
+    the default minor heap and three with `s=4k`, while the same program
+    with `array-move` prints `0`, and `slc --interpret` prints `0`. In
+    40 smaller runs (1, 3, 10, or 100 trials, with 0, 50, 300, 1000, or
+    2000 allocation steps around the move, each with the default minor
+    heap and with `s=4k`), no run printed a value other than `0`: each
+    printed `0` or stopped, with a segmentation fault (exit 139) or an
+    abort (exit 134; the one examined said "Fatal error: out of
+    memory").
     §31 says a real run "may crash where the host cannot represent
-    what is asked of it", which this small program seems not to
+    what is asked of it", which these small programs seem not to
     approach. The analysis, and the reasoning that
     compiled `-imm` stores are safe when both words are immediates, are
     in `proposals/self-formal/08-gc-imm-stores.md`.

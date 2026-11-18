@@ -1,0 +1,5 @@
+(def-fns _ $ (erased g2-direct : (erased (TyCtor ((Fm) c) -> Type) P) (erased (Fm) g)
+    (erased (Hbl P g) h) (erased (NotP P (Bot)) con) (erased (P g) p) -> (erased (False) no))
+  (let-match erased h (MkHbl _ _ K d2 d3 dg))
+  (let-match erased con (MkNotP _ _ KC c))
+  (c $ d2 _ _ (d2 _ _ dg p) (d3 _ p)))

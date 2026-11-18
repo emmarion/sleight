@@ -12,7 +12,13 @@ Repository files are at commit 5fba336. Test sources are in
 which is not kept. Toolchain: OCaml 4.14.1, amd64, `flambda: false`,
 `naked_pointers: true`, `flat_float_array: true`, and Zarith 1.13. The
 installed `caml/{memory,address_class,major_gc,minor_gc}.h` are
-byte-identical to the 4.14.1 tag's `runtime/caml/` headers.
+byte-identical to the 4.14.1 tag's `runtime/caml/` headers. §6 also
+reports runs with compilers built from Ubuntu's source packages
+(`ocaml_4.14.1.orig.tar.xz`, `ocaml_5.4.1.orig.tar.xz`): 4.14.1 with
+flambda, 5.4.1 with and without flambda, all amd64, each with Zarith
+(1.13 for 4.14.1, 1.14 for 5.4.1) built against it, and a 5.4.1 cross
+compiler for arm64 whose programs ran under `qemu-aarch64-static`.
+`toolchain.sh` and `arm64.sh` in `proto/gc/` build and run them.
 
 ## 1. Summary
 
@@ -44,7 +50,9 @@ byte-identical to the 4.14.1 tag's `runtime/caml/` headers.
   integer" (§6). `--build` crashes the same way, because the program's
   final call runs in run position in that interpreter.
   `proto/review6/08_blit_many_imm_interp.sl`, the same program through
-  `array-blit-many-imm`, fails in the same two ways. The
+  `array-blit-many-imm`, fails in the same two ways, and
+  `proto/bugs/move_imm_interp.sl`, through `array-move-imm`, segfaults
+  in every run tried, with the default minor heap and with `s=4k`. The
   interpreter's `-swap-imm` and `-place-imm` are mapped to the
   barriered `swap` and `place` (`lib/ffi.ml:102, 107`), so they are not
   affected. slc's evaluator maps all three `-imm` blits to its plain
@@ -54,8 +62,12 @@ byte-identical to the 4.14.1 tag's `runtime/caml/` headers.
   really mean "the compiled word is an immediate". Every read of a field
   that an `imm` store can change must be a mutable load. The program
   must run on one domain, or else OCaml 5's memory model needs a
-  separate check. OCaml 5's `write_barrier` reads the same way, but I
-  did not run anything on OCaml 5 or with flambda.
+  separate check. OCaml 5's `write_barrier` reads the same way (§4).
+- [C] The stress tests and negative controls behave the same with
+  4.14.1 under flambda and with 5.4.1, with and without flambda,
+  including variants with three extra systhreads and, on 5.4.1, three
+  extra domains; so does the stress test without Zarith on arm64 under
+  emulation (§6).
 
 ## 2. Citations checked
 
@@ -154,10 +166,13 @@ byte-identical to the 4.14.1 tag's `runtime/caml/` headers.
   `mutable` fields slc emits meet this. [C] A match that binds the fields of such a record
   also reads them with `load_mut` (`proto/review6/08_match_loads.ml`,
   `-dcmm`).
-- [A] **flambda.** This is not installed, so I tested nothing. I expect
-  the array kind to be fixed at type-checking, as without flambda, and
-  flambda 1 not to reorder mutable loads across stores, but I have not
-  checked either.
+- [C] **flambda.** With 4.14.1 and 5.4.1 built with flambda, at `-O3`,
+  `kinds.ml` compiles as without flambda (`-dcmm`): the two `int array`
+  stores are plain `(store int …)`, `Obj.t array` gets the tag-254 test
+  and `caml_modify`, and the `word array` and record-field stores get
+  `caml_modify`. `08_match_loads.ml` reads the fields with `load_mut`.
+  That flambda never moves a load of a field that an `imm` store writes
+  across the store is not shown beyond these shapes.
 - [S] **OCaml 5** (5.2.0 tag). `write_barrier` (`runtime/memory.c:178-199`)
   has the same two tests, `Is_block(old_val)` and
   `Is_block_and_young(new_val)`. With immediates, `caml_modify`
@@ -167,6 +182,13 @@ byte-identical to the 4.14.1 tag's `runtime/caml/` headers.
   looks unchanged, and across domains the `imm` store gets the memory
   model of an ordinary `int array` store. I take that to be harmless
   because an immediate publishes no block, but I have not checked it.
+  5.4.1 reads the same: `write_barrier` at `runtime/memory.c:183-202`,
+  `caml_modify` at `:209-230`, `int_array_set` a plain `Assignment`
+  store at `asmcomp/cmm_helpers.ml:776-778`, and `caml_blit_bytes` a
+  `memmove` at `runtime/str.c:366-371` [S]. [C] On 5.4.1, `kinds.ml`
+  and `08_match_loads.ml` compile as on 4.14.1 (`-dcmm`). The
+  multi-domain runs of §6 are one schedule each, not a check of the
+  memory model.
 
 ## 5. Can a non-immediate word reach these stores?
 
@@ -178,7 +200,9 @@ byte-identical to the 4.14.1 tag's `runtime/caml/` headers.
   `div`, `rem`, `gcd`, `sqrt`, `of_int64`, `of_float`) and 1,000,000
   random reductions. Every value below 2^62 was immediate, and 2^62 was
   boxed. The FFI's start-up check (`ffi_core.ml:27`) tests only
-  `Z.of_int max_int`.
+  `Z.of_int max_int`. [C] It gives the same result with Zarith 1.14
+  under 5.4.1, with and without flambda, and with 1.13 under 4.14.1
+  with flambda.
 - [D/A] **`ImmVacant`.** `vacant-slot`'s word is that of `Nat` 0 (§33),
   which is `Z.zero`, an immediate. **`ImmPlaced` and `ImmFromSlot`**
   hold because a `(Placed s A v)` is represented as the word of `v`
@@ -233,6 +257,11 @@ counts as `s=4k` [C].
 | `../review6/08_blit_many_imm_interp.sl` | The same program with a `many` source array, through `array-blit-many-imm`. | Segfault (exit 139) in 2 of 2 runs with the normal runtime; with `s=4k`, "not an extern integer: _". Its control (`array-blit-many`) prints `0`, and so does `slc --interpret`. Not run with the debug runtime. |
 | `kinds.ml` | `-dcmm` | Described in §4. |
 | `zarith_small.ml` | Described in §5. | No boxed value below 2^62. |
+| `stress.ml`, `slc_cells_driver.ml` (built from slc's output for `tests/cell_imm.sl`), on 4.14.1 with flambda (`-O3`), 5.4.1, and 5.4.1 with flambda (`-O3`) | The six configurations above on each compiler. On 5.4.1, the debug runs add `V=1`, which walks the heap from the roots at the end of every major cycle and, in the debug runtime, asserts that each reachable block is outside the minor heap and has the new cycle's unmarked status, so that a reachable block the collector judged dead fails it (`runtime/shared_heap.c:884-903`, called from `major_gc.c:1617-1618`). | All ok. On 4.14.1 with flambda the debug runs printed 393 and 2,056 heap checks (`stress.ml`, `s=4k` and `s=4k,o=1`) and 1,304 and 1,399 (`slc_cells_driver.ml`); with `OCAMLRUNPARAM=v=0x000` the first debug run printed none, so it is not counted. On 5.4.1 a rerun of `stress.ml`'s debug build with `s=4k,V=1,v=0x800` logged 215 verifications for its 215 major collections. |
+| The same two with `helpers_thr.ml` (three systhreads that allocate and yield) on all three compilers, and with `helpers_dom.ml` (three domains that allocate and call `Gc.major_slice`) on the two 5.4.1 compilers | Normal runtime with `OCAMLRUNPARAM` unset and `s=4k`; debug runtime with `s=4k` (and `V=1` on 5.4.1). | All ok. The domains raise the collection counts, for example 67,250 minor and 2,429 major collections for `stress.ml` with `s=4k` on 5.4.1 against 7,245 and 215 without them; a debug rerun with domains logged 1,756 verifications. |
+| `neg_young.ml` on the three compilers; `neg_mark.ml` on 4.14.1 with flambda | Normal and debug runtime. | `neg_young`: 10,000 of 10,000 without the barrier and 0 with it, everywhere. `neg_mark`: 20 of 20 freed without the barrier, 0 with it, and 0 in `imm` mode; the debug runtime fails `gc_ctrl.c:64` without the barrier. |
+| `stress_noz.ml` (`stress.ml` with `noz_ops.ml`'s copies of Ffi_core's three `-imm` operations, taking `int` indices, in place of Zarith), its systhreads and domains variants, and `neg_young.ml`, built by the 5.4.1 arm64 cross compiler and run under `qemu-aarch64-static` (`arm64.sh`) | The six `stress.ml` configurations, debug with `V=1`; the variants as above. | All ok, with 43, 230, and 14,021 verifications in the three debug runs, one per major collection; 745 with systhreads and 2,375 with domains. `neg_young`: 10,000 of 10,000 without the barrier and 0 with it, normal and debug. |
+| `../bugs/move_imm_interp.sl`, run as `bin/main.exe std/immediate.sl …` | `blit_imm_interp.sl`'s design through `array-move-imm`: 1,000 trials, each moving two placed `U62`s from a fresh array into an older array of `Vacant` slots. The control uses `array-move` and drops the two `ImmAll` arguments. | Segfault (exit 139) in 3 of 3 runs, and in 3 of 3 with `s=4k`. The control prints `0`; so does `slc --interpret`, with or without `s=4k`. |
 
 ## 7. Conclusion and its conditions
 
@@ -251,14 +280,21 @@ conditions:
 4. For `blit_imm`, every word in the source range and in the
    overwritten destination range is immediate (`ImmAll` on both
    sides).
-5. On OCaml 5, the same reasoning applies to one domain, and
-   multi-domain use has not been looked at.
+5. On OCaml 5, the same reasoning applies to one domain. With three
+   other domains allocating and collecting, the stress tests pass (§6),
+   which is evidence from one schedule, not an analysis of the memory
+   model.
+
+[A] With these conditions, the stores also look GC-safe on 5.4.1, with
+or without flambda, and on 4.14.1 with flambda, for one domain: the
+runtime sources read the same (§4), and the runs of §6 agree.
 
 The reference interpreter's `array-blit-imm`, `array-blit-many-imm` and
 `array-move-imm` fail conditions 1 and 4, since their elements are
-boxed `Value.value`s, and the OCaml-level reproducer,
-`proto/bugs/blit_imm_interp.sl`, and
-`proto/review6/08_blit_many_imm_interp.sl` all break. As I read §27 and §62, this
+boxed `Value.value`s, and the OCaml-level reproducer and the Sleight reproducers
+`proto/bugs/blit_imm_interp.sl`,
+`proto/review6/08_blit_many_imm_interp.sl`, and
+`proto/bugs/move_imm_interp.sl` all break. As I read §27 and §62, this
 also reaches a program built with `--build` wherever such a call runs
 at compile time, in run position or in a macro's expansion, since the
 reference interpreter evaluates those. Only the run-position case was
@@ -268,13 +304,17 @@ the barriered `blit`, as `-swap-imm` and `-place-imm` already are.
 
 ## 8. Unverified
 
-- Whether `array-move-imm` trips the same way from Sleight. It calls
-  the same function (`lib/ffi.ml:119`), but only `array-blit-imm` and
-  `array-blit-many-imm` were run end to end.
 - A Sleight-level stress program using `array-swap-imm`. The emitted
   cell stores were driven from OCaml, and the `-imm` FFI functions were
   called directly.
-- Any run on OCaml 5, with flambda, on arm64, or with systhreads.
+- arm64 hardware. The arm64 runs used `qemu-aarch64-static` on an
+  amd64 host, which runs arm64 code but, as I understand qemu's user
+  mode, not with arm64's weaker memory ordering. slc's cell driver,
+  which needs Zarith, was not built for arm64.
+- A mark-phase negative control on OCaml 5. `neg_mark.ml` reads 4.14's
+  header colours and ran only on the 4.14.1 builds.
+- OCaml versions other than 4.14.1 and 5.4.1; 5.2.0's sources were read,
+  not run.
 - Whether `Imm` proofs can be forged through the logic (§10).
 - Whether other emitted shapes, such as wide-tagged or `Slots`
   records, have any immutable field that an `imm` store could reach. I
@@ -421,3 +461,21 @@ Unsure:
 - `proto/gc/zarith_small.ml`'s header comment mentions "Sleight's own
   Nat operations", which the file does not exercise; §5 does not rely
   on them.
+
+## Round 7 coordinator notes
+
+1. §8 listed runs on OCaml 5, with flambda, on arm64, and with
+   systhreads as unverified, and `array-move-imm` from Sleight as
+   untried. The compilers were built from Ubuntu's source packages,
+   since GitHub archives were not reachable from the session. On
+   4.14.1 with flambda, 5.4.1, and 5.4.1 with flambda, the two stress
+   tests pass in all six configurations, with systhreads and (5.4.1)
+   domains variants, and the negative controls keep their teeth;
+   `kinds.ml`, `08_match_loads.ml`, and `zarith_small.ml` give the
+   same results as on 4.14.1. On arm64, under qemu's user mode, the
+   stress test without Zarith and `neg_young.ml` behave the same.
+   `proto/bugs/move_imm_interp.sl` crashes the reference through
+   `array-move-imm` (BUGS.md 26). Added to the header, §1, §4, §5, §6,
+   §7, and §8; `toolchain.sh`, `arm64.sh`, `noz_ops.ml`, and the two
+   helpers are new in `proto/gc/`.
+

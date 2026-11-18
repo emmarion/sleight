@@ -1,15 +1,15 @@
-# Round-6 review brief
+# Round-7 review brief
 
 You are a fresh, independent adversarial reviewer. The files under review
 have already been through several review passes, recorded in sections at
-their ends ("Review notes", "Second/Third/Fourth/Fifth review notes", and
-"Coordinator notes"; 08–10 have had one pass). Per-file error counts per
-round fell roughly 9–27, 8–22, 6–13, 4–9, 3–9: more errors very likely
-remain. Earlier agents kept making false assumptions; your job is to find
-what all earlier reviewers missed, AND errors introduced by later edits
-(edits create new mistakes, break sentences, leave a body contradicting its
-notes or a Coordinator note, or leave a note claiming a fix the body
-doesn't reflect).
+their ends ("Review notes", "Second" to "Fifth review notes", "Round 6
+review notes", and "Coordinator notes"). Per-file error counts per round
+fell roughly 9–27, 8–22, 6–13, 4–9, 3–9, and then 3–14 in round 6, the
+first full pass on 08–10: more errors very likely remain. Your job is to
+find what all earlier reviewers missed, AND errors introduced by later
+edits (edits create new mistakes, break sentences, leave a body
+contradicting its notes or a Coordinator note, or leave a note claiming a
+fix the body doesn't reflect).
 
 Before anything: read the original brief
 proposals/self-formal/agent-briefs/BRIEF.md
@@ -23,10 +23,14 @@ For every claim, ask "where exactly does this come from?":
   "DESIGN.md does not say X", grep DESIGN.md to confirm.
 - Code claims (file:line): open the lines.
 - Accept/refuse/output/timing claims: re-run them. Reference:
-  `_build/default/bin/main.exe`. slc: `_build/release/slc`. MANUAL.md has
-  the flags. Mind argument order with `--extract`/`--build` (an earlier run
-  nearly overwrote a source file). Prioritise claims never re-run and
-  claims changed in the latest passes.
+  `_build/default/bin/main.exe`. slc: `_build/release/slc`, built from the
+  same compiler sources as `origin/main`. MANUAL.md has the flags. Mind
+  argument order with `--extract`/`--build` (an earlier run nearly
+  overwrote a source file). Prioritise claims never re-run and claims
+  changed in the latest passes. Background jobs may load the machine:
+  before re-running a timing claim, check `uptime`, and if the one-minute
+  load average is above 1.5, do not re-run timings; say they were not
+  re-run.
 - Logic/type-theory claims: check the reasoning step by step; flag
   overclaims and underclaims.
 - Owner attributions; ASSUMPTIONS.md as owner views; proposals presented
@@ -39,12 +43,16 @@ hedges drifting stronger or weaker during edits; false "DESIGN.md does not
 say X"; untested claims presented as tested; condensations losing a
 condition.
 
-FIX each error in place. Append a section "## Round 6 review notes"
+FIX each error in place. Append a section "## Round 7 review notes"
 (numbered: what was wrong, evidence, what changed; then points you are
 unsure of). Edit only your assigned files plus new small source tests under
-/home/user/sleight/proposals/self-formal/proto/review6/. Scratch outputs and
-binaries go in
-/tmp/claude-0/-home-user-sleight/1366633a-e15e-566f-bd0e-9c4268fb4c7a/scratchpad/r6-<your-files>/,
-never under proposals/. Do not commit. Reply with a ≤12-line summary:
-error count per file, the most serious ones, and your view of
-trustworthiness.
+/home/user/sleight/proposals/self-formal/proto/review7/, named with your
+files' numbers as a prefix. Scratch outputs and binaries go in
+/tmp/claude-0/-home-user-sleight/dca6105d-73d0-5c03-b5b8-1c0e2e358cac/scratchpad/r7-<your-files>/,
+never under proposals/. Other agents work in the same checkout at the same
+time: do not commit, and run no git command that changes state (checkout,
+reset, stash, restore, add). Install nothing and write nothing outside
+your assigned files, `proto/review7/`, and your scratch directory: no
+`make install`, `opam`, `ocamlfind install`, or `apt`. Reply with a
+≤12-line summary: error count per file, the most serious ones, and your
+view of trustworthiness.

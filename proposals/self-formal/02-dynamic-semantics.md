@@ -218,6 +218,19 @@ n))`, A and the reference agree (head first), and a timing reading of
 arguments (`self/elab-main.sl:178-182`), threading its world through
 both.
 
+[compiled] Two `Program` steps observe a head form against an argument
+form inside a body, with a world write on one side and a stack
+overflow on the other. In `proto/dyn/head_crash_arg_write.sl`, the head
+form overflows and the argument writes "argument ran"; in
+`proto/dyn/head_write_arg_crash.sl`, the head form writes "head ran"
+and returns a `UniqueFn` that closes over the world, and the argument
+overflows. Under the reference (interpreted and `--build`),
+`slc --interpret`, and slc's native and `--byte` builds, the first
+prints nothing before "Stack overflow" and the second prints "head
+ran" before it. With the overflow made harmless (depth 10 in place of
+10^8), each prints its write and exits 0. So in these two tests every
+implementation and mode runs the head form before the argument form.
+
 ### 2.3 Is order observable in the abstract machine?
 
 (reading; no proof) Candidate observers, assuming no crash:
@@ -743,7 +756,10 @@ option, with the spec's own store a heap (as 01's Σ is).
   its stack on that file either way, and since its "out of fuel" does
   not stop the run (C4), the overflow does not tell the two orders
   apart; nor does it on `proto/review3/00_arg_head_order.sl`, the same
-  test with head and argument swapped.
+  test with head and argument swapped. The world-write tests of 2.2 do
+  tell them apart, and show the head form first in every
+  implementation and mode; they cover one call shape each, not every
+  call.
 - That GC reuse of addresses is unobservable because a slot word keeps
   its block alive. This is a reading of OCaml's runtime, not checked.
 - CakeML's top-level theorem allowing early termination on resource
@@ -1098,3 +1114,16 @@ Unsure, not changed:
 - slc's interpreter's order of a head form against an argument form
   remains unobserved.
 - The summary is still longer than the brief's 15 lines.
+
+## Round 7 coordinator notes
+
+1. The Round 6 notes left slc's interpreter's order of a head form
+   against an argument form unobserved. `proto/dyn/head_crash_arg_write.sl`
+   and `proto/dyn/head_write_arg_crash.sl` observe it with a world write
+   on one side and a stack overflow on the other, which a stack
+   overflow in slc's interpreter does not survive (`proto/dyn/crash_probe.sl`
+   prints "before" and not "after"). Both show the head form first
+   under the reference (interpreted and `--build`), `slc --interpret`,
+   and slc's native and `--byte` builds; their controls, with the
+   overflow made harmless, print the write and exit 0. Added to 2.2
+   and section 6.
