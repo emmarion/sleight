@@ -608,8 +608,8 @@ the conditions.
 - Route B: no `Prov`, D2, D3, `Sub`, or G was built. The derivation's
   internal steps ((d) in §4) were tried only with D2, D3, and one D1
   instance as hypotheses about an abstract `P`, and with G read as
-  ¬`P g`, which needs `g` to be a code of that type such as a unit's
-  text (`g2_step.sl`, §2.4 B); its final step was compiled only with
+  ¬`P g`, which needs `g` to be a code of that type such as the text
+  of the file that states G (`g2_step.sl`, §2.4 B); its final step was compiled only with
   consistency postulated (`review7/09_g2_final.sl`). For a relational
   diagonal, the two directions of G ↔ ¬`Prov ⌜G⌝` were not tried.
   Whether D2 holds given §71's one goal per unit and the global gensym
@@ -811,6 +811,10 @@ Unsure:
    ⊢ Con. Its `def-prim`, as declared in `09_g2_pre.sl`, gives an
    element of every type, so the file shows only how the last step
    elaborates; said so.
+3. After this round's review: §5 called the code G needs "a unit's
+   text", where §2.4 B says the source text that states G, as a
+   macro-built diagonal splices in its own file's text. §5 follows
+   §2.4 B now.
 
 ## Round 7 review notes
 

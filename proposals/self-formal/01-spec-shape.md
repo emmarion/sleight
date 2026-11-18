@@ -42,7 +42,9 @@ statement from the brief; **[A]** this agent's reading or proposal.
   order of elaboration is visible through gensym numbers (tested; that
   it can decide acceptance is inferred from a program that both accept
   because a macro call gets number 1, §3.6), and a crash at compile time
-  (out of fuel) rejects in both implementations (tested). The first two
+  (out of fuel) rejects in both implementations in the case tested,
+  though on a host stack overflow both die instead, naming no form
+  (BUGS.md 27). The first two
   need an owner decision before the spec can be functional
   (deterministic); the third concerns the agreement theorem rather than
   the spec, whose machine does not crash (§31). A fourth, when the
@@ -1197,4 +1199,8 @@ Unsure, not changed:
    whose run crashes. On a host stack overflow both die instead,
    naming no form (02 r7.3, r7.4; BUGS.md 27). Narrowed. Raised by
    the round-7 check of 00-summary.
-
+2. §1 said an out-of-fuel crash at compile time rejects in both
+   implementations, as tested. On a host stack overflow, which slc's
+   interpreter can reach after running out (`proto/review7/02_fuel_runpos.sl`
+   under `--eval-fuel 20`), both die instead (02 r7.3; BUGS.md 27).
+   Narrowed. Raised by the round-7 carry-over check of 00-summary.

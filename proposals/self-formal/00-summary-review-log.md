@@ -2405,3 +2405,106 @@ Unsure:
 - 07 r7's unsure point, that the `Predates` route was compiled for one call of `init` and `step`
   each, is not in section 7; left as detail.
 - 00-summary.md is now 788 lines, 00-glance.md 120.
+
+## Round 7 carry-over check
+
+An independent check of 00-summary.md and 00-glance.md against every numbered item of the "Round 7
+review notes" and "Round 7 coordinator notes" of 01 to 10 (08's including its list on BUGS.md 23 to
+27), and of the 22 corrections of the "Round 7 summary check" above against their sources, after
+reading REVIEW.md, the brief, CLAUDE.md, and all of DESIGN.md. No test was re-run: each point was
+settled by reading the track files, BUGS.md, MANUAL.md:154-166, and `self/eval.sl:51`.
+
+Errors, and changes:
+
+1. Section 1's theorem bullet said "Intrinsic, since a type holds no call (§9)", as if §9 forced
+   the intrinsic form; 05 F1 gives a graph relation as the other form, the intrinsic one
+   recommended (05 §1, r7.8), as key finding 3 already says. Now so.
+2. Key finding 2 stated the diagonal's conclusion, "impossible if Sleight's functions terminate",
+   before naming any other premise, the shape 03 r7.3 corrected in 03's summary, F6, F7, and Q1(d);
+   the sentence after it named key finding 21's premises for the detour only. The conclusion now
+   carries them.
+3. Key finding 2 listed what 05 §4.3's macro version needs without the 09 §3.4 premises that 05
+   §4.3 names for it, and gave its quine form as needing only a quine, where 05 r7.3 added 09
+   §3.2's reading and the spec's determinism on Q to that conclusion (05 §4.3 also assumes logic
+   soundness there). Both added.
+4. Key finding 8 and decision 6 said that on a host stack overflow both implementations die
+   "naming no form". MANUAL.md:162-164 has the reference name "the file alone" for a runtime error,
+   and 04 r7.3 and BUGS.md 27 say no message names "the file or the form"; BUGS.md 27 (08's round-7
+   BUGS.md note 7) also counts the reference's `Array.make` refusal of 2^60 elements as such a host
+   limit. Now "on a host limit, such as a stack overflow, ... naming neither file nor form".
+5. Decision 6 said DESIGN.md is "elsewhere silent" on a compile-time crash, the claim 01 r7.2
+   corrected in 01 §5 item 3: §31 says a crash "produces no value, never a different one" and that
+   how one is reported "is not specified", which does not say whether the program is refused. Now
+   quoted.
+6. Key finding 14 stated as fact that "`unique` is the sole reference" is not needed for compiler
+   correctness; 05 §1 and §6 give it as opinion ("In my reading", "I do not think it is needed"),
+   as 05 r7.9 made §1 say, and the trailing "a reading" could be read as covering only the second
+   clause. Now "on 05's reading".
+7. Key finding 21's premise that "the macro's other code ends" cited only `diagonal.sl`, dropping
+   03 r7.5's condition (09 §3.4 premise 4) that for a real `compile` the macro must also read every
+   file of the unit and build `Src`. Added.
+8. Key finding 22 said the token binders read "as the word 0", for any type. 10 §1 has slc's
+   discriminant read take a token as the word 0, giving a `Nat` 0, a `String` `(SNil)`, and a
+   tagged enum its first fieldless constructor, other kinds of type not surveyed; a `Pair` binder
+   passes a `comptime-match` on `MkPair` and its fields read as `_` (10 r7.15; BUGS.md 25, after
+   08's round-7 BUGS.md note 4). Scoped.
+9. Decision 18 gave 03's option (d) as "ruled out by the diagonal" with no premises; 03 r7.3 made
+   Q1(d) say "under its premises". Added.
+10. Decision 18c said a closure extended at a level minted during the run is built "but not
+    applied", and the glance's 18c row put its failure "on 06's reading of §18". 06 F4.2 reports
+    the stepper's application (`ho_exist_use_bad.sl`) and a step's proof of the fresh level from a
+    packed `Predates` (`proto/review3/06_packed_predates_bad.sl`) as compiled refusals, which 03
+    r7.9 corrected 03 F4.1 to say; that no placement of levels works stays 06's reading (06 §6).
+    Both now say refused in the tests, and never possible only on 06's reading.
+11. Section 6's "Closures as suspensions" listed "applying one extended at a level minted during
+    the run" as unknown without the two refusals (03 r7.9; 06 §6). Now "whether any placement of
+    levels lets a stepper apply one ..., the two shapes tried being refused". Its "a packed level
+    from a caller", which the check above left untraced, is 06's fourth-review unsure point: a
+    packed level passed in from a caller rather than minted at the top level. `06_packed_subterm.sl`
+    mints its packed level at the top level, so it does not settle the point. Reworded "passed in
+    from a caller".
+12. Section 6's diagonal bullet said "H for all sources yields a runnable `compile`" "assumes
+    soundness", dropping the stepper's faithfulness and F6's premises, which 03 r7.3 restored in F6
+    and F7. Added.
+13. Section 6's SOUNDNESS.md bullet listed (T), (C), and (E) and went on "H also needs ...",
+    implying that H rests on (C); 03 r7.7 and 05 r7.12 derive H from (T) and (E), (C) not being
+    needed. Now says so.
+14. Section 6 listed "relation-valued `TyCtor` at scale" as 01's unverified layering point; 01 r7.6
+    narrowed it to proving the metatheory once over such a parameter, the indexing compiling (05 F7;
+    01 §6). Now so, as decision 19 already says.
+15. Cross-file item 1 set 02's A1 with N1 against "slc's native `ESome`" as an open inconsistency.
+    02 r7.6 put that case into N1 and decision 4, which name the choice (equal immutable constants
+    sharing a word, or native builds not sharing them), and 04 r7.4 found the reference's native
+    build answering `ESome` too. Now says the two files agree, gives both native builds, and points
+    to decision 5 for the open choice.
+16. The glance's Gödel bullet said a macro in a goal type "can build" a diagonal sentence from its
+    own file's text, beside listing the diagonal sentence as missing. `r_self_goal.sl` shows only
+    that a goal type can splice in its own file's text (09 §5, r7.8), and 09 r7.2 adds that reading
+    G as ¬`P g` needs `g` to code that type itself, unexamined for a text code (09's round-7 unsure
+    point; key finding 20). Now "can splice in its own file's text".
+
+The 22 corrections of the round-7 summary check were each read against their sources and hold; none
+was changed back. Item 2 follows 09 §2.4 B's bullet ("the source text that states G, as the
+macro-built diagonal of `r_self_goal.sl` splices in its own file's text").
+
+Checked and unchanged, as already carried or about matters the condensations do not mention: 01
+r7.1, r7.3 to r7.5, and its coordinator note; 02's coordinator note, r7.1 to r7.5, r7.7, and r7.8;
+03 r7.1, r7.2, r7.4, r7.6, r7.8, and r7.10; 04 r7.1, r7.2, r7.5, and its coordinator note; 05 r7.1,
+r7.2, r7.4 to r7.7, r7.10, and r7.11; 06 r7.1 to r7.6; 07 r7.1 to r7.5; 08's coordinator note, r7.1
+to r7.11, and its BUGS.md notes 1 to 3, 5, and 6; 09's coordinator notes, r7.1, and r7.3 to r7.8;
+10 r7.1 to r7.14 and r7.16 to r7.20.
+
+Unsure:
+- 09 says "a unit's text" (§5, r7.2) and "the source text that states G, ... its own file's text"
+  (§2.4 B) for the code that G needs; key finding 20 and the glance follow §2.4 B. Which one 09
+  means is for 09 to settle.
+- Key finding 20's "no code built from the formula's structure can be" such a code generalizes 09
+  r7.2's "in `g2_defs.sl`'s coding"; 09 §2.4 B makes the same step "on my reading", and the key
+  finding is headed "09's reading", so it is left.
+- Key finding 8's "Both implementations refuse a run-position form whose run fails with a runtime
+  error" stands beside "its interpreter runs on after out of fuel": under `--eval-fuel 20`,
+  `02_fuel_runpos.sl` is refused by the reference and kills slc with a stack overflow (02 r7.3,
+  BUGS.md 27), a case the host-limit clause covers. 01 §1 ("out of fuel ... rejects in both
+  implementations") and 03 §1 ("reported as a refusal of the form") state slc's side without that
+  case; they are not this check's files.
+- 00-summary.md is now 804 lines, 00-glance.md 120.

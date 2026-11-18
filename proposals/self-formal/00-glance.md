@@ -56,7 +56,7 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
   hardware and the multi-domain memory model are unchecked. The reference interpreter's `-imm` blits corrupt its
   heap (all three tried; BUGS.md 26).
 - **Gödel II** may apply; nothing establishes it. Missing: a formalized `Prov` with D1 to D3, a diagonal sentence (a
-  macro in a goal type can build one from its own file's text), and lemmas tying `Prov` to the stripped run. The
+  macro in a goal type can splice in its own file's text), and lemmas tying `Prov` to the stripped run. The
   derivation's internal steps (⊢ Con → ¬`P g`) go through despite level stratification for an abstract relation given
   D2, D3, and the diagonal's D1 instance as hypotheses (`g2_step.sl`); reading that as ⊢ Con → G needs `g` to be a code
   of ¬`P g` itself, which no structural formula code can be and a file's text, as a macro splices it in, might
@@ -96,7 +96,7 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 | 18 | How is fuel kept out of results and theorems? | tracks disagree | 17 | no |
 | 18a | Resumable checker: derivation zipper or replay? | zipper for a new kernel; replay only retrofitting slc (07) | 17, 18 | no |
 | 18b | Certified stepper invariant: erased trace or counter closure? | erased trace, as a working hypothesis (06) | — | no |
-| 18c | Apply a closure whose level is packed beside it? | no change proposed; it works with a packed `Predates` or one derived from a `Predates` about a holder built before the function's level, except, on 06's reading of §18, applying one extended at a level minted during the run (06) | — | only if changed |
+| 18c | Apply a closure whose level is packed beside it? | no change proposed; it works with a packed `Predates` or one derived from a `Predates` about a holder built before the function's level; applying one extended at a level minted during the run is refused in 06's tests and, on 06's reading of §18, never possible (06) | — | only if changed |
 | 19 | Judgment shape and staging? | 01 §4.2 layers (Γ/Σ home of run-position facts open); run relation as a parameter (01) | — | no |
 | 20 | Where does the proof stop at the output end? | O1 now, O2 + O4 later (04) | — | no |
 | 21 | `native-compute`? | N3, same trust as the output end (04) | — | no, unless 6 changes §72 |

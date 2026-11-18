@@ -11,7 +11,10 @@ decisions, which is an earlier session's paraphrase, not the owner's words.
 - slc has one fuel known to change a verdict: the compile-time interpreter's
   depth bound (default 10⁹, fresh for each run-position form, each macro
   run, and each step of an interpreted `Program`). Running out is reported
-  as a refusal of the form, which DESIGN.md does not obviously license. The
+  as a refusal of the form, which DESIGN.md does not obviously license,
+  except that the run goes on after running out, and if it then
+  overflows the host stack slc dies instead (`proto/review7/02_fuel_runpos.sl`
+  under `--eval-fuel 20`; 02 r7.3; BUGS.md 27). The
   other "fuels" are a language rule (§62's 10000 expansions),
   termination measures (most of them erased), and a handful of bounds that a measure proof could
   replace. One of those, `merge-opens` (F3 row 6), would accept early if
@@ -1176,3 +1179,12 @@ Unsure:
 - Item 5's "which non-recursive code can do" follows 09 §3.4 premise 4
   and assumes that `Src` is built from a fixed list of files by
   constructor applications; no such macro was written.
+
+## Round 7 coordinator notes
+
+1. §1 said running out of fuel is reported as a refusal of the form.
+   slc's run goes on after running out, and on `02_fuel_runpos.sl` under
+   `--eval-fuel 20` it then dies of a host stack overflow (02 r7.3;
+   BUGS.md 27; re-run by the coordinator: the reference exits 1 with
+   "runtime error: out of fuel", slc exits 2). Added. Raised by the
+   round-7 carry-over check of 00-summary.
