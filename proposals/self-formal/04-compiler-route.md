@@ -49,6 +49,8 @@ proposal.
   `slot-eq` compiles to OCaml `==`, and ocamlopt can share two equal immutable
   constants, so a native compiled run can answer `ESome` where
   `slc --interpret` and the reference's interpreter answer `ENone` (2.5).
+  A native or `--byte` build can also do so where the FFI returns an
+  argument that its model rebuilds (2.5).
 - [C] There are 103 FFI implementations and 7 extern types. [P] Under §42
   each one is an agreement axiom.
 
@@ -271,7 +273,15 @@ definition whose header is `(erased name :`.
   one a call answers may differ between runs"), and in the compiled run
   the two do hold one word. It is a refinement mismatch only if the spec
   says that every allocation takes a never-used address (the earlier
-  session's proposal B).
+  session's proposal B). [T] The FFI is a second source of such
+  answers, in `--byte` builds too: its `append` returns its first
+  argument when the second is empty (`lib/ffi_core.ml:146-147`), where
+  the prelude's model rebuilds it (`lib/prelude.sl:1120-1123`), so
+  `proto/review8/02_append_share.sl`, comparing `x` with
+  `(str-append x "")`, answers `ESome` built by either compiler,
+  natively or with `--byte`, and `ENone` in every interpreted run, with
+  or without externs, and in the reference's `--no-extern` build (02
+  N1). §42's `slot-eq` exception allows this.
 - [C] The `-imm` operations write with `Array.unsafe_set` through
   `(cast a : int array)`, or with `caml_blit_bytes` (`lib/ffi_core.ml:235-241,
   315-321`), and so do their templates (`lib/ffi_templates.txt:51-52`)
@@ -782,13 +792,19 @@ IR's call and constructor arguments syntactically atomic in either case.
    output above may differ between implementations?
 2. **A crash at compile time.** §31: "A real run may crash where the host
    cannot represent what is asked of it." §72 makes a crashed native run
-   "an error at its argument". DESIGN.md does not say what a crash (or
-   fuel exhaustion) in an *evaluator* run of a run-position form is.
-   MANUAL.md:162-164 says both implementations refuse such a form, which
-   describes the implementations, not the language. On a host stack
-   overflow in run position, both instead die with "Stack overflow" and
-   no message naming the file or the form
-   (`proto/review7/02_deep_runpos.sl`).
+   "an error at its argument". Of a crash (or fuel exhaustion) in an
+   *evaluator* run of a run-position form, DESIGN.md says only what §31
+   says of any crash: "A crash produces no value", and how it "is
+   reported is not specified". It does not say whether the form is
+   refused. MANUAL.md:162-164 says both implementations refuse such a
+   form, which describes the implementations, not the language. On the
+   host limits tried in run position, both instead die of an uncaught
+   OCaml exception, with no message naming the file or the form
+   (BUGS.md 27): a stack overflow in both
+   (`proto/review7/02_deep_runpos.sl`), and, on a request for 2^60 array
+   elements (`proto/review7/02_fuel_runpos.sl`, without `--eval-fuel`),
+   `Invalid_argument("Array.make")` in the reference and a stack
+   overflow in slc.
 3. **`def-prim` and `def-opaque` are not in §54's registry**, although
    §54 opens "Every special form, as a constructor of `Special`", the
    prelude uses them (`lib/prelude.sl:1399-1403`, for `Placed` and
