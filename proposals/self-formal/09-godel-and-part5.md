@@ -18,12 +18,14 @@ references.
   one: a Sleight relation `Prov` that formalizes acceptance and meets the
   derivability conditions D1 to D3 inside Sleight, with the usual
   derivation's internal steps going through despite level stratification
-  (§2.4 B). Nobody has built it. Those internal steps do go through
-  for an abstract relation given D2, D3, and the diagonal's D1 instance
-  as hypotheses (`g2_step.sl`, compiled), with the final step to ⊥ at
-  the top level.
+  (§2.4 B). Nobody has built it. For an abstract relation given D2, D3,
+  and the diagonal's D1 instance as hypotheses, with G taken to be
+  ¬`Prov ⌜G⌝` itself, the derivation's internal steps compile
+  (`g2_step.sl`), and so does its final step to ⊥ at the top level,
+  with consistency postulated (`review7/09_g2_final.sl`).
   So 03 and 05 may claim Gödel-based limits only conditionally on that
-  step (§4 gives the wording they now carry). §9 does not force the
+  step (§4 gives the wording; 05 does not yet say that (d) was tried in
+  this form). §9 does not force the
   diagonal sentence to be built from a relational `Sub`: a macro in a
   goal type can splice in the text of its own file (`r_self_goal.sl`,
   compiled).
@@ -85,8 +87,9 @@ fixed set (my reading):
   permitted run passes" or "every permitted run passes". 05 §2.2 lists
   this and other sources of choice (crashes, `native-compute`).
 - Flags change the language (`--no-prelude` admits `def-prim` axioms,
-  which SOUNDNESS.md part 1 excludes; `--fn-same`). I fix the default
-  flags.
+  which SOUNDNESS.md part 1 excludes, though both implementations
+  refuse it with `--goal proved`, MANUAL.md; `--fn-same`). I fix the
+  default flags.
 
 ### 2.2 Is the theory recursively enumerable?
 
@@ -278,16 +281,17 @@ as `top_mp.sl` does. So the stratification of §2.3 does not obviously
 block route B (my reasoning). Whether every internal step of the
 derivation goes through is a condition of its own ((d) in §4), tried
 so far only in an abstract form:
-- [compiled] `g2_defs.sl` codes formulas as `Bot`, `Imp`, and `Pv`
-  (the object language's "provable"), and states, for an abstract
-  relation `P` on codes (a `TyCtor` parameter) and a code `g`, D2, D3,
-  and the D1 instance ⊢ `P ⌜g → ¬Pv g⌝` as hypotheses packed with
-  their level (`Hbl`). With G read as ¬`P g`, so that ¬`Prov ⌜G⌝` → G
-  holds by definition, `g2_step.sl` proves, for every such `P` and
-  `g`, a packed ¬`P g` from a packed ¬`P ⌜⊥⌝`: ⊢ Con → G
-  (`--goal proved` PASS, reference and slc). The proof unpacks the
-  hypotheses, mints a level, and defines the new closure there, as
-  `hyp_factory.sl` does.
+- [compiled] `g2_defs.sl` codes formulas as `Bot`, `Imp`, `Pv` (the
+  object language's "provable"), and `Txt` (a string), and states, for
+  an abstract relation `P` on codes (a `TyCtor` parameter) and a code
+  `g`, D2, D3, and the D1 instance ⊢ `P (Imp g (Imp (Pv g) Bot))`,
+  that is, `P` of the code of G → ¬`Pv` ⌜G⌝ with ⌜G⌝ = `g`, as
+  hypotheses packed with their level (`Hbl`). With G read as ¬`P g`,
+  so that ¬`Prov ⌜G⌝` → G holds by definition, `g2_step.sl` proves,
+  for every such `P` and `g`, a packed ¬`P g` from a packed
+  ¬`P ⌜⊥⌝`: ⊢ Con → G (`--goal proved` PASS, reference and slc). The
+  proof unpacks the hypotheses, mints a level, and defines the new
+  closure there, as `hyp_factory.sl` does.
 - [compiled] Applying the packed hypotheses in the body itself, to
   reach `False` from a proof of `P g`, is refused by both
   (`g2_direct_bad.sl`: "`K` was not in scope when level
@@ -296,10 +300,28 @@ so far only in an abstract form:
   (`g2_fixed.sl`, PASS, both). So in the packed form the last step,
   from ⊢ Con to ⊢ ⊥ through D1 for G, is a top-level application, as in
   `top_mp.sl`, which is where G2's argument makes it.
+  `review7/09_g2_final.sl`, run under `--no-prelude` after
+  `review7/09_g2_pre.sl` and `g2_defs.sl`, takes that step at the top
+  level and is accepted by both. It postulates ⊢ Con with a `def-prim`
+  axiom, which SOUNDNESS.md part 1 excludes, and proves the other
+  hypotheses for a `P` that holds of every code. The same step inside a
+  function body is refused by both, as `g2_direct_bad.sl` is.
+- Reading G as ¬`P g` needs `g` to be a code of the type ¬`P g`
+  itself. In `g2_defs.sl`'s coding, ¬`Pv g` is `Imp (Pv g) Bot`, and
+  no `g` equals a term that contains `g`: §7's occurs check refutes
+  the equation (`review7/09_g2_cycle.sl`, accepted by both). So, on my
+  reading, `g` has to be a code not built from the formula's
+  structure, such as a `Txt` holding the text of the unit that states
+  G, as in the macro-built diagonal (`r_self_goal.sl`). For a
+  relational diagonal, G ↔ ¬`Prov ⌜G⌝` is a theorem rather than a
+  definition, and its two directions are further internal steps, not
+  tried.
 - This checks (d) for this derivation and this way of stating the
   hypotheses only. `P` formalizes nothing, and nothing here shows that
   D2, D3, or the D1 instance hold for a `Prov` that formalizes
-  acceptance. The usual G2 argument from D1 to D3 is intuitionistic, so
+  acceptance.
+
+The usual G2 argument from D1 to D3 is intuitionistic, so
 anticlassicality (README.md, `tests/anticlassical.sl`) is no exemption.
 G2 fails for some very weak theories with suitably weak consistency
 statements (Willard's self-verifying systems, from memory). So D3 is a
@@ -491,7 +513,9 @@ them on P.
 
 03 F6 and 05 (§1, §4.3, T7, and §9; 05's Coordinator note 1) carry this
 wording, revised there by later reviews; where they differ, they are
-the current text. 05 §4.3 adds a condition (d), included below.
+the current text. 05 §4.3 adds a condition (d), included below. 05 does
+not yet carry what the wording below says was tried for (d): its §1,
+§4.3, T7, and §9 call (d) unattempted.
 
 **03 F6, after "(T) and (E) for P then say that this call of `compile`
 returns, reading part 5 as counting the driver's call as one of the
@@ -529,7 +553,8 @@ Sleight meets the conditions." with:
 > reaches absurd code, it cannot prove uniform stripped-run safety. The
 > same goes for uniform (T) with full-semantics safety, given the
 > matching lemma. (d) has been tried only for an abstract relation, with
-> D2, D3, and the diagonal's D1 instance as hypotheses (09 §2.4 B); (b),
+> D2, D3, and the diagonal's D1 instance as hypotheses and G taken to be
+> ¬`(Prov ⌜G⌝)` itself (09 §2.4 B); (b),
 > (c), and those lemmas have not been attempted (09 §2.4). As far as I recall, that derivation is intuitionistic, so
 > anticlassicality does not obviously exempt Sleight. README.md's IΣ₂
 > remark is derived there from the functions Sleight computes; read
@@ -555,12 +580,14 @@ statements and consistency of a coded system are expressible as goals
 sentence, the derivation's internal steps under level stratification,
 and any interpretation of HA, IΣ₁, or PRA are unattempted, except
 that the internal steps were tried for an abstract relation with D2,
-D3, and a D1 instance as hypotheses (09 §2.4 B).
+D3, and a D1 instance as hypotheses, and G taken to be ¬`Prov ⌜G⌝`
+itself (09 §2.4 B).
 The obvious translation of nested implications meets level
 stratification (09 §2.3, compiled); a PRA-style translation with
 first-order implications does not obviously meet it (09 §2.4)."
 
-00-summary's Gödel item (§3 item 20) points to 09 for the conditions.
+00-summary's Gödel item (key finding 20, in its §2) points to 09 for
+the conditions.
 
 ## 5. Unverified
 
@@ -580,7 +607,11 @@ first-order implications does not obviously meet it (09 §2.4)."
   such codes.
 - Route B: no `Prov`, D2, D3, `Sub`, or G was built. The derivation's
   internal steps ((d) in §4) were tried only with D2, D3, and one D1
-  instance as hypotheses about an abstract `P` (`g2_step.sl`, §2.4 B).
+  instance as hypotheses about an abstract `P`, and with G read as
+  ¬`P g`, which needs `g` to be a code of that type such as a unit's
+  text (`g2_step.sl`, §2.4 B); its final step was compiled only with
+  consistency postulated (`review7/09_g2_final.sl`). For a relational
+  diagonal, the two directions of G ↔ ¬`Prov ⌜G⌝` were not tried.
   Whether D2 holds given §71's one goal per unit and the global gensym
   and literal state is open.
 - Route C's two lemmas, and the claim that normalization implies
@@ -776,6 +807,5 @@ Unsure:
    implementations, the direct application of packed hypotheses is
    refused, and the fixed-level form passes. Added to §1, §2.4 B, §4's
    wording for 05, and §5. 05 still carries the earlier wording ("None
-   of (b), (c), (d) ... has been attempted"), and 00-summary and
-   00-glance say (d) is untried; both are for the coordinator to bring
-   in line after this round's review of 05.
+   of (b), (c), (d) ... has been attempted"), for the coordinator to
+   bring in line after this round's review of 05.

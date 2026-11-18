@@ -37,10 +37,11 @@ statement from the brief; **[A]** this agent's reading or proposal.
   bounds how many expansions happen.
 - [C/A] Three things DESIGN.md leaves free or unstated look able to
   affect acceptance: a program's acceptance depends on what `slot-eq`
-  answers at compile time (tested with the one answer both
-  implementations give; the other answer is inferred from §67), the
+  answers at compile time (tested: one program is accepted by both
+  implementations and refused by both under `--no-native`, §3.8), the
   order of elaboration is visible through gensym numbers (tested; that
-  it can decide acceptance is inferred), and a crash at compile time
+  it can decide acceptance is inferred from a program that both accept
+  because a macro call gets number 1, §3.6), and a crash at compile time
   (out of fuel) rejects in both implementations (tested). The first two
   need an owner decision before the spec can be functional
   (deterministic); the third concerns the agreement theorem rather than
@@ -77,7 +78,9 @@ depends on it.
    and no hypothesis seems to need compile-time evaluation proved
    terminating inside Sleight. That looks like the diagonal obstacle
    the owner does not expect to overcome for `no_false` (statement 1);
-   this is unverified. *Options:* (a) relative to H. Statement 4 words
+   this is unverified here. 03 F6 argues a version of it, not checked:
+   no non-erased `compile` function taking no further evidence can
+   agree with the spec on every source. *Options:* (a) relative to H. Statement 4 words
    H as "every accepted compile-time form's spec run halts"; this file
    uses the broader "every compile-time run in the spec halts", and
    which one is meant is for the owner. (b) A fuel parameter, with a
@@ -100,12 +103,16 @@ depends on it.
    elaboration takes fuel, and where.
 3. **Is the expansion limit a parameter?** DESIGN.md already fixes it:
    "At most 10000 expansions run in one run" (§62), so the spec keeps
-   it as written. The question is only whether the spec generalizes it
+   it as written. One question is whether the spec generalizes it
    to a parameter `N`, which would be a change to DESIGN.md's wording.
    *Recommended:* keep §62's 10000 as written; `N` is an option if the
    owner wants it. Without some
-   limit, theorem 3 fails even under H (§3.5). *Depends on it:*
-   theorem 3, and determinism, because the count is global.
+   limit, theorem 3 fails even under H (§3.5). Also open: §62 does not
+   say what a call past the limit does. Both implementations refuse it
+   ("more than 10000 macro expansions", §3.5), and theorem 3 needs the
+   spec to give it an outcome, which needs wording (03 decision 5).
+   *Depends on it:* theorem 3, and determinism, because the count is
+   global.
 4. **What does a rejection carry?** *Options:* (a) only "rejected";
    (b) the first error's position and macro-call trace; (c) also a
    structured reason, including the text DESIGN.md requires (the string
@@ -140,8 +147,10 @@ depends on it.
    existence only, with no exclusivity. (b) An oracle parameter (a
    stream of answers), so the spec is functional for each oracle.
    (c) Fix the compile-time answer to word equality, which is a change
-   to the language. (d) Forbid `slot-eq` from reaching run position or
-   a macro, also a change to the language. *Recommended:* (b). It
+   to the language, and would have to say whose words: the evaluator
+   and `native-compute`'s compiled run answer differently (§3.8).
+   (d) Forbid `slot-eq` from reaching run position or a macro, also a
+   change to the language. *Recommended:* (b). It
    changes nothing in DESIGN.md and uses the same mechanism as the
    `read-file` oracle.
 7. **Is a crash at compile time a rejection, a third outcome, or
@@ -167,6 +176,9 @@ depends on it.
    arities (§42, §43), and the expansion limit if decision 3 makes it a
    parameter. Not in the spec are
    `--eval-fuel`, `--no-native`, `--hints`, and `--warn-unused`.
+   `--no-native` changes acceptance without a crash, through `slot-eq`
+   (§3.8); [A] under decision 6 (b) that is another oracle, so it can
+   stay out.
    *Open:* `--warnings-as-errors`. DESIGN.md mentions it (§4), but its
    effect depends also on warnings that WARNINGS.md defines, beyond the
    few DESIGN.md defines (§4's, and the prelude's warnings in §69). In
@@ -192,8 +204,11 @@ depends on it.
     §4.2. Where possible, the run relation is a *parameter* of
     elaboration, so that the metatheory of elaboration (determinism, and
     the theorem-3 skeleton) is proved once for every lawful run
-    relation. That a Sleight ADT can usefully be indexed by a
-    relation-valued `TyCtor` is unverified.
+    relation. 05 F7 compiles the mechanism: an ADT indexed by a
+    relation-valued `TyCtor`, with a field whose type applies it, and a
+    function generic over it, are accepted by both implementations
+    (`proto/theorems/model.sl` after `bove.sl`). That the metatheory can
+    be proved once this way is unverified.
 11. **Staging order.** *Recommended:* §4.6. This affects how much of
     mini/ is rewritten.
 
@@ -333,7 +348,12 @@ splicing (`:1383`): in `proto/review4/01_head_name_err.sl`,
 `(nosuch (loop))` with `nosuch` unbound and `loop` a macro that
 expands to itself is refused, on both implementations, with "more
 than 10000 macro expansions", not with the unbound name. A macro can
-branch on its number, so the order can decide acceptance. [D] DESIGN.md fixes "The head is elaborated
+branch on its number, so the order can decide acceptance: in
+`proto/review7/01_order_accept.sl`, `(MkPair _ _ (MkPair _ _ (gs) (gs))
+(first-only))`, `first-only` expands to `(Zero)` when its number is 1
+and to an unbound name otherwise. Both implementations give it 1 and
+accept; a depth-first order would give it 3, and placed where it gets
+3 (`01_order_refuse.sl`) it is refused by both. [D] DESIGN.md fixes "The head is elaborated
 first" (§6), that statements come before the code after them (§27), that
 "the forms inside a form run before it does" (§27), and hoisting (§15),
 which places hoisted bindings "just before the statement or final form
@@ -360,7 +380,9 @@ the items.
   explicit about reporting more than one error. "whichever one the
   elaborator meets first" appears in §15, and §4's "Warnings go to
   standard error and do not stop elaboration" may be read as implying
-  that an error does stop it.
+  that an error does stop it. §54 says `dump-context` "stops
+  elaboration with a report of the context"; the reference stops
+  there, and slc goes on (`tests/dump_context.sl`, 10 §1).
 - [C] `two_errors.sl`: the reference reports only `one`, and slc reports
   `one` and `two`; self/README.md:298-301 says slc records errors and
   goes on, and slc's `--first-error` (MANUAL.md) stops its report, not
@@ -389,8 +411,10 @@ the items.
   `proto/review2/after_error_run.sl`) only by coincidence: `(BFalse)`
   reads as `(BTrue)`, and `3` as `0`, giving false later messages (10
   §1 to §3; BUGS.md 25). A string literal, or a `Settled` string
-  variable, also leaves the binder `Hypothetical`, for a reason 10 did
-  not trace. Acceptance seems unaffected, since the first
+  variable, gets the token too: `comptime-match` reads it as `(SNil)`,
+  and a `compile-warn` of it says it "is `Hypothetical`", slc's wording
+  for any stored value that is not a string (`self/elab.sl:2585-2587`;
+  `proto/review7/10_string_token.sl`). Acceptance seems unaffected, since the first
   error already makes slc exit 1 (10 §4).
 - [C] Both implementations read a whole file before elaborating it.
   `reader_phase.sl` (a missing `)` on line 3) and `pragma_phase.sl` (an
@@ -416,7 +440,8 @@ the items.
   `--warnings-as-errors` the reference holds every final value back
   until all files are elaborated (`bin/main.ml:97-102`, `:109-110`), and
   `01_prog_first.sl` then `01_late_error.sl` is refused, with no
-  `effect`, though no warning is given. [A]
+  `effect`, though no warning is given. It is refused under `--extract`
+  too, which runs no final (`bin/main.ml:93`). [A]
   Where reading or elaboration fails only in a
   later file, acceptance then depends on when the driver runs, which
   section 5 item 14 raises; otherwise reading can be a separate total
@@ -438,8 +463,15 @@ the items.
   `slot_eq_comptime.sl` (`comptime-match` on `ESome`) is accepted, and
   `slot_eq_comptime_none.sl` is refused, on both implementations, and
   also under the reference's `--no-extern` (slc has no such flag). [A] So an implementation that answers `ENone`
-  would conform to DESIGN.md and have the opposite outcomes. Acceptance
-  is not a function of the source under DESIGN.md as written.
+  would conform to DESIGN.md and have the opposite outcomes. [C] Both
+  answers already occur at compile time: in
+  `proto/review7/01_slot_eq_native.sl`, a `comptime-match` expects
+  `(BTrue)` from a `native-compute` of a function that asks `slot-eq`
+  about the slots of `(add 1 2)` and `3`. The compiled run answers
+  `ESome`, and both implementations accept; under `--no-native` the
+  evaluator answers `ENone`, and both refuse, as does the reference
+  under `--no-extern`. Acceptance is not a function of the source under
+  DESIGN.md as written.
 - [D] `native-compute` "may crash where the evaluator would not" (§72).
   §31 crashes are a host matter. [A] These are compiler outcomes, not
   spec outcomes (decision 7).
@@ -515,8 +547,10 @@ DESIGN.md does not define the unit.
   run position, or a body with its level and subterm arguments, or an
   erased position.
   - Γ, restored when a scope ends: the scope list of §5; the facts,
-    split into the facts of the innermost run position and the facts
-    forced in branches, because §6 and §65 read only the former; the
+    split into the facts of the innermost enclosing run position and
+    those added below it, in bodies and branches, because §6 and §65
+    read only the former ("the table as it stood at the innermost
+    enclosing run position", §7); the
     opened `Matchable`s and `AtFn`s; and the ambient level and subterm
     arguments.
   - Σ, threaded: the heap; the id counter (introduction order); the
@@ -607,10 +641,13 @@ before one that only adds rules.
    one the elaborator meets first" covers only two conflicting uses of
    one unique binder.)
 2. `slot-eq`'s freedom (§67) reaches acceptance through `comptime-match`
-   in run position (tested).
+   in run position (tested, §3.8).
 3. A crash in run position: only §72 says "a run that crashes is an
    error". MANUAL.md (`--eval-fuel`) says a crashing run-position form
-   "is refused". DESIGN.md is silent for the general case.
+   "is refused". For the general case, §31 says "A crash produces no
+   value, never a different one. How a crash is reported is not
+   specified; it need not be a runtime error", which does not say
+   whether the program is then refused.
 4. Numerals: §1 says "Atoms made only of digits … are numeral …
    literals", and §45 says a numeral has "no leading zero". It does not
    say what `042` is. [C] Both implementations: "syntax error: 042 has
@@ -627,7 +664,8 @@ before one that only adds rules.
    reference does not reset its counter, and the shipped prelude expands
    no macro: a program of exactly 10000 expansions is accepted by both
    implementations (§3.5, `proto/review6/01_count_10000.sl`). So the
-   question bears only on a prelude that does expand one.
+   question bears only on a prelude that does expand one. Nor does §62
+   say what a call past the limit does (decision 3).
 8. `--warnings-as-errors` is in DESIGN.md (§4), but which warnings exist
    beyond §4's is in WARNINGS.md. So under that flag, acceptance depends
    on text outside the spec. [C] `fuel.sl` draws an implementation
@@ -636,8 +674,8 @@ before one that only adds rules.
    (§42) puts one implementation's table into the definition of
    acceptance.
 10. `dump-context` is defined by reference to MANUAL.md (§27, §54) and
-    always stops elaboration. [A] For the spec it is an `Err` with
-    unspecified content.
+    "stops elaboration" (§54); slc goes on after its report (§3.7). [A]
+    For the spec it is an `Err` with unspecified content.
 11. Multiple errors: DESIGN.md says nothing explicit (§4's "Warnings
     ... do not stop elaboration" may imply that errors do). The two
     implementations differ after the first error (tested).
@@ -666,24 +704,32 @@ before one that only adds rules.
     on one command line share one scope, in order" and gives each file
     that ends in an expression a final value for the driver, but does
     not say whether a `Program` final runs when its file ends or after
-    every file is elaborated, nor whether its `Exit` ends the unit. The
+    every file is elaborated, nor whether its `Exit` ends the unit.
+    §71's "nothing is printed, applied or written after elaboration",
+    said of the modes that turn the driver off, may be read as putting
+    the driver after elaboration, but not as saying whether a file's
+    or the unit's. The
     reference runs it when its file ends and then exits, never reading
     a later file, except under `--warnings-as-errors`, where it
-    elaborates every file first; slc always elaborates every file first
+    elaborates every file first, and under `--extract`, where it runs
+    no final; slc always elaborates every file first
     (§3.7, `proto/review5/01_prog_first.sl`). So the two disagree on
     acceptance for such a unit, and the reference's acceptance depends
-    on `--warnings-as-errors` even when nothing warns. §4 makes a
+    on `--warnings-as-errors` even when nothing warns, and on
+    `--extract`. §4 makes a
     `;! file` file mean "what it would as a separate file of the unit",
     and both implementations treat it so here. A question for the
     owner.
 
 ## 6. Unverified claims
 
-- That an inductive relation in Sleight can usefully take another
-  relation (a first-class `TyCtor`) as a parameter (decision 10).
+- That the metatheory of elaboration can be proved once over a run
+  relation taken as a parameter (decision 10); 05 F7 shows only that
+  such indexing is accepted.
 - That a proof of theorem 3 without hypotheses would hit the diagonal
-  obstacle of statement 1 (decision 2). This is an analogy, not an
-  argument.
+  obstacle of statement 1 (decision 2). Here this is an analogy, not an
+  argument; 03 F6 argues it, not checked, for a non-erased `compile`
+  function.
 - That §50's meta solving is independent of order within a boundary.
 - That the Run layer needs only the fact engine, scope lookup, and Σ,
   and never the full elaborator (§3.2). This comes from reading §65,
@@ -1068,4 +1114,76 @@ Unsure, not changed:
 - slc's out-of-fuel is an error value and evaluation goes on (02 C4);
   whether that changes which first message slc gives for `fuel.sl`
   under `--eval-fuel 5` was not traced.
+- The summary is still far beyond the brief's 15 lines.
+
+## Round 7 review notes
+
+Added by a seventh, independent review. Every test under
+`proto/spec-shape/` and the `proto/review2/` to `proto/review6/` tests
+this file cites were rerun on the reference and on `_build/release/slc
+--interpret` (`fuel.sl` and a `--no-prelude` program under
+`--eval-fuel 5`, the `slot_eq` pair under the reference's
+`--no-extern`); the outputs quoted reproduce. The code citations in
+`lib/`, `bin/`, `self/`, and `mini/` were reopened and hold. New tests
+are `proto/review7/01_*.sl`; `01_order_accept.sl`, left by an
+interrupted reviewer, is used as written.
+
+1. §3.7 said a string literal or a `Settled` string variable after an
+   error "leaves the binder `Hypothetical`". It gets the token:
+   `proto/review7/10_string_token.sl` gives "expected `SCons`, got
+   `(SNil)`" for both, and the "is `Hypothetical`" of a `compile-warn`
+   is how `message-of` words any stored value that is not a string
+   (`self/elab.sl:2585-2587`), as 10 now says. Fixed.
+2. Section 5 item 3 said DESIGN.md "is silent for the general case" of
+   a crash; §31 says "A crash produces no value, never a different one.
+   How a crash is reported is not specified". Now quoted.
+3. Section 5 item 2 said `slot-eq`'s freedom reaches acceptance
+   "(tested)" when only `ESome` had been seen, the overclaim first
+   review note 6 removed from the summary. `01_slot_eq_native.sl` now
+   tests both answers: a `comptime-match` on a `native-compute` that
+   asks `slot-eq` passes on both implementations by default and fails
+   on both under `--no-native` (and on the reference under
+   `--no-extern`). §3.8, the summary, item 2, and decision 6 (c) updated;
+   decision 8 notes that `--no-native` changes acceptance without a
+   crash.
+4. Decision 3 said §62 fixes the limit, so "The question is only"
+   whether to make it a parameter `N`. §62 does not say what a call past
+   the limit does (as 03 decision 5 notes); both implementations refuse
+   it, and theorem 3 needs an outcome there. Added to decision 3 and
+   section 5 item 7.
+5. §4.2 split Γ's facts into those "of the innermost run position" and
+   those "forced in branches". Facts added in a body outside any branch
+   (its declarations, opens, a `let-match`'s exports) are neither, and
+   §7 has dispatch read "the table as it stood at the innermost
+   enclosing run position", which excludes them too. Reworded to "those
+   added below it, in bodies and branches".
+6. Decision 10 and section 6 called it unverified that an ADT can be
+   indexed by a relation-valued `TyCtor`. 05 F7 compiled that:
+   `proto/theorems/bove.sl` then `model.sl` is accepted by both (rerun).
+   Narrowed to what is still unverified, proving the metatheory once
+   that way.
+
+Also added: `01_order_accept.sl` and `01_order_refuse.sl` show a
+program whose acceptance turns on the gensym number a macro call gets
+(§3.6, summary); §54's `dump-context` "stops elaboration", and slc goes
+on after it (`tests/dump_context.sl`), in §3.7 and section 5 item 10;
+§71's "nothing is printed, applied or written after elaboration" and
+the reference refusing the `01_prog_first.sl` pair under `--extract`
+(`bin/main.ml:93`) in §3.7 and section 5 item 14; 03 F6 as the argument
+behind decision 2's diagonal analogy. Checked and not added: both
+implementations count expansions across the files on the command line
+(`01_files_6000.sl` then `01_files_10000.sl`, 10000 in all, accepted;
+then `01_files_10001.sl` instead, refused), and in
+`01_order_forms.sl` the entries of a `values`, a `let`'s statements,
+and a call's arguments take gensym numbers in decision 5's order on
+both.
+
+Unsure, not changed:
+- §4.6 says S2 "changes every rule's signature (Σ, ρ, the Run
+  premise)", but S1 already threads Σ, and the summary puts the run
+  mode in the shape fixed first. Possibly S2 only grows Σ (a heap);
+  which was meant is the author's to say.
+- Whether decision 8 should list `--extract`, which changes the
+  reference's acceptance in item 14's case, and `--build`, which takes
+  the same path (`bin/main.ml:93`) but was not run.
 - The summary is still far beyond the brief's 15 lines.

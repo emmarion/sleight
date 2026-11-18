@@ -1,0 +1,8 @@
+(let ((many b)) 7)
+(compile-error "first")
+(let ((erased p)) (prove-literal-lt 3 5))
+(let ((erased q)) (prove-literal-lt b 9))
+(let ((many a)) 7)
+(let ((erased r)) (prove-literal-lt a 9))
+(unary a)
+(compile-warn "end")

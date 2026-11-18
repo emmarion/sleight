@@ -12,8 +12,8 @@ decisions, which is an earlier session's paraphrase, not the owner's words.
   depth bound (default 10⁹, fresh for each run-position form, each macro
   run, and each step of an interpreted `Program`). Running out is reported
   as a refusal of the form, which DESIGN.md does not obviously license. The
-  other "fuels" are a language rule (§62's 10000 expansions), erased
-  termination measures, and a handful of bounds that a measure proof could
+  other "fuels" are a language rule (§62's 10000 expansions),
+  termination measures (most of them erased), and a handful of bounds that a measure proof could
   replace. One of those, `merge-opens` (F3 row 6), would accept early if
   its bound were too small; I believe it is not, but did not prove it.
 - The prototype (`proto/fuel/`) shows a CEK interpreter and a toy checker
@@ -28,7 +28,7 @@ decisions, which is an earlier session's paraphrase, not the owner's words.
   closure cannot call another one at the same level. With an erased
   `subterm` counter in the closure type, a closure at a fixed level can
   call the one before it (F4.1). A function also cannot iterate
-  `Program` steps itself. I compiled these claims (F4). I propose
+  `Program` steps itself unless it is given fuel. I compiled these claims (F4). I propose
   defunctionalized suspension: explicit data frames, plus one fresh
   `UniqueFn` per driver step that calls down to the stepper.
   Counter-indexed closures may be an alternative, but only a chain of
@@ -38,7 +38,7 @@ decisions, which is an earlier session's paraphrase, not the owner's words.
   `proto/fuel/diagonal.sl`, the rest is my reasoning) says that, if
   Sleight's functions terminate and its checking ends (SOUNDNESS.md's
   (T), (C), and (E), argued there, not proved, and read as F6 reads
-  them), no non-erased Sleight function `compile : Src -> Verdict` that
+  them), and under F6's further premises (09 §3.4), no non-erased Sleight function `compile : Src -> Verdict` that
   takes no further evidence can agree with the spec on every source. A source's
   macro can `read-file` its own text, call `compile` on it, and expand to
   a `compile-error` exactly when the answer is "accept". So "every source
@@ -174,7 +174,12 @@ The file behind 3 was not saved. Reproduce each from the text here.
    calls `(k w)`, and recurses on the result `p2`. It is refused:
    "`p2` is not a strict subterm of `(Continue L k)`". This matches
    SOUNDNESS.md's point 3, "A stored function is a leaf". Only the driver
-   iterates, or a function that is given fuel.
+   iterates, or a function that is given fuel. The second is checked by
+   `proto/review7/03_fuel_iterate.sl`: called from a driver step with its
+   world, a function at a level minted after the `Program`'s steps a
+   five-step `Program` under a `subterm` fuel, and prints `out of fuel`
+   with fuel 3 and `finished` with fuel 10, under the reference,
+   `--no-extern`, and `slc --interpret`.
 3. **The `Program` knot is accepted, as in `interp.sl`.** `drive` at PA
    returns `Continue P again`. `again` is a `def-unique` at P, defined in
    `drive`'s body and closing over `many` state, and it calls `drive`.
@@ -265,7 +270,9 @@ with the spec on every source. Its termination is then the checker's
 since `read-file` supplies the text. `Src` must carry every file the
 unit reads (§65) and the flags; Q fixes the flags it assumes, and the
 argument concerns Q run with them. Q can read each file of its unit, since
-each is a source file. Q's spec run consists of one macro run of a total
+each is a source file. The argument takes the file system as fixed, so
+that those reads return Q's own files; "agrees with the spec" is meant
+relative to it (09 §3.4 premise 5). Q's spec run consists of one macro run of a total
 function plus ordinary elaboration, so it ends, by SOUNDNESS.md's (T)
 for the macro run and (C) for the rest; since §27 strips erased
 positions before a run, the run's termination also uses (E). (The
@@ -284,7 +291,7 @@ if Q's text before the macro call is. `proto/review5/03_detour.sl` is
 that P for `toy-compile`: `--extract` accepts it, and run, it prints
 `(BFalse)`. (T) and (E) for P then say that this call of `compile`
 returns, reading part 5 as counting the driver's call as one of the
-activations it covers, and reading (E)'s "follows" as a step-by-step
+activations it covers, and reading (E)'s "follows" as an order-preserving
 correspondence with a finite full run, which part 7 suggests without
 saying it (09 §3.2). SOUNDNESS.md does not mention the driver's call
 of a final `Fn` value. Part 5's measure argument asks no decrease of a
@@ -301,7 +308,9 @@ another (09 §3.4). The macro's other code
 cannot be given a P, since it needs a `MacroWorld` (§65). In
 `diagonal.sl` it is non-recursive apart from that call, and its
 termination is by inspection, given that `read-file` and
-`intern-string` return (09 §3.4). The rest of Q is the
+`intern-string` return (09 §3.4). For a real `compile`, Q's macro must
+also read every file of its unit and build `Src` from them, which
+non-recursive code can do (09 §3.4 premise 4). The rest of Q is the
 elaboration of the macro's output, one `compile-error` or nothing, and
 of what follows the call, in `diagonal.sl` one string literal, so Q's
 spec run ends without (C) being applied to Q (my reasoning). With
@@ -317,8 +326,8 @@ the argument applies instead to its copy with every `slot-eq` answered
 must be faithful too, if "faithful" means that every run §67 permits
 agrees with the spec (my reasoning).
 
-So, if Sleight's functions do terminate, no such function is a faithful
-compiler for all sources. It is the halting-problem form of
+So, under the premises above, chiefly that Sleight's functions
+terminate, no such function is a faithful compiler for all sources. It is the halting-problem form of
 diagonalization. The self-reference comes from `read-file`, not from
 Kleene's recursion theorem. I make no claim about Gödel's theorems here.
 Whether their hypotheses hold for Sleight's logic (§10: `Type : Type`
@@ -353,9 +362,9 @@ that applies here.
 **H for all sources (inference, untested).** Suppose a Sleight
 function returned, for every source, erased evidence that the stepper
 halts within an erased n. Recursing on that n would then give a
-hypothesis-free non-erased `compile`, which F6 forbids. So if Sleight is
-sound and the stepper is faithful, Sleight cannot prove H for all
-sources in this form.
+hypothesis-free non-erased `compile`, which F6 forbids. So, under F6's
+premises, if Sleight is sound and the stepper is faithful, Sleight
+cannot prove H for all sources in this form.
 
 **The escapes.**
 - `compile_n` with fuel. Q's call to `compile_n(Q)` must answer
@@ -390,7 +399,7 @@ My reading: H is "every compile-time evaluation the spec performs while
 deciding src halts". Going through DESIGN.md, compile-time computation
 happens at these places:
 - run-position forms and everything they call (§27, §29);
-- macro functions (§62), at most 10000 of them per run;
+- macro functions (§62), whose runs §62 caps at 10000 in one run;
 - macro primitives, which check and canonicalize but do not evaluate
   (§65, §29 "The checker never evaluates");
 - `unary`, at most 1024 successors, checked "with `nat-cmp`" (§49), and
@@ -407,9 +416,10 @@ happens at these places:
 
 The top level cannot loop (§3, §20), apart from macro re-expansion,
 which §62 caps. So H would follow from two things:
-- SOUNDNESS.md's claims (T), totality, and (C), checking terminates,
-  applied to the code that is run, form by form, as part 6 applies (T)
-  to run-position forms; part 1 states the claims only "about any
+- SOUNDNESS.md's claim (T), totality, applied to the code that is run,
+  form by form, as part 6 applies (T) to run-position forms in its
+  argument for (C). H concerns evaluation only, so (C) itself is not
+  needed for it. Part 1 states the claims only "about any
   program the checker accepts", and H concerns rejected sources too
   (F6). (E) is needed as well, read as giving termination of the
   stripped run (F6), since §27 runs a
@@ -423,8 +433,8 @@ which §62 caps. So H would follow from two things:
   and run under `native-compute` must also halt.
 
 In that reading, H is an instance of the language's own termination
-claim plus I/O. By F6's inference (untested, and assuming Sleight is
-sound), it is not provable in Sleight for all sources in a form a
+claim plus I/O. By F6's inference (untested; it rests on F6's premises
+and assumes that Sleight is sound and the stepper faithful), it is not provable in Sleight for all sources in a form a
 function can recurse on, such as erased step counts.
 For one given source it is a statement about that source, so it may be
 provable case by case.
@@ -496,7 +506,7 @@ count at `elab-main.sl:559-560`.
 - Design: the interpreter terminates by a measure mirroring the program's
   levels and subterm order, as a normalization proof in Sleight.
 - Pros: no driver loop. A total function.
-- Cons: F6 rules it out for all sources, if it is a non-erased
+- Cons: under its premises, F6 rules it out for all sources, if it is a non-erased
   function on source text with no further evidence. At best it works for a fragment
   bounded by a fixed number of levels and `subterm` parameters, with
   "too deep" as a new extra outcome, i.e. fuel in another shape. It would
@@ -632,8 +642,11 @@ source whose compile-time run diverges has no derivation.
   over to the run of the possibly rejected Q (F6). It assumes that the
   spec accepts P as the checker does, that part 5 covers the driver's
   call, that (E) gives termination of the stripped run, and that Q's
-  text before the macro call does not depend on its file. Only P's
-  shape is compiled, with `toy-compile`.
+  text before the macro call does not depend on its file. The rest
+  of F6 needs the other premises 09 §3.4 lists (a deterministic run of
+  `compile`, one semantics for the macro's run and the driver's, no crash, the macro's other code
+  ending, a fixed file system, and Q's verdict following the macro's
+  output). Only P's shape is compiled, with `toy-compile`.
 - That the per-item and per-file expansion parameters (F3 row 2) never
   bind before the global count.
 - Whether the store can hold cycles (F3 row 5).

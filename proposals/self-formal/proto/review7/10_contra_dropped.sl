@@ -1,0 +1,6 @@
+(compile-error "first")
+(let ((many x1)) (Some (Nat) 4))
+(comptime-match many x1 (None t1))
+(let ((many x2)) (None (Nat)))
+(comptime-match many x2 (None t2))
+(dump-context)
