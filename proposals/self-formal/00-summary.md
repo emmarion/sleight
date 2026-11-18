@@ -108,14 +108,15 @@ Each item is the tracks' recommendation, not a decision.
    (inferred), then expand each macro call among an application's arguments, left to right, its
    output before the next argument, then a head that is a name, then the arguments left to right
    (`proto/review3/gensym_*.sl`, `review4/01_head_name_err.sl`, `review6/01_splice_output.sl`;
-   special forms' operands unchecked; 01 §3.6, r3.1, r4.2). At runtime the reference, and slc's
-   compiled code (native and `--byte`) in one test only, run a head form before an argument form in
-   a body (`proto/review3/head_arg_order.sl`, `proto/review5/04_head_arg_compiled.sl`; 02 §6; 04
-   r5.2), and slc's emitter writes the head before the hoisted argument and a `values` as nested
-   `let`s in written order (`proto/review6/02_values_order_slc.sl`; 02 r6.3). `slc --interpret`'s
-   order is unobserved: it overflows its stack on `head_arg_order.sl` and on the swapped
-   `proto/review3/00_arg_head_order.sl`, and `--eval-fuel` cannot separate the orders, since its out
-   of fuel is an error value after which the run goes on (02 §6, r6.4, r6.5). A real run observes
+   special forms' operands unchecked; 01 §3.6, r3.1, r4.2). At runtime, the reference (interpreted
+   and built), `slc --interpret`, and slc's native and `--byte` builds all run a head form before an
+   argument form in a body in two tests that set a world write against a stack overflow
+   (`proto/dyn/head_crash_arg_write.sl`, `head_write_arg_crash.sl`; 02 §2.2, round-7 coordinator
+   note 1). Earlier crash-against-crash tests showed the same for the reference and slc's builds
+   (`proto/review3/head_arg_order.sl`, `proto/review5/04_head_arg_compiled.sl`; 02 §6; 04 r5.2), but
+   not for `slc --interpret`, whose out of fuel is an error value after which the run goes on (02
+   §6, r6.4, r6.5). slc's emitter writes the head before the hoisted argument and a `values` as
+   nested `let`s in written order (`proto/review6/02_values_order_slc.sl`; 02 r6.3). A real run observes
    order without divergence through a §31 crash: an argument's write precedes another's crash under
    slc's native build and the reference, §15 allowing either order, though the spec's run
    ("unlimited stack and heap") would not crash (`proto/review5/04_effect_vs_crash.sl`; 04 §5.1,
@@ -204,20 +205,26 @@ Each item is the tracks' recommendation, not a decision.
     n)` stores, which skip `caml_modify`, as GC-safe when both the overwritten and the stored word
     are immediates (for a blit, every word of both ranges), every read of such a field is a mutable
     load (in a match too, by `-dcmm`), and the target is not a flat float array, from runtime
-    sources and stress tests (over 5,000 debug heap checks); OCaml 5 (one domain read, not run),
-    flambda, arm64, and systhreads are untested (08 §1, §3, §6 to §8, r6.1, r6.8). The reference
-    interpreter's `-imm` blits copy boxed `VWord`s raw: `array-blit-imm` and `array-blit-many-imm`
-    segfault it, under `--build` too (for `array-blit-many-imm`, this summary's own check;
-    `array-move-imm` untried), while `slc --interpret` maps all three to the ordinary blit
-    (`proto/bugs/blit_imm_interp.sl`, `proto/review6/08_blit_many_imm_interp.sl`; 08 r1, r6.4;
-    BUGS.md 26).
+    sources and stress tests (over 5,000 debug heap checks). The stress tests and negative controls
+    behave the same on 4.14.1 with flambda and on 5.4.1 with and without flambda, with systhreads and
+    (on 5.4.1) domain variants and debug heap verification, and, for the stress test without Zarith,
+    on arm64 under qemu's user mode; 5.4.1's runtime sources read the same way. Real arm64 hardware
+    and the multi-domain memory model are unchecked (08 §1, §3 to §8, r6.1, r6.8, round-7
+    coordinator note 1). The reference interpreter's `-imm` blits copy boxed `VWord`s raw:
+    `array-blit-imm`, `array-blit-many-imm`, and `array-move-imm` segfault it, under `--build` too
+    (for the last two, this summary's own check), while `slc --interpret` maps all three to the
+    ordinary blit (`proto/bugs/blit_imm_interp.sl`, `proto/review6/08_blit_many_imm_interp.sl`,
+    `proto/bugs/move_imm_interp.sl`; 08 r1, r6.4; BUGS.md 26).
 20. **Gödel II: possibly, not established** (09's reading). Goals passing `--goal proved` (§71)
     appear r.e., and Σ₁ facts and a coded system's consistency can be goals (09 §2.2, §2.3;
     `proto/godel/`, both). Missing, unattempted: a Sleight `Prov` formalizing acceptance, with D1 to
-    D3 and a diagonal sentence; (d) the usual derivation's internal steps, such as ⊢ Con → G, going
-    through despite level stratification; and, for the safety limits, lemmas that `(Prov ⌜False⌝)`
-    yields an accepted program whose stripped run reaches absurd code (09 §2.4 B, C, §4, r6.13; 05
-    §4.3, r6.1). A macro in a goal type can splice in its own file's text (`r_self_goal.sl`, with
+    D3 and a diagonal sentence; and, for the safety limits, lemmas that `(Prov ⌜False⌝)` yields an
+    accepted program whose stripped run reaches absurd code (09 §2.4 B, C, §4, r6.13; 05 §4.3,
+    r6.1). Condition (d), the usual derivation's internal steps going through despite level
+    stratification, holds in one abstract form: for any relation given D2, D3, and the diagonal's
+    D1 instance as packed hypotheses, a packed ⊢ Con → G passes `--goal proved` on both
+    implementations, applying those hypotheses directly in a body is refused, and the last step to
+    ⊥ is a top-level application (`proto/godel/g2_*.sl`; 09 §2.4 B, round-7 coordinator note 1). A macro in a goal type can splice in its own file's text (`r_self_goal.sl`, with
     `std/macro.sl`, both; 09 r6.1); D2 and D3 for such codes are open (§45). Level stratification
     blocks the obvious translation of nested implications, not obviously a PRA-style one (09 §2.3,
     §2.4 A). Without Gödel, 03's diagonal rules out, under its premises, a faithful hypothesis-free
@@ -638,8 +645,8 @@ Open ones; numbers follow the review log, gaps being resolved items.
   09's six premises (key finding 21), only P's shape compiled, and the `slot-eq` step is reasoning
   (03 §6, r2.3, r3.4, r5.1); all rests on (T) and (E), and 05's version also on logic soundness, all
   unproved; 05's quine form assumes unwritten quines (05 §9, r5.2).
-- **Gödel II** (key finding 20): `Prov`, D1 to D3, the diagonal sentence, condition (d), route C's
-  lemmas, any interpretation of HA, IΣ₁, or PRA, and the r.e. readings are unattempted or unchecked;
+- **Gödel II** (key finding 20): `Prov`, D1 to D3, the diagonal sentence, condition (d) beyond an
+  abstract relation with hypothetical D2, D3, and D1 instance, route C's lemmas, any interpretation of HA, IΣ₁, or PRA, and the r.e. readings are unattempted or unchecked;
   the named results are from memory (09 §5); README.md's IΣ₂ / ω^ω^ω claim is unchecked (05 §9).
   `05_stripped_absurd_final.sl` shows only route C's program shape, its `p` a `def-prim`, which
   SOUNDNESS.md excludes (05 r5.1).
@@ -677,8 +684,8 @@ Open ones; numbers follow the review log, gaps being resolved items.
   the cut is at least a silent wrong answer.
 - **OCaml**: `let ... and` and argument order in versions other than 4.14, whose manual leaves them
   unspecified (02 §2.2, r4.3); other targets, flambda, many-argument tail calls; constant sharing
-  beyond immutable tuples; GC safety of the `imm` stores on OCaml 5, flambda, arm64, or systhreads,
-  and whether `Imm` proofs can be forged through the logic (08 §8); `Slots` hashing across GC moves;
+  beyond immutable tuples; GC safety of the `imm` stores on arm64 hardware (only qemu's user mode
+  ran) and across domains beyond one stress schedule, and whether `Imm` proofs can be forged through the logic (08 §8); `Slots` hashing across GC moves;
   `bytes-str` input never mutated (02 §6; 04 §2.5, §6, r3.1, fourth review).
 
 

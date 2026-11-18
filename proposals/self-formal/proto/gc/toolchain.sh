@@ -25,7 +25,7 @@ for v in n d; do
 done 2> build.log
 run() {
   bin=$1 rp=$2; shift 2
-  [ -x "$bin" ] || return
+  [ -x "$bin" ] || return 0
   res=$(OCAMLRUNPARAM=$rp ./$bin "$@" 2> err.txt); code=$?
   echo "$bin $* [$rp] exit=$code heap-checks=$(grep -c 'heap check\|Heap verified' err.txt) :: $res $(grep -i 'assert\|fatal\|error' err.txt | head -n 1)"
 }
