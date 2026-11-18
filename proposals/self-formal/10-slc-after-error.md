@@ -331,6 +331,7 @@ is run with `--eval-fuel 100` on both implementations):
 | 10_contra_dropped | `x1` = `(Some (Nat) 4)`, matched `(None t1)`; `x2` = `(None (Nat))`, matched `(None t2)`; `dump-context` | only the report: `t1` `Hypothetical`, `t2` `Settled`; `x1` `is (Some (Nat) 4)` and `= (None _)` | missing error; the report's `= (None _)` |
 | 10_macro_crash | a pre-error macro whose run runs out of fuel; `compile-warn` | the `compile-warn` only | missing error |
 | 10_unreported | an empty `;! suppress warn` region; an unneeded `(predates _)`; `compile-warn` | the `compile-warn` only | two missing warnings |
+| 10_macro_after | a pre-error `resolve` probe on `m`, a macro bound after the error; `(m)` | `RHypothetical`; `m` is a macro, expanded only where its head is constant-known | yes (both) |
 
 ## 4. Are reported messages false?
 
@@ -350,8 +351,10 @@ without `(m)`): every `comptime-match` of a "yes" row passed (17 aside,
 which has no such line and stops at its refuted branch), 03, 05,
 10_contra_dropped, and 10_macro_crash failed with the error slc omits,
 14 printed `abc` twice, 10_string_token printed it once, `(m2)`
-expanded, `resolve` answered `RSettled` all three times, 10_literal_macros
-printed only its `compile-warn`, and 10_unreported gave both warnings.
+expanded, `resolve` answered `RSettled` all three times in
+10_macro_prims and once in 10_macro_after, whose `(m)` then expanded,
+10_literal_macros printed only its `compile-warn`, and 10_unreported
+gave both warnings.
 slc, run on the same files, printed what the reference did on every
 one but 17, 10_contra_dropped, and 10_macro_crash: in each, an error
 still comes before later forms, so slc goes on, and in 10_macro_crash
@@ -361,13 +364,22 @@ before it is recorded with no gate shut, and acceptance seems never to
 be affected: once an error is recorded, slc's exit code is 1 whatever
 follows, when it runs to the end (below). DESIGN.md does not require a
 second message at all, so the reading that these are defects rests on a
-message being false, not on its being extra. Two further kinds of
-difference were seen that are not false messages: messages that do not
-appear (03, 05, 10_contra_dropped, 10_macro_crash, and 10_unreported's
-two warnings), which DESIGN.md seems not to require since it requires
-no second message, and genuine later messages that the reference would
-not reach (15's first, and each later `compile-warn` or
-`compile-error`).
+message being false, not on its being extra. Three further kinds of
+difference were seen that are not counted as false messages here:
+messages that do not appear (03, 05, 10_contra_dropped, 10_macro_crash,
+and 10_unreported's two warnings), which DESIGN.md seems not to require
+since it requires no second message; genuine later messages that the
+reference would not reach (15's first, and each later `compile-warn` or
+`compile-error`); and a message that follows from the first error at
+the same form. In `proto/review2/03_untaken_ce.sl`, where a branch's
+body is `(compile-error "untaken")`, slc adds "the enclosing `match`
+expects 1 return value, got 0" and the reference prints `untaken`
+alone; self/README.md allows such messages ("may report a few more that
+follow from it"). It states no value, and whether it is false turns on
+the size of a `compile-error` used as an expression, which DESIGN.md
+does not state: §4 lets the form "stand anywhere a form may", §54 makes
+it "also usable as an expression", and §27 lists it among the
+statements, which produce no values.
 
 [A] One case looked for and not found: a later error that slc would
 have to report and does not, in a way that could make a program
