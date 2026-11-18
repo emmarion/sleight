@@ -234,7 +234,10 @@ functions are `Settled`: `resolve` answers `RSettled` for one
 gets the token (`08_call_var.sl`, whose `f` is bound before the
 error). A macro bound after the error holds the token too and is
 refused as not constant-known (`proto/review2/after_error_macro.sl`),
-as `m2` is in 15. A direct read of an entry that was `Settled` before
+as `m2` is in 15: in `proto/review7/10_macro_after.sl` the refusal is
+the plain one, so the entry is `Settled` (`elab.sl:2800-2806`), and
+`resolve` answers `RHypothetical` for it, which for a `Settled` entry
+only the token test gives. A direct read of an entry that was `Settled` before
 the error is unaffected: `comptime-match` on it, and on the fields it
 binds, reads the real value (`16_pre_error_field.sl`),
 `(compile-error s)` with such an `s` prints its text, and `resolve`
