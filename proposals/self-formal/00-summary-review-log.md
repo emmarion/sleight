@@ -2508,3 +2508,135 @@ Unsure:
   implementations") and 03 §1 ("reported as a refusal of the form") state slc's side without that
   case; they are not this check's files.
 - 00-summary.md is now 804 lines, 00-glance.md 120.
+
+## Round 8 carry-over check
+
+An independent check of 00-summary.md and 00-glance.md against every numbered item of the "Round 8
+review notes" of 01 to 10 (08's including its list on BUGS.md 13 and 23 to 27), the round-8 items of
+01's "Round 7 coordinator notes" (note 2's revision and note 3), and the coordinator's own round-8
+edits (73bfc07, 07cd1f0, 8d695f0, and be1c4e2), after reading REVIEW.md, the brief, CLAUDE.md, and
+all of DESIGN.md. One test was re-run: `proto/review8/02_append_share.sl` in eight modes (item 2).
+Everything else was settled by reading the track files, BUGS.md, `lib/prelude.sl`, and
+`lib/ffi_core.ml`.
+
+Errors, and changes:
+
+1. The header's citation key stopped at `r7.N`, while the summary cites round-8 notes as `r8.N`.
+   Added.
+2. Key finding 5 (07cd1f0) said `02_append_share.sl`'s two comparisons, `x` against
+   `(str-append x "")` and against `(str-append "" x)`, both give a built `ESome` that a spec
+   running the prelude's model cannot, since the model "rebuilds the string". The model returns `b`
+   itself when `a` is `SNil` (`lib/prelude.sl:1120-1123`), so `(str-append "" x)` is `x` there too.
+   Re-run: `(Cons _ 0 $ Cons _ 1 $ Nil _)` under the reference's `--no-extern`, interpreted and
+   built; `0` and `0` interpreted with externs (the reference and `slc --interpret`); `1` and `1`
+   in the four builds with externs. 02 N1 and 04 r8.2 describe the first comparison only. Now the
+   mismatch is the first comparison's, `ENone` is given for the reference's `--no-extern` build too,
+   and the second is said to answer `ESome` under `--no-extern` (this check). The glance's bullet is
+   narrowed the same way.
+3. Key finding 22 (73bfc07) had "an enum with no fieldless constructor ... reads as none", dropping
+   10 §1's "tagged": a binder of `Pair`, an untagged enum whose one constructor has fields, passes a
+   `comptime-match` on `MkPair` (10 r7.15; BUGS.md 25). Now "a tagged enum".
+4. Key finding 22 cited `vacant-slot`'s `RHypothetical` to 10 r8.6, which is about
+   `settled-ty-apply`; it is 10 r8.2. Fixed.
+5. Key finding 22's "Acceptance seems unchanged, the first error already making slc exit 1, on a
+   reading of every writer of slc's message list" kept the first error as what makes slc exit 1,
+   the wording 10 r8.4 corrected, and "every writer" overstates 10 §4 ("no writer of the list that
+   was read"; "Other places that go back to an earlier `Env` were not searched for"). Now: slc
+   exits 1 when the list holds an error at the end (`self/main.sl:143`), and no writer 10 §4 read
+   drops a recorded error, a reading, not a proof (coordinator note 3 of 01 says the same of 01
+   §3.7).
+6. Key finding 8 and decision 6 said that on a host limit both implementations die. 01 r8.3: on
+   `02_fuel_runpos.sl` under `--eval-fuel 20` only slc dies, the reference refusing with "out of
+   fuel", and without the flag the reference dies of `Invalid_argument("Array.make")` (BUGS.md 27;
+   04 r8.1). Now "a run that reaches a host limit kills either one", with both files' cases;
+   decision 6 likewise.
+7. Key finding 8 (be1c4e2) gave `03_fuel_goes_on.sl`'s timings without 03 r8.1's "single runs",
+   and the order of its `let`s as observed, which 03 reads from slc's `CLet` (03 §1 and its round-8
+   unsure point); and "fresh per form, macro run, and `Program` step" dropped 03 §1's
+   "interpreted". All three added.
+8. Key finding 6 said slc's interpreter goes on after out of fuel, without 02 r8.5's condition that
+   under `--interpret` it then performs no world request (02 C4, `02_fuel_then_write.sl`); and it
+   omitted 01 r8.1's "or, by the code, a handle" among the macro calls expanded first. Both added,
+   the handle as untested.
+9. Key finding 15 said `;! file` files "behave as separate files in both" beside "the later file
+   never read", the pairing 01 r8.9 corrected: the reference tokenizes a later `;! file` file up
+   front and reports its lexical error only when it parses it (`01_pragma_file_lex.sl`). It also
+   lacked round 8's `--extract` and `--build` refusal of the unit. Both added, with `bin/main.ml:109`.
+   Rough edge 31 now names `--build`, and its "and on `--extract`, a known divergence (BUGS.md 19)"
+   no longer reads as if BUGS.md 19 recorded the `--extract` dependence; it records the two
+   implementations' disagreement.
+10. Key finding 2's account of 05's version lacked 05 r8.7's condition that nothing else Q runs at
+    compile time calls `slot-eq`, and the glance's diagonal bullet likewise; both added. Its
+    `diagonal.sl` "both implementations" lacked "after `std/macro.sl`" (09 r8.9); added.
+11. Key finding 21's premise 2 lacked the `slot-eq` condition of 09 §3.4 premise 2, which 03 r8.7
+    put into F6 (none runs before the call in `diagonal.sl`'s unit). Added.
+12. Key finding 4 ruled out the uniform `Halts` "under key finding 2's premises" without logic
+    soundness, which 05 r8.6 added (an unsound logic could supply a fake `h`), and said a packed-level
+    closure is applied and extended "only as 18c says", making 18c's routes complete, against 06
+    r8.2. Both fixed.
+13. Decision 5 gave 02's `ESome` as "needing the bit *and* equal words", N1's former "only if",
+    which 02 r8.2 made "exactly when". Its "conditions 02 now gives as necessary, not sufficient"
+    (07cd1f0) read as a changelog and asserted insufficiency, where 02 decision 4 says "only if" and
+    that "the list may not be complete", and its "likewise an FFI result that is one of its
+    arguments" was vague. Reworded from 02 decision 4.
+14. Decision 18's 03 (b) lacked 03 r8.8: a failed attempt is a prefix of the successful run only if
+    it stops where its fuel runs out, which slc's evaluator does not. Added.
+15. Decision 18a's "about quadratic work (07's estimate)" dropped what 07 r8.3 restored: it is
+    re-elaboration work, quadratic in the number of runs. Added.
+16. Decision 18c (73bfc07) lacked the written-out `Predates` refusal (`06_use_self_predates_bad.sl`,
+    06 r8.3), had "for a closure at its own level", which reads as the closure's own, and gave "none
+    of these helps a stepper" unhedged, though 06 reads it from §18, with the routes as if complete
+    (06 r8.2). Fixed. The glance's 18c row gave two routes as the ones that work; it now lists the
+    four tested and says others are not ruled out.
+17. Rough edge 9's "and where a crash may occur (§31)" is the claim 02 r8.7 corrected: §31 says
+    "where the host cannot represent what is asked of it", and the open point is at which steps.
+    Reworded, with 02 §5.5's note that both implementations die on the host limits tried in run
+    position.
+18. Rough edge 20 listed two DESIGN.md texts on multiple errors; 10 r8.7 added §15's "whichever one
+    the elaborator meets first", which 01 §5.1 limits to two uses of one unique binder. Added.
+19. Rough edge 30's "after the arguments' macro calls expand" kept the general wording that 01 r8.1
+    narrowed in 01 §5 item 13 to calls by a name. Narrowed.
+20. Cross-file 1 did not mention the append case, which 02 r8.1 put into N1 and decision 4 and 04
+    r8.2 into 2.5. Added.
+21. Section 6's Gödel bullet named D2 only for codes that mix a text code with structural ones; 09
+    r8.7 needs D1 and D2 for them (09's round-8 unsure point says so of this bullet). Fixed. Key
+    finding 20's "which nobody has examined" (be1c4e2) said more than 09's "unexamined"; now
+    "which is unexamined", citing 09 r8.7. The glance's Gödel bullet lacked the D1 and D2 condition
+    and cited `g2_step.sl` for the proof, which 09 r8.6 corrected (`con-to-g` in `g2_defs.sl`,
+    stated as `g2_step.sl`'s goal). Both fixed.
+22. Section 6 listed `open-bind`'s token for a non-empty context as unverified; 10 r8.10 tests it
+    after an error (`10_open_token.sl`), and only the case without one is still read. Narrowed.
+23. Key finding 19 cited the blit-many reproducer's `--build` crash to "this summary's own check";
+    08 r8.5 now reports it. Cited.
+24. Section 8 said each BUGS.md entry comes "with its reproducer"; entry 24 is read from the code,
+    and 18's survey cases were not reproduced. Reworded.
+25. The glance's Gödel bullet ended "Gödel II, if those hold and Sleight is consistent, would make
+    uniform stripped-run safety unprovable". Since round 6 inserted "under its premises" before it,
+    "those" reads as the diagonal's premises, while key finding 20 conditions Gödel II on the
+    missing pieces. Now "given the missing pieces and a consistent Sleight".
+
+Checked and unchanged, as already carried or about matters the condensations do not state: 01 r8.2
+(section 1 and the glance already give (T) and (E)), r8.4 to r8.8, and r8.10, and coordinator
+note 2's revision (key finding 8); 02 r8.3, r8.4, and r8.6; 03 r8.2 to r8.6 and r8.9 (rough edge
+27 and 18c carry 06 F4.2's routes); 04 r8.3 to r8.5; 05 r8.2 to r8.5 and r8.8 to r8.10; 06 r8.1
+(18c and rough edge 27 already had it; key finding 4 and the glance did not, items 12 and 16),
+r8.4 to r8.8; 07 r8.1 (section 7 already had it), r8.2, r8.4, and r8.5; 08 r8.1 ("over 5,000 heap
+checks" holds as a lower bound with the varying counts), r8.2 to r8.4, and its BUGS.md notes 3 to
+5 (notes 1 and 2 are items 3 to 5); 09 r8.1 to r8.5 and r8.8; 10 r8.3, r8.5, r8.6, r8.8, r8.9, and r8.11. Section 8's list of
+entries matches BUGS.md (13, 18, 19, and 23 to 27; entries 1 and 20 to 22 come from elsewhere).
+Each glance line agrees with the key finding or decision it cites, after items 2, 10, 16, 21, and
+25.
+
+Unsure:
+- Decision 3 and the glance's decision row follow 01 decision 5's "a macro call by any other form",
+  which by the reference's code would not cover a head that is a handle (01 §3.6, untested); key
+  finding 6 alone mentions the handle.
+- Key finding 8's first clause, "Both implementations refuse a run-position form whose run fails
+  with a runtime error", stands beside slc going on after out of fuel and then dying; the following
+  clauses cover that case.
+- Outside these files: 02 N1 and 04 2.5 and r8.2 describe only the first comparison of
+  `02_append_share.sl`; its second answers `ESome` under `--no-extern` (item 2), which neither says.
+- Rough edge 27 lists the routes by which a function that receives the closure has applied it, and
+  leaves out 06 decision 2's third, code minted after a top-level destructure, which is not a
+  function receiving the closure; left.
+- 00-summary.md is now 859 lines, 00-glance.md 122.

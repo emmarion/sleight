@@ -281,7 +281,9 @@ definition whose header is `(erased name :`.
   `(str-append x "")`, answers `ESome` built by either compiler,
   natively or with `--byte`, and `ENone` in every interpreted run, with
   or without externs, and in the reference's `--no-extern` build (02
-  N1). §42's `slot-eq` exception allows this.
+  N1); its second comparison, with `(str-append "" x)`, answers `ESome`
+  under `--no-extern` too, since the model returns `x` itself there.
+  §42's `slot-eq` exception allows this.
 - [C] The `-imm` operations write with `Array.unsafe_set` through
   `(cast a : int array)`, or with `caml_blit_bytes` (`lib/ffi_core.ml:235-241,
   315-321`), and so do their templates (`lib/ffi_templates.txt:51-52`)
@@ -1495,6 +1497,10 @@ Points I am unsure of:
 1. 2.5 cited `lib/ffi_core.ml:315-320` for the `-imm` blits;
    `array_move_imm` is at `:321`. Extended, as 08 §2 has it. Raised by
    the round-7 reviewer of 08.
+2. After round 8: 2.5 described only the first comparison of
+   `02_append_share.sl`; the second, with `(str-append "" x)`, answers
+   `ESome` under `--no-extern` too (re-run). Added. Raised by the
+   round-8 carry-over check of 00-summary.
 
 ## Round 8 review notes
 

@@ -525,7 +525,11 @@ Values as words:
   externs, and the reference's `--no-extern` build answer `ENone`. The
   prelude's model of `append` rebuilds its first argument
   (`lib/prelude.sl:1120-1123`), so a spec that runs it gives the two
-  strings different words and answers `ENone` under every oracle
+  strings different words and answers `ENone` under every oracle. The
+  file's second comparison, `x` with `(str-append "" x)`, answers
+  `ESome` under `--no-extern` too, since the model returns its second
+  argument when the first is empty, so only the first comparison
+  separates the model from the FFI
   (reading).
   Pros: deterministic, fits a `Program`-driven spec. Cons: the theorem
   is existential.
@@ -1178,6 +1182,11 @@ Unsure, not changed:
    and slc's native and `--byte` builds; their controls, with the
    overflow made harmless, print the write and exit 0. Added to 2.2
    and section 6.
+2. After round 8: `02_append_share.sl`'s second comparison, `x` with
+   `(str-append "" x)`, prints `1` under the reference's `--no-extern`
+   (re-run: `(Cons _ 0 $ Cons _ 1 $ Nil _)`), so only the first
+   comparison separates the prelude's model from the FFI. Said so in
+   N1. Raised by the round-8 carry-over check of 00-summary.
 
 ## Round 7 review notes
 

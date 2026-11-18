@@ -23,8 +23,8 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
   of H for its one source, though, if Sleight is sound, the diagonal source cannot produce that evidence for itself
   (03's reasoning). 03 carries (T) and (E) to that source through an accepted detour that calls `compile` in a final
   value (compiled with a toy), reading part 5, which never mentions that call, as covering it; (C) is not used. slc
-  does not escape it (03's reading). 05's version also needs logic soundness and crashes kept out of the oracle (00-summary
-  §2 items 2, 21).
+  does not escape it (03's reading). 05's version also needs logic soundness, crashes kept out of the oracle, and no
+  other `slot-eq` in Q's compile-time run (00-summary §2 items 2, 21).
 - **Spikes.** The intrinsic-derivation plus `Program`-driver pattern compiles and runs at toy scale, fuel-free, on
   both implementations, but proves partial correctness only: an always-"stuck" `step`, `advance`, or `run-total` (06)
   or a never-answering `step` (07) passes, and 07's `Rejected` reason text is unconstrained. For one variant with a
@@ -32,8 +32,8 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
   items 16, 17).
 - **`slot-eq`.** §67 lets answers differ between runs, so acceptance can depend on the implementation; answers already
   differ between implementations and modes, though not between runs as far as seen (`imm_eq.sl`, `slot_eq_share.sl`,
-  `02_append_share.sl`, whose built `ESome` no spec run of the prelude's models can give).
-  Both answers reach acceptance: a `comptime-match` on `slot-eq` asked through `native-compute` passes by
+  and `02_append_share.sl`, whose built `ESome` on `x` against `(str-append x "")` no spec run of the prelude's models
+  can give). Both answers reach acceptance: a `comptime-match` on `slot-eq` asked through `native-compute` passes by
   default and fails under `--no-native`, on both implementations (`01_slot_eq_native.sl`). The output theorem therefore
   cannot be "the same values, up to crash";
   04 makes `slot-eq` an oracle beside the host's answers to `world-do` and `read-file` (00-summary §2 items 5, 18).
@@ -59,11 +59,12 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
 - **Gödel II** may apply; nothing establishes it. Missing: a formalized `Prov` with D1 to D3, a diagonal sentence (a
   macro in a goal type can splice in its own file's text), and lemmas tying `Prov` to the stripped run. The
   derivation's internal steps (⊢ Con → ¬`P g`) go through despite level stratification for an abstract relation given
-  D2, D3, and the diagonal's D1 instance as hypotheses (`g2_step.sl`); reading that as ⊢ Con → G needs `g` to be a code
-  of ¬`P g` itself, which no structural formula code can be and a file's text, as a macro splices it in, might
-  (`09_g2_cycle.sl`). 03's diagonal already rules out a
-  faithful hypothesis-free `compile`, under its premises; Gödel II, if those hold and Sleight is consistent, would
-  make uniform stripped-run safety unprovable (09).
+  D2, D3, and the diagonal's D1 instance as hypotheses (`g2_defs.sl`'s `con-to-g`, `g2_step.sl`'s goal); reading that
+  as ⊢ Con → G needs `g` to be a code of ¬`P g` itself, which no structural formula code can be and a file's text, as
+  a macro splices it in, might, though D1 and D2 would then have to hold for codes mixing text and structure,
+  unexamined (`09_g2_cycle.sl`). 03's diagonal already rules out a faithful hypothesis-free `compile`, under its
+  premises; Gödel II, given the missing pieces and a consistent Sleight, would make uniform stripped-run safety
+  unprovable (09).
 - **slc after its first error** can print false later messages and drops some; acceptance seems unchanged (10; BUGS.md 25). Defects
   found are in BUGS.md 13, 18, 19, and 23 to 27.
 
@@ -97,7 +98,7 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 | 18 | How is fuel kept out of results and theorems? | tracks disagree | 17 | no |
 | 18a | Resumable checker: derivation zipper or replay? | zipper for a new kernel; replay only retrofitting slc (07) | 17, 18 | no |
 | 18b | Certified stepper invariant: erased trace or counter closure? | erased trace, as a working hypothesis (06) | — | no |
-| 18c | Apply a closure whose level is packed beside it? | no change proposed; it works with a packed `Predates` or one derived from a `Predates` about a holder built before the function's level; applying one extended at a level minted during the run is refused in 06's tests and, on 06's reading of §18, never possible (06) | — | only if changed |
+| 18c | Apply a closure whose level is packed beside it? | no change proposed; tested routes: a packed `Predates`, one derived from a `Predates` about a holder built before the function's level, code minted after a top-level destructure, and, at the function's own level, a packed `Eq (Level)`, others not ruled out; applying one extended at a level minted during the run is refused in 06's tests and, on 06's reading of §18, never possible (06) | — | only if changed |
 | 19 | Judgment shape and staging? | 01 §4.2 layers (Γ/Σ home of run-position facts open); run relation as a parameter (01) | — | no |
 | 20 | Where does the proof stop at the output end? | O1 now, O2 + O4 later (04) | — | no |
 | 21 | `native-compute`? | N3, same trust as the output end (04) | — | no, unless 6 changes §72 |
