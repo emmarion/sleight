@@ -970,3 +970,92 @@ Points I am unsure of:
   one; not compiled beyond the shapes F4.2 names.
 - Whether decision 2's three ways to have the `Predates` are all; I
   found no other in §18 or §19, but did not prove there is none.
+
+## Round 8 review notes
+
+An eighth adversarial review read DESIGN.md in full, every file in
+`proto/stepper/`, `proto/review3/06_*`, `proto/review4/06_*`,
+`proto/review6/06_*`, and `proto/review7/06_*`, and re-ran at 634e3ee
+(no code change since d6644d9): `run.sl` and `complete.sl
+total_demo.sl` under the reference, `--no-extern`, `--build`,
+`slc --interpret`, and `slc --build`; `ho_counter.sl`,
+`06_packed_counter.sl`, `06_packed_subterm.sl`, `06_generic_out.sl`,
+`06_generic_out_more.sl`, `ho_exist_build.sl`, and `06_pred_zero.sl`
+under the reference, `--no-extern`, and `slc --interpret`; the three bad
+files and `06_generic_out_nth_bad.sl` under the reference and
+`slc --interpret` (messages and positions as quoted);
+`06_packed_predates_bad.sl` cut after line 13 (accepted);
+`06_packed_counter.sl` without `(predates pb)` (refused at 24:26);
+`06_vacuous.sl`; the three teeth checks (`SNext` argument 5, `ExSeq`
+argument 6, `ExWhile` argument 5); a wrong `runs-fn` step; the numeral
+refusal and its note; F4.4's name-clash warnings; the F5 line counts,
+`runop-fn`'s 47 lines, `step-back`'s 15, `RWrite`'s 15 fields, and the
+24 + 2 failure sites; the `lib/prelude.sl`, `std/list.sl`, `machine.sl`,
+and `spec.sl` citations; the DESIGN.md quotes; the 7821 and 26021 step
+counts; and, with the one-minute load average between 0.9 and 1.3 as
+each run started, the timings (one-line file 0.40–0.44 s, the four files
+0.50–0.51 s, slc 0.25 s and 0.34 s; 7821 steps 1.37 s, 0.53 s, and
+0.00 s built; 26021 steps 11.6 s, 3.43 s, and 0.06 s built; peak 22,264
+to 41,592 KB as GNU `time` reports it). All matched except as below.
+Errors found and changes made:
+
+1. Decision 2, rough edge 1, and Q1.2 said a function that receives a
+   packed-level closure can apply it "only with a `Predates`" from the
+   closure's level to its own. §19 asks for a `subterm` proof instead
+   when the callee's level canonicalizes to the current one (§48), and
+   an `Eq (Level) L S` packed beside the level makes it do so:
+   `proto/review8/06_packed_same_level.sl` (new) applies the closure by
+   a same-level call on a decreasing erased argument and prints
+   `(Halted ...)` under the reference, `--no-extern`, and
+   `slc --interpret`; without the `Eq` match it is refused ("`L` was not
+   in scope when level `S` was minted"), and with a non-decreasing
+   argument it is refused as a same-level call. The closure is then at
+   the function's own level, F4.1's fixed level hidden. Decision 2,
+   rough edge 1, Q1.2, F4.2, and §6 now say so.
+2. Decision 2 listed the "three ways" to have the `Predates` as if
+   complete, which round 7's own unsure point does not claim; stated
+   that the last two "need the value built before" as fact; and called a
+   stepper's states "arising at run time", as a top-level state built in
+   run position also is. Now "did not rule out others", "As I read §18",
+   and "the states a stepper builds as it runs".
+3. F4.2's "the stepper cannot apply it at a halt" (and 07 F7's matching
+   claim) rested on refusals of the inferred `(predates _)`, which §48
+   says does not search ("Both fail whenever a proof ... comes from a
+   parameter or a call, or is carried in data"). A written-out
+   `(prove-predates st S)` in the stepper is refused as well, "`st` was
+   not in scope when level `S` was minted"
+   (`proto/review8/06_use_self_predates_bad.sl`, new; three modes). F4.2
+   now says "given only the state" and cites it, as do decision 2 and §6.
+4. The summary said, unhedged and citing §18, that a stepper extending
+   the closure at a fresh level "cannot apply it", which §6 lists as
+   unverified and F4.2 gives as a reading; now "in the shapes tried, and
+   as I read §18" (F4.2). It also said "Without that counter it is
+   refused", while F4.1 says the missing decrease is what is refused; now
+   "Without a decreasing argument such as that counter".
+5. F4.3 said an index that proofs inspect "has to be written `(Zero)` or
+   `(Succ ...)`, or exposed with `unary`". The checker's own note names
+   `unary`, `prove-literal-lt`, and `numeral-of`, and a `let-match` of
+   `(numeral-of 0)` against the prelude's `NZ` makes `total_demo.sl`
+   accepted with `0` in place of `(Zero)` (`proto/review8/06_numeral_of.sl`,
+   new; three modes; refused without the `let-match`). Now "for
+   example", with this route.
+6. F2: "the one for the start state being `TNil (c0 :: nil) m0`" implied
+   one trace per start state. A looping program can come back to it:
+   `proto/review8/06_loop_trace.sl` (new; three modes) builds a four-step
+   `Trace` from `(CWhile 0 CSkip :: nil, m0)` back to that state, of
+   `TNil`'s type, and `advance` takes it. Now "one for the start state".
+7. F4.2's reading of which levels have a `Predates` to `S` (an entry
+   introduced before `S`, or part of a value with one) left out a level
+   passed in as a parameter beside its `Predates`, as 05's
+   `proto/theorems/drive.sl` passes its step's level (re-run: accepted).
+   Added; that a step cannot mint such a level is unchanged.
+8. Header: names this review's commit.
+
+Points I am unsure of:
+
+- Whether item 1's `Eq` shape also lets a stepper extend the closure at
+  its own level, as `06_packed_counter.sl` does at a packed one; with
+  F4.1's counter I expect so, but only the application was compiled.
+- Outside this file: 00-summary.md's rough edge 27 ("can call it only
+  given a `Predates`") and decision 18c, and 03 F4.1's account of F4.2,
+  do not have item 1's same-level route; left to their owners.

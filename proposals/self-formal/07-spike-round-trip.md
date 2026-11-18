@@ -955,3 +955,62 @@ Points I am unsure of:
 - F3's "valid partial derivation by construction" still carries, only
   in the second review's notes, the caveat that it rests on the erased
   logic having no closed proof of `False`; I left the body as it is.
+
+## Round 8 review notes
+
+An eighth adversarial review read DESIGN.md in full, every file in
+`proto/roundtrip/`, `proto/review2/07_*`, `proto/review4/07_*`,
+`proto/review6/07_*`, and `proto/review7/07_cert_predates.sl`, and
+re-ran at 634e3ee (no code change since 669b328): programs 0 to 5 in
+both variants under the reference and `slc --interpret` (outputs, exit
+codes, and step counts as in F2, identical between the two); program 6
+(22 MB at 4 s and at 12 s, both variants); the three
+`--goal proved: PASS` sets and the replay set without `impl.sl`
+("unbound name `vals`") under both checkers; `spec.sl det.sl` alone
+(accepted); the four refusals under both checkers, with the quoted
+messages; `07_loop_step_bad.sl` (FAIL under both); both bare-`ne`
+refusals (`det.sl:107` and `:120`); the `p0` refusal; the three
+`predates` variants of `drive.sl`; `07_nondet_both.sl` under both
+checkers (`(MkBoth _ _ _)`) and `det.sl` against `07_nondet_spec.sl`
+(refused at `det.sl:48`); `07_cert_fn_bad.sl` (refused as quoted, slc
+also at the `step` call), and `07_cert_drive.sl` and
+`07_cert_predates.sl` under the reference, `--no-extern`, and
+`slc --interpret`; that the current files run with no warnings; the
+line and rule counts, F4's sub-counts, and the lemmas each case of
+`exclusive` uses (`det.sl:90-123`); the `goal.sl` and `Waiting`
+excerpts; the DESIGN.md quotes in F1 and §5, and a search of DESIGN.md
+for divergence; `self/elab-main.sl:159` and `443-462`; and the
+cross-references to 01 decisions 4 and 5, 03 decision 3 and Q1(e), 05
+F4, T3, T5, and decisions 4 and 5, and `t1_toy.sl`. All matched except
+as below. Errors found and changes made:
+
+1. F7 said a function given only a `Certified` cannot call its `init` or
+   `step`, on one refusal of the inferred `(predates _)`, which §48 says
+   does not search. A written-out `(prove-predates c F)` in the function
+   is refused too, "`c` was not in scope when level `F` was minted"
+   (`proto/review8/07_cert_fn_self_bad.sl`, new; reference,
+   `--no-extern`, and `slc --interpret`). F7 now cites it and says "in
+   the two shapes tried and as I read §18".
+2. §1 used "termination under H" without saying what H is. It is the
+   hypothesis of the brief's statement 4, so the header's "The only
+   owner item the body mentions is the brief's statement 3" was false.
+   §1 now states H, and the header names both statements as an earlier
+   session's paraphrases.
+3. Decision 1 condensed F6 and Q1(b) to "about quadratic work", dropping
+   that it is an estimate and that it is re-elaboration work, quadratic
+   in the number of runs, and said the zipper "removes both", where
+   Q1(a) keeps the toy's O(entries) lookups per statement. Now says so.
+4. F3's "Every `CState p0` value is a valid partial derivation by
+   construction" carried no condition in the body, which round 7 left
+   open: it rests on the erased logic having no closed proof of `False`
+   (second review notes). The body now says so.
+5. Header: names this review's commit.
+
+Points I am unsure of:
+
+- F4's "about 45 lines" for the suspension machinery: `Ctx`, the two
+  `plug` functions, `Reach`, and `reach-runs` come to 41 lines, 49 with
+  `CState`; left as it is.
+- Outside this file: 00-summary.md section 7 states "A function given
+  only a `Certified` value cannot call its packed-level `step`" on the
+  same single test that item 1 found too thin; left to its owner.

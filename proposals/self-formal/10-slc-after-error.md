@@ -123,8 +123,8 @@ value" and "got `_`"), and a file's final expression is not run by
 `env-run-final` (`:3393`). Read only: `:2537`, `:2560`, and `:2565`
 stop elaborating a `settled-ty-apply` or `settled-val-apply` form once
 failed; performing one while a macro expands is another matter
-("What still runs", below). `settled-type`, `settled-erase`, `settled-mult`, and
-`settled-value` are elaborated as primitive calls
+("What still runs", below). `settled-type`, `settled-erase`,
+`settled-mult`, and `settled-value` are elaborated as primitive calls
 (`elab-main.sl:1075-1081`, `elab-prim-call` at `:2482-2513`), so the
 gate at `:739` keeps them from running in run position: in
 `proto/review7/10_settled_value.sl`, whose handle is bound before the
@@ -158,8 +158,9 @@ slc already treats this token as a stand-in in one place:
 `resolve-answer` (`eval.sl:1335`, using `stand-in`, `eval.sl:1321-1324`)
 answers as for a `Hypothetical` entry when the environment is failed
 and a non-erased entry (`mult-is-many` holds for `many` and `unique`,
-`core.sl:187-188`) holds a `BToken`. The test does not tell such a
-binder from an entry that holds a token from the start: `vacant-slot`
+`core.sl:187-188`) holds a `BToken`. The test does not tell a binder
+that got the token after the error from an entry that holds one from
+the start: `vacant-slot`
 is bound with one (`core.sl:3649`), so after the error `resolve`
 answers `RHypothetical` for it, and for a `let` of it bound before the
 error, where before the error both implementations answer `RSettled`
@@ -797,4 +798,123 @@ Unsure:
   never reached, since the `(None t1)` match fails first.
 - `open-bind`'s token for a non-empty context, failed or not (`:675`),
   is still read only.
+- No timing claim is made here, and none was re-run.
+
+## Round 8 review notes
+
+An eighth reviewer read the brief, CLAUDE.md, all of DESIGN.md,
+BUGS.md 13 and 25, 01 §3.7, and the round-7 diff of this file; re-ran
+every `proto/aftererr/` test, the after-error tests of `proto/review2/`
+and `proto/review4/`, `proto/review2/03_untaken_ce.sl`, and every
+`proto/review7/10_*` test on the reference and on slc under
+`--interpret`, with no flag, and with `--build` (the three slc modes
+byte-identical, exit 1 everywhere, every message in the tables as
+quoted); `--first-error` on each; the no-first-error variants of §4, now
+in all three slc modes; `tests/dump_context.sl` and
+`tests/macro_resolve_after_error_bad.sl` (after `std/macro.sl`), also in
+all three modes; and a self-expanding macro and `(compile-error s)` on a
+pre-error `s`, after the error (as stated). It confirmed that `self/`
+and `lib/prelude.sl` are unchanged from `5fba336` to HEAD and to
+`origin/main`, opened every cited line, listed every `env-failed` test
+in `self/` (each is cited here except `elab-main.sl:876`, which follows
+the native run), and repeated the scans of `MkEnv` and `env-set-said`
+(as §4 says). New tests under `proto/review8/`: `10_resolve_vacant.sl`,
+`10_no_fieldless.sl`, `10_special_rename.sl`, `10_open_token.sl`,
+`10_dup_error.sl`, `10_warn_unused.sl` (run with `--warn-unused`), and
+`10_goal_open.sl` (run with `--goal open`).
+
+Errors found, and changes:
+
+1. (round 7) §1, and §2's account of `fieldless-index`, read a token as
+   "the enum's first fieldless constructor" for every tagged enum. Where
+   the enum has none, `fieldless-index` (`eval.sl:38-42`) returns an
+   index past the last constructor: after the error, `x` bound to
+   `(Ok (Nat) 1)` gives "expected `Ok`, got `_`" (`10_no_fieldless`;
+   without the error both implementations accept it). The first review
+   notes' item 2 has the same gap. Fixed in §1 and §2, with a row.
+2. (round 7) "A direct read of an entry that was `Settled` before the
+   error is unaffected: ... `resolve` answers `RSettled` for it" was
+   drawn from one probe. `vacant-slot` is bound holding a token
+   (`core.sl:3649`), so after the error `resolve` answers
+   `RHypothetical` for it and for a `let` of it bound before the error,
+   where before the error both implementations answer `RSettled`
+   (`10_resolve_vacant`). Narrowed to entries that do not hold the
+   token; §1, the `resolve-answer` paragraph, §4, and follow-up 1, whose
+   suggested "not run" test misreads `vacant-slot` the same way, now say
+   so, and follow-up 4 notes that §33 makes `vacant-slot`'s word that of
+   `Nat` 0.
+3. (gap) Special-form dispatch reads the token too: `special-of-entry`
+   (`elab.sl:124-133`) takes it as the word 0 (`:127`), so a binder of
+   `compile-warn` bound after the error dispatches as `let` ("malformed
+   `cw` form" with `let`'s usage hint, then "a body needs a final
+   expression"; without the error both implementations warn `hello`,
+   `10_special_rename`). Added to §1, §2, and §4, with a row.
+4. (round 7) Acceptance was argued past the reading of the list's
+   writers in two places: §1's "slc exits 1 once its message list holds
+   an error" and §4's "once an error is recorded, slc's exit code is 1
+   whatever follows" state as fact that a recorded error stays, which
+   §4's next paragraph reads and does not prove. Both now say that slc
+   exits 1 when the list holds an error at the end (`main.sl:143`), and
+   §4 rests the rest on that reading.
+5. (round 7) The header said the three slc modes printed byte-identical
+   output on every test below, and §4 that slc "printed what the
+   reference did" on the no-first-error variants. On a variant slc
+   accepts, slc with no flag writes the OCaml and `--build` compiles;
+   the messages agree in all three modes, and the built program prints
+   what `--interpret` prints. The header now covers §3's tables, and §4
+   says how the modes differ.
+6. (round 7, gap) "Of the macro-world primitives (`macro-prim` ...) only
+   `resolve` tests `env-failed`" left out `settled-ty-apply` and
+   `settled-val-apply`, which `apply-answer` performs during an
+   expansion (`elab-main.sl:323`) with no such test; the
+   `settled-ty-apply` of `prove-literal-lt` answered after the error in
+   `10_literal_macros` (`3 5` and `b 9` print nothing). Added, and the
+   gates paragraph now separates elaborating such a form from performing
+   one.
+7. (earlier rounds) §1 said "Two texts come near"; 01 §3.7, which §1
+   cites, quotes a third, §15's "whichever one the elaborator meets
+   first". Mentioned.
+8. (earlier rounds) §3's note on 17's wording did not say that BUGS.md
+   13 records it. Added.
+9. (round 7) Row 10_string_token's "`t` = a pre-error `"abc"`" reads as
+   `t` bound before the error; `t` is bound after it, to `s0`. Reworded.
+10. Behaviours marked as read that are now tested: `env-fail`'s
+    dropping of a repeated text (`10_dup_error`: of two identical
+    `(compile-error "dup")` from one expansion slc prints one, and the
+    `"dup2"` after them), `--warn-unused` (`10_warn_unused`), the goal's
+    closing (`10_goal_open`: without the first error both
+    implementations add "a file sets a `goal`, and none does"), and
+    `open-bind`'s token for a non-empty context, after the error
+    (`10_open_token`). Marked in §2, with rows. Also checked, with no
+    test added: a file's final expression is not run after the error (a
+    final of 3×10^7 tail calls kept slc with no flag busy for seconds
+    without the error and returned at once with it; the load average
+    was about 2, so no time is given).
+11. Round 7's first unsure point: a `dump-context` added at the end of
+    03 gives `x` as `is (BFalse)` and `= (BTrue)`, so the forcing in 03
+    equates two constructors of one opened `Matchable`. §2 says so.
+
+Elsewhere, not edited, as read during this review: BUGS.md 25 reads the
+token as the first fieldless constructor for every tagged enum (item 1),
+rests "Acceptance seems unaffected" on the first error alone (item 4),
+and mentions neither special-form dispatch nor `vacant-slot`; 01 §3.7
+ends its paragraph with the same "since the first error already makes
+slc exit 1"; and 00-summary.md key finding 22 has `resolve` answer
+`RHypothetical` for a token-holding binder, which `vacant-slot` widens.
+
+Unsure:
+- Whether 10_dup_error's second `dup` counts as missing: §4 has
+  `compile-error` fire "wherever it is elaborated", and the reference
+  never reaches it.
+- 10_open_token's report counts 1243 prelude entries on slc and 1241 on
+  the reference, without the error too; that was not looked into.
+- `apply-answer` checks on a copy of a failed `Env`, where `env-fail`
+  drops a repeated text; whether that can make a check that should fail
+  answer `Some` was not tested.
+- Places that go back to an earlier `Env` were searched for only among
+  quiet checks (`env-set-quiet` has one caller), so the monotonicity
+  argument is still not a proof.
+- `open-bind`'s token for a non-empty context without an error (`:675`,
+  "failed or not") is still read only; this review found no way to get
+  a non-empty context in run position without an error.
 - No timing claim is made here, and none was re-run.

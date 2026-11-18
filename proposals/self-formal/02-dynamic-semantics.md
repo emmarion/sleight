@@ -233,8 +233,8 @@ before an overflow is shown, and nothing runs after the overflow. With
 the overflow made harmless (depth 10 in place of 10^8), each prints its
 write and exits 0. So in these two tests, one call shape each, every
 implementation and mode tried runs the head form before the argument
-form. The reference's `--no-extern --build` was tried on the controls
-only: it overflows while extracting the files with depth 10^8.
+form. The reference's `--no-extern --build` could run only the
+controls: it overflows while extracting the files with depth 10^8.
 
 ### 2.3 Is order observable in the abstract machine?
 
@@ -261,9 +261,13 @@ only: it overflows while extracting the files with depth 10^8.
   through all of elaboration", and §6 elaborates the head first, but I
   found no statement of the order in which a call's arguments are
   elaborated. Both implementations expand every macro call among an
-  application's arguments before elaborating any argument, or a head
-  that is a name (01, §3.6, `proto/review3/gensym_depth.sl`,
-  `proto/review4/01_head_name_err.sl`). A gensym number can reach the output (`intern-nat`, §65),
+  application's arguments whose head is a name or `(share n)` before
+  elaborating any argument, or a head that is a name (01, §3.6,
+  `proto/review3/gensym_depth.sl`, `proto/review4/01_head_name_err.sl`);
+  a macro call whose head is itself a form is expanded in its own
+  argument's turn (`proto/review8/01_form_head_arg.sl`; the reference's
+  `macro_of`, `lib/elab.ml:622-628`, also takes a non-erased handle).
+  A gensym number can reach the output (`intern-nat`, §65),
   so elaboration order is observable; that is a question about the
   elaboration spec, separate from runtime evaluation order.
   `native-compute` results are constructors with no non-erased field
@@ -496,8 +500,8 @@ Values as words:
 
 - **N1 (recommended): oracle.** The spec run is a function of the
   program, the world's answers, and an oracle (step count → bit).
-  `slot-eq` answers `ESome` only if the bit is set and the words are
-  equal. Theorem: for each compiled run there is an oracle under which
+  `slot-eq` answers `ESome` exactly when the bit is set and the words
+  are equal, as in the prototype (`proto/dyn/machine.sl:99-104`). Theorem: for each compiled run there is an oracle under which
   the spec run produces the same events and values. It covers the FFI
   `Slots` too (§69): an FFI answer is the model's linear search under
   some oracle, as long as the FFI says "found" only for an equal word
@@ -511,7 +515,18 @@ Values as words:
   two run-position `(str-append "a" "b")`, answers `ESome` when built
   natively by slc or by the reference (04 §2.5) [compiled], which a
   spec that gives the two strings never-reused addresses (A1) could not
-  match under any oracle (reading).
+  match under any oracle (reading). It depends, too, on the models E2
+  runs: where an FFI function returns one of its arguments, its model
+  may build a new block. [compiled] `proto/review8/02_append_share.sl`
+  compares `x` with `(str-append x "")`: built with externs by either
+  compiler, natively or with `--byte`, it answers `ESome`, since the
+  FFI's `append` returns its first argument when the second is empty
+  (`lib/ffi_core.ml:146-147`); every interpreted run, with or without
+  externs, and the reference's `--no-extern` build answer `ENone`. The
+  prelude's model of `append` rebuilds its first argument
+  (`lib/prelude.sl:1120-1123`), so a spec that runs it gives the two
+  strings different words and answers `ENone` under every oracle
+  (reading).
   Pros: deterministic, fits a `Program`-driven spec. Cons: the theorem
   is existential.
 - **N2: relation.** `slot-eq` is a nondeterministic step, and the

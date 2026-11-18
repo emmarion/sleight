@@ -1,0 +1,11 @@
+(def-fns _ $ (many deep : (subterm many (Nat) n) -> (many (Nat) r))
+  (let-match many n (Succ m) ((Zero) 0))
+  (Succ (notail (deep m))))
+(def-fns _ $ (many big : (many (Nat) n) -> (many (Nat) r))
+  (let ((erased xs) (unique a) (erased p)) (array-new (Nat) n))
+  0)
+(def-fns _ $ (many top : (many (Nat) n) (many (Nat) h) -> (many (Nat) r))
+  (let ((many d)) (deep n))
+  (big h))
+(let ((many r)) (top 50 1152921504606846976))
+r

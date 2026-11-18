@@ -444,8 +444,9 @@ the items.
   variable, gets the token too: `comptime-match` reads it as `(SNil)`,
   and a `compile-warn` of it says it "is `Hypothetical`", slc's wording
   for any stored value that is not a string (`self/elab.sl:2585-2587`;
-  `proto/review7/10_string_token.sl`). Acceptance seems unaffected, since the first
-  error already makes slc exit 1 (10 §4).
+  `proto/review7/10_string_token.sl`). Acceptance seems unaffected: the
+  first error makes slc exit 1, on 10's reading of the code that writes
+  slc's message list that no recorded error is dropped (10 §4).
 - [C] Both implementations read a whole file before elaborating it.
   `reader_phase.sl` (a missing `)` on line 3) and `pragma_phase.sl` (an
   unknown pragma) print no earlier `compile-warn`. Reading is per file,
@@ -1349,3 +1350,8 @@ Unsure, not changed:
 - Whether S2 was meant to grow Σ's contents (a heap) rather than its
   place in the signature; that is the author's to say.
 - The summary is still far beyond the brief's 15 lines.
+3. After round 8: §3.7 rested "acceptance seems unaffected" on the first
+   error alone. 10 §4 states that no recorded error is dropped as a
+   reading of the code that writes slc's message list (10 r8). Said
+   so. Raised by 10's round-8 reviewer.
+
