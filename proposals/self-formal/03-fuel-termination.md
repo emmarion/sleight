@@ -1215,3 +1215,105 @@ Unsure:
    BUGS.md 27; re-run by the coordinator: the reference exits 1 with
    "runtime error: out of fuel", slc exits 2). Added. Raised by the
    round-7 carry-over check of 00-summary.
+
+## Round 8 review notes
+
+An eighth adversarial reviewer read REVIEW.md, the brief, CLAUDE.md,
+DESIGN.md in full, SOUNDNESS.md in full, 09 §1 to §5 with its round-7
+notes, 06 F4 as it now stands, and the cited code, and re-ran, under the
+reference and `slc --interpret`: `diagonal.sl` (969 bytes, accepted)
+and the 970-byte copy (refused); `03_detour.sl` (`(BFalse)`, also
+`--extract` to a scratch path, with the 909-byte prefix and the
+969-byte literal compared again); `review2/03_untaken_ce.sl` (refused);
+`fr/a.sl` to `fr/d.sl` (`fr/d.sl` also under `--no-extern`, each
+printing `13`); `suspend.sl` 0/1/2, interpreted and built by both, and
+3 under a timeout; the `--eval-fuel 1000` pair;
+`review7/03_fuel_iterate.sl` (also under `--no-extern`);
+`review7/02_fuel_runpos.sl` under `--eval-fuel 20` (the reference exits
+1 with "out of fuel"; slc, plain and `--interpret`, exits 2 with a stack
+overflow); `review6/01_count_10000.sl` and `01_count_10001.sl`; and the
+06 files F4.1 cites. All behave as the body says. With the one-minute
+load average at 0.5, the two interpreted timing rows were re-run once:
+about 6.9 µs and 4.9 µs for the reference, and 1.6 µs and 1.3 µs for
+`slc --interpret`, the same order as F5's table. The compiled rows were
+not re-run.
+
+Errors found and changed:
+
+1. §1, the sentence the round-7 coordinator note added. "Reported as a
+   refusal of the form, which DESIGN.md does not obviously license,
+   except that the run goes on" read both ways, and "the run goes on"
+   was cited to 02 r7.3 and BUGS.md 27, which do not say it. On
+   `02_fuel_runpos.sl` the order inside slc's run is an inference, and
+   the host limit need not be the stack: without `--eval-fuel` the
+   reference dies there of `Invalid_argument("Array.make")` (raised by
+   01's round-8 reviewer through the coordinator). From the code: where
+   the fuel runs out, slc's evaluator returns an error value
+   (`self/elab-main.sl:185-188`), goes on with the arguments after the
+   head and with the code after a `let` (`:178-197`), keeps the first
+   error in the heap (`self/core.sl:2409-2415`), and refuses the form
+   after the run (`:2815-2819`). New `proto/review8/03_fuel_goes_on.sl`
+   observes it under `--eval-fuel 200`: its first `let` runs out, its
+   second runs a shallow tree recursion, and the third asks `array-new`
+   for 2^60 elements. The reference refuses it in 0.4 s with "out of
+   fuel". slc, plain and `--interpret`, dies of a stack overflow after
+   about 5 s; with a 3-element array it refuses the form with "out of
+   fuel" after about 5.7 s; with no tree it dies in 0.25 s; and with
+   nothing running out, the tree alone takes 5.3 s (single runs, load
+   below 0.5). §1 now says this, names a host limit, marks the order
+   inside `02_fuel_runpos.sl`'s run as inferred, and says "at compile
+   time", since a step of an interpreted `Program` reports a runtime
+   error instead. F3 row 1 matches. (slc performs no world request once
+   an error is recorded, `self/interp.sl:131-133`; 02 §2.2.)
+2. F3 row 1 cited the refusal sentence as MANUAL.md:163-165; it is
+   162-164, and MANUAL.md has not changed since before this file's
+   draft. Fixed.
+3. F3 row 3 cited `Steps` as `elab.sl:1241-1244`, which ends before its
+   `SS` constructor at line 1245. The second review's "`SS` is line
+   1244" was wrong: `self/elab.sl` has not changed since before this
+   file's draft. Now 1241-1245.
+4. Summary, the diagonal bullet's last sentence ("My inference is that H
+   for all sources ... is not, if Sleight is sound") dropped F6's
+   premises and the stepper's faithfulness, which F6 and F7 carry since
+   round 7. Restored.
+5. Decision 2, "F6 suggests that no hypothesis-free, non-erased Sleight
+   function can do better", also without F6's premises. Added.
+6. F6, "so it returns too, if its result is determined by its code and
+   argument". Carrying termination from P's driver call to Q's macro
+   call needs the run, not only its result, to be determined, whether
+   the evaluator or the driver runs it (09 §3.4 premise 3; section 6's
+   "one semantics"). Reworded.
+7. F6, "Q's text before the macro call elaborates as in P", lacked 09
+   §3.4 premise 2's `slot-eq` condition: a `slot-eq` that runs in the
+   prefix may be answered differently in P's run and Q's (§67). Added,
+   with the fact that nothing run before the call in `diagonal.sl`'s
+   unit calls one (the prelude's only `slot-eq` is in the body of
+   `slot-search`, which only the extern models `slots-find` and
+   `slots-intern` call; `std/` has none). Section 6 updated.
+8. Q1(b), "a failed attempt is a prefix of the successful run". That
+   needs the attempt to stop where its fuel runs out, which slc's
+   evaluator does not (item 1). Added.
+9. F4.1 and the summary gave 06 F4.2 without the routes 06 now reports
+   (raised by 06's round-8 reviewer through the coordinator): a closure
+   at a packed level applied as a same-level call through a packed
+   `Eq (Level)` (`proto/review8/06_packed_same_level.sl`), one applied
+   through `predates-subterm` for a state built before the stepper's
+   level (`proto/review7/06_packed_subterm.sl`), and the refusal of a
+   `Predates` the stepper writes from its state
+   (`proto/review8/06_use_self_predates_bad.sl`). Re-run after
+   `std/list.sl`, `spec.sl`, and `machine.sl` under the reference,
+   `--no-extern`, and `slc --interpret`: the first two halt, the third
+   is refused with "`st` was not in scope when level `S` was minted".
+   F4.1 now reports them as 06 reads them, and the summary's "I did not
+   try level-indexed continuations" adds that 06 F4.2 tried packed
+   levels.
+
+Unsure:
+- In `03_fuel_goes_on.sl`, that the first `let` runs before the other
+  two is read from slc's `CLet` (`self/elab-main.sl:192-197`); what the
+  run shows is that slc does the work of both later `let`s in a run
+  whose fuel runs out.
+- F6 keeps its first route, "(C) for the rest", beside the detour, as
+  round 7's unsure point says; unchanged.
+- Whether "faithful" for a nondeterministic spec is best read as "every
+  permitted run agrees" (third review); unchanged.
