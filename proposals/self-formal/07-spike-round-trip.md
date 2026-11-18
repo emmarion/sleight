@@ -8,7 +8,7 @@ Tags: **[D]** DESIGN.md, quoted; **[C]** compiled or run. Unless marked
 otherwise, files are under `proto/roundtrip/` and were run with
 `_build/default/bin/main.exe` at commit 669b328 (no change to `bin/`,
 `lib/`, `src/`, or `self/` since, up to ad07c35, 07692f2, c236135, e0aaf2c,
-fb2c533, and 10bd85d), and also with slc
+fb2c533, 10bd85d, and 13ca61f), and also with slc
 (`_build/release/slc`; `slc --interpret`, `slc --goal`).
 **[A]** marks my own reading or proposal. The only owner item the body
 mentions is the brief's statement 3, in decision 4, and it is an earlier
@@ -25,8 +25,9 @@ session's paraphrase.
   positive `Fails`, and a small-step `Step` relation. The checker emits
   "evaluate this" by moving into a `Waiting` state. Each `Program`
   step is one checker step: one machine step while `Waiting` (the step
-  whose machine step halts also resumes the checker), and otherwise one
-  statement, or the acceptance once no statement is left. The
+  whose machine step halts also resumes the checker, or rejects if the
+  run is stuck), and otherwise one statement, or the acceptance once no
+  statement is left. The
   final `Verdict p` carries an erased `Elab [] p` or `Fails [] p`.
   Exclusivity (`Elab ∧ Fails → False`) is proved. Its proof uses
   determinism of evaluation (`step-det`, `runs-det`, `evals-det`) and
@@ -194,8 +195,10 @@ uses `impl.sl`'s lookups and `mstep`, and fails without it), and for
   - Generic list lemmas (`nth-det`, `nth-nonth`, `setnth-det`): about 25.
   - `vals-det`, `step-det`, `runs-det`, `head-det`, `evals-det`, and
     `evals-sticks`: about 60.
-  - `exclusive`: about 35. It is induction on `Fails`, with one
-    determinism lemma per premise that two derivations share.
+  - `exclusive`: about 35. It is induction on `Fails`, with a
+    determinism lemma for each shared premise whose outputs a case must
+    equate (`FNeedRest` needs none), and `nth-nonth` or `evals-sticks`
+    where a premise of one derivation contradicts one of the other.
   - Exclusivity of `Let` needs `evals-det`, which needs `vals-det`,
     `runs-det`, and `step-det`, which in turn needs `nth-det` and
     `nth-nonth`. Without determinism of the evaluation relation, this
@@ -238,9 +241,11 @@ uses `impl.sl`'s lookups and `mstep`, and fails without it), and for
   refutation rule covers absurd bodies only, and `exclusive` is not
   `absurd`.
 - `replay.sl`, first version. "`p0`, declared `erased`, used in a
-  non-erased position." Replay re-elaborates the whole source, so its
-  state must hold the source at runtime: `(many p0 is src)`. The zipper
-  needs only the remaining statements at runtime.
+  non-erased position." The draft was not kept; the message reproduces
+  with `p0` passed for `src` at `replay.sl:116`. Replay re-elaborates
+  the whole source, so its state must hold the source at runtime:
+  `(many p0 is src)`. The zipper needs only the remaining statements at
+  runtime.
 - `drive.sl`. Calling the step parameter from `drive`'s body with a
   `Predates M P` gave "value mismatch: expected `PA`, got `P`", since
   the current level is `PA`. With no annotation the call is accepted:
@@ -296,18 +301,23 @@ spec has one. The reason string of `Rejected` is free text, so a
 `drive.sl`: the driver, which reaches `cstep` and `rstep` through its
 own wrappers `zipper` and `replay` rather than through a `Certified`
 value, and the text it prints for each verdict, are outside the proved
-statement. A function given a `Certified` cannot call its `init` or
-`step` at all: their level `L` is packed, and the call is refused with
+statement. A function given only a `Certified` cannot call its `init`
+or `step`: their level `L` is packed, and the call is refused with
 "`L` was not in scope when level `(level-of first-turn)` was minted"
 (`proto/review6/07_cert_fn_bad.sl`), as 06 F4.2 found for packed-level
-closures. Destructured at the top level before the driver's levels are
-minted, the same value drives program 0 to "accepted after 26 Program
-steps" (`proto/review6/07_cert_drive.sl`; reference, `--no-extern`, and
-`slc --interpret`) [C, sixth review]. Program 6 has a diverging run, so (by my reading, not
-proved) it has neither derivation, since `Evals` and `Sticks` both need
-a finite `Runs` and `Step` is deterministic; the loop runs at constant
-memory. That is consistent with "no verdict if and only if a run that
-the checker reaches diverges" (a program rejected before a diverging
+closures. Given also a `Predates` from the value to the function's
+level, which the top level proves for a value built before that level
+is minted, the function calls both, through `prove-subterm` and
+`predates-subterm` (`proto/review7/07_cert_predates.sl`; reference,
+`--no-extern`, and `slc --interpret`) [C, round 7]. Destructured at the
+top level before the driver's levels are minted, the same value drives
+program 0 to "accepted after 26 Program steps"
+(`proto/review6/07_cert_drive.sl`; reference, `--no-extern`, and
+`slc --interpret`) [C, sixth review]. Program 6 has a diverging run, so
+(by my reading, not proved) it has neither derivation, since `Evals`
+and `Sticks` both need a finite `Runs` and `Step` is deterministic; the
+loop runs at constant memory. That is consistent with "no verdict if
+and only if a run that the checker reaches diverges" (a program rejected before a diverging
 `Let` still gets a verdict). For the zipper, both directions can be
 read from the code, though neither is proved: a `Waiting` state leaves
 only on `Halt`, so a diverging run gives no verdict; and each other
@@ -419,7 +429,7 @@ levels"), see §5 below.
      `proto/theorems/t1_toy.sl` has an order-free `FPlusR`, which needs
      no `Elab` of the left operand, and its `exclusive` is also a plain
      induction, on the source term with no determinism lemma, where the
-     toy's is on `Fails` with one.
+     toy's is on `Fails` with determinism lemmas.
    - Consequence: the spec then fixes the order of premises, which is
      01's decision 5.
 4. **Must the packaged theorem include completeness?**
@@ -865,3 +875,73 @@ Points I am unsure of:
 - Whether the top-level destructure of item 2 is how a certified checker
   in full Sleight would be packaged for its driver; that is a design
   question, not settled by this test.
+
+## Round 7 review notes
+
+A seventh adversarial review read DESIGN.md in full, every file in
+`proto/roundtrip/`, `proto/review2/07_*`, `proto/review4/07_*`,
+`proto/review6/07_*`, and `proto/review7/07_cert_predates.sl`, and
+re-ran at 13ca61f (no code change since 669b328): programs 0 to 5 in
+both variants under the reference and `slc --interpret` (outputs, exit
+codes, and step counts as in F2, identical between the two); program 6
+(22 MB at 4 s and at 12 s, both variants, still running at 12 s); the
+three `--goal proved: PASS` sets and the replay set without `impl.sl`
+(FAIL) under both checkers; `spec.sl det.sl` alone (accepted); the four
+refusals under both checkers, with the quoted messages;
+`07_loop_step_bad.sl` (FAIL under both); both bare-`ne` refusals; the
+`p0` refusal; the three `predates` variants of `drive.sl`;
+`07_nondet_both.sl` under both checkers (`(MkBoth _ _ _)`) and `det.sl`
+against `07_nondet_spec.sl` (refused at `det.sl:48`);
+`07_cert_fn_bad.sl` (refused as quoted) and `07_cert_drive.sl`
+(reference, `--no-extern`, and `slc --interpret`); that the current
+files run with no warnings; the line and rule counts and F4's
+sub-counts; the `goal.sl` and `Waiting` excerpts; the DESIGN.md quotes
+in F1 and §5, and searches of DESIGN.md for divergence and for an
+argument order; `self/elab-main.sl:159` and `443-462`; and the
+cross-references to 01 decisions 4 and 5, 03 decision 3 and Q1(e), 05
+F4, T3, T5, and decisions 4 and 5, and `t1_toy.sl`. All matched except
+as below. Errors found and changes made:
+
+1. F7 said a function given a `Certified` "cannot call its `init` or
+   `step` at all". Given also a `Predates` from the value to the
+   function's level, proved at the top level for a value built before
+   that level was minted, the function calls both through
+   `prove-subterm` and `predates-subterm`
+   (`proto/review7/07_cert_predates.sl`, left by an interrupted round-7
+   reviewer; reference, `--no-extern`, and `slc --interpret`, each
+   printing `0`, the `More` case). §19 refuses a `Predates` "about the
+   function value itself"; the one derived here is about the packed
+   level `L`. F7 now says "given only" and adds this; 06's decision 2
+   cites it.
+2. F4 said `exclusive` has "one determinism lemma per premise that two
+   derivations share". `FNeedRest` shares its `Nth` premise and uses
+   none, `FAssertRest` uses no `head-det` for the `Head` premise it
+   shares, and three cases refute with `nth-nonth` or `evals-sticks`
+   instead (`det.sl:90-123`). Reworded; decision 3's "on `Fails` with
+   one" now says "with determinism lemmas".
+3. §1 said the step whose machine step halts "also resumes the
+   checker"; when the run is stuck, that step rejects instead (program
+   3's sixth step). Added.
+4. F5 gave `replay.sl`'s "first version" refusal without saying that
+   the draft was not kept; it now says that, and that the message
+   reproduces with `p0` passed for `src` at `replay.sl:116`.
+5. Header: names this review's commit.
+
+The theorem's type was checked against the claims again: `MkCertified`
+packs `S`, `L`, an unconstrained `init`, a `step` whose `Fin` must carry
+a `Verdict p` for the erased `p` it is given, and an `excl` that
+mentions only `spec.sl` relations. Vacuous implementations that pass: a
+`step` answering `More` on some or all states, with any `init`, and any
+reason string. I found no third.
+
+Points I am unsure of:
+
+- The round-6 open point stands, now with two ways to reach a
+  `Certified`'s `init` and `step`: a top-level destructure, which
+  drives program 0 to its verdict, and a `Predates` passed beside the
+  value, compiled only for one call of each. Which, if either, a
+  certified checker in full Sleight would use for its driver is a
+  design question.
+- F3's "valid partial derivation by construction" still carries, only
+  in the second review's notes, the caveat that it rests on the erased
+  logic having no closed proof of `False`; I left the body as it is.

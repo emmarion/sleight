@@ -1,6 +1,6 @@
-; Accepted (round-7 review of 06): a four-input wrapper serves pick, and a wrapper whose relation parameter has
-; Nth's dependent signature serves nth-p and also the prelude's NthLast. Needs std/list.sl, spec.sl and
-; machine.sl first.
+; Accepted (round-7 review of 06): a four-input wrapper serves pick, a wrapper whose relation parameter has
+; Nth's dependent signature serves nth-p and also the prelude's NthLast, and one with SetNth's signature serves
+; set-p. Needs std/list.sl, spec.sl, and machine.sl first.
 (def-adts $ (Out4 : (Type T1) (T1 a1) (Type T2) (T2 a2) (Type T3) (T3 a3) (Type T4) (T4 a4) (Type W)
     ((TyCtor (T1 b1) (T2 b2) (T3 b3) (T4 b4) (W w) -> Type) R) -> Type)
   enum
@@ -24,6 +24,18 @@
   (FoundL _ _ _ _ x p))
 (def-fns _ $ (erased last-one : (erased Type A) (erased A x) -> (erased (OutL A (Cons A x (Nil A)) (Zero) NthLast) r))
   (FoundL _ _ _ _ x (NthLastHere _ x (Nil A) (Zero) (LengthNil _))))
+(def-adts $ (OutS : (Type A) ((List A) xs) ((Nat) i) (A y)
+    ((TyCtor (Type B) ((List B) zs) ((Nat) j) (B v) ((List B) ws) -> Type) R) -> Type)
+  enum
+  (many FoundS : (erased Type A) (erased (List A) xs) (erased (Nat) i) (erased A y)
+     (erased (TyCtor (Type B) ((List B) zs) ((Nat) j) (B v) ((List B) ws) -> Type) R)
+     (many (List A) ys) (erased (R A xs i y ys) p) -> (OutS A xs i y R))
+  (many MissingS : (erased Type A) (erased (List A) xs) (erased (Nat) i) (erased A y)
+     (erased (TyCtor (Type B) ((List B) zs) ((Nat) j) (B v) ((List B) ws) -> Type) R) -> (OutS A xs i y R)))
+(def-fns _ $ (many set-p2 : (erased Type A) (many (List A) xs) (many (Nat) i) (many A y) -> (many (OutS A xs i y SetNth) r))
+  (let-match many (set-p _ xs i y) (SetOk _ _ _ _ ys p) ((SetNo _ _ _ _) (MissingS _ _ _ _ _)))
+  (FoundS _ _ _ _ _ ys p))
 (let ((many m)) (MkMem (Cons _ (VNum (Succ (Zero))) $ Nil _) (Nil _)))
 (comptime-match many (nth-p2 _ (Cons _ 5 $ Nil _) (Zero)) (FoundL _ _ _ _ v p))
+(comptime-match many (set-p2 _ (Cons _ 5 $ Cons _ 6 $ Nil _) (Succ (Zero)) 9) (FoundS _ _ _ _ _ ys q))
 (pick2 m (Zero) (CSkip) (COp $ OSet (Zero) 7))

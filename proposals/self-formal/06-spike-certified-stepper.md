@@ -8,8 +8,9 @@ Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
 **[ran]** is a run tonight of the reference (`_build/default/bin/main.exe`,
 commit d6644d9; the first review re-ran everything at ad07c35, the
 second at 07692f2, the third at c236135, the fourth at e0aaf2c, the
-fifth at fb2c533, and the sixth at 10bd85d, with no change to `bin/`, `lib/`, `src/`, `self/`, or
-`std/` in between) and, where said, of `_build/release/slc`. The
+fifth at fb2c533, the sixth at 10bd85d, and the seventh at 13ca61f,
+with no change to `bin/`, `lib/`, `src/`, `self/`, or `std/` in
+between) and, where said, of `_build/release/slc`. The
 prototype is `proto/stepper/`. Every command line starts with the
 repository's `std/list.sl`, then `spec.sl machine.sl`.
 
@@ -41,8 +42,9 @@ repository's `std/list.sl`, then `spec.sl machine.sl`.
   each extension's call to the previous closure decreases
   (`ho_counter.sl`, added in review) [ran]. Without that counter it is
   refused at a fixed level. With its level packed in the state it can be
-  built but not applied (§18); with a `Predates` to the stepper's level
-  packed too, it can be applied but not extended at a fresh level [ran].
+  built, but a stepper that extends it at a fresh level each step cannot
+  apply it (§18); with a `Predates` to the stepper's level packed too, it
+  can be applied but not extended at a fresh level [ran].
   Packing the level with its `Predates` proofs and the counter, and
   extending at that same packed level, is accepted
   (`proto/review4/06_packed_counter.sl`) [ran, fourth review].
@@ -204,6 +206,13 @@ refused in `step-back` at `ExSeq` [ran, third review].
    closure, but a step cannot prove its fresh `L2` below `S`: "`L2` was
    not in scope when level `S` was minted"
    (`proto/review3/06_packed_predates_bad.sl`) [ran, third review].
+   The `Predates` need not be packed: a function at `S` given a state
+   built before `S` was minted, with a `Predates` from that state to `S`,
+   gets one for the packed level through `prove-subterm` and
+   `predates-subterm`, and applies the closure
+   (`proto/review7/06_packed_subterm.sl`; reference, `--no-extern`, and
+   `slc --interpret`) [ran, round 7]. As I read §18, a state a step builds
+   can have no such `Predates`, so this does not help a stepper either.
    Inside a closure defined at a packed level, even a call to a lower-level
    function such as `step-back` needs a packed `Predates`: without one,
    "`L` is not a level minted by `def-lvl`" (§18: "`L` must be an entry
@@ -214,10 +223,12 @@ refused in `step-back` at `ExSeq` [ran, third review].
    loop (`proto/review4/06_packed_counter.sl`; reference, `--no-extern`,
    and `slc --interpret`) [ran, fourth review]; its loop is the same
    fuel-bounded test driver as item 1's. Here the packed level is `L0`,
-   minted at the top level before the stepper's `S`, and as I read §18
-   any level with a `Predates` to `S` was introduced (not necessarily
-   minted) before `S`, so this is
-   item 1 with the level hidden; item 1's counter makes packing the level
+   minted at the top level before the stepper's `S`, and as I read §18 a
+   level with a `Predates` to `S` is an entry introduced before `S` or a
+   part of a value that has such a `Predates` (as in
+   `06_packed_subterm.sl`, whose level binder is introduced after `S`),
+   so a step cannot mint it afresh, and this is item 1 with the level
+   hidden; item 1's counter makes packing the level
    unnecessary. The trace of F2 is the same closure defunctionalized:
    `step-back` is the code of each closure, and `Trace` is the list of
    them.
@@ -231,8 +242,11 @@ refused in `step-back` at `ExSeq` [ran, third review].
    fixed by `let-match` and `notail`. `Exec` and `SCons` clashed with
    prelude names (warning only); renamed.
 
-Apart from these, every definition was accepted as first written (the
-author's report; the review cannot check it).
+Apart from these, every definition was accepted as first written. Items
+3 and 4 and that sentence are the author's report on drafts that were
+not kept: the reviews reproduce item 3's refusal and item 4's
+name-clash warnings on edited copies of today's files, and cannot check
+the rest.
 
 ### F5. Where the effort went
 
@@ -260,22 +274,27 @@ helper has its own result type carrying the relation (`NthOut`,
 `SetOut`, `OpOut`, `PickOut`, `StepOut`). `(Nth A xs i)` cannot be passed
 unsaturated (§17: "There is no currying, for functions or for
 constructors."), but a result type indexed by the unapplied relation is
-accepted when the relation's signature is not dependent:
-`proto/review6/06_generic_out.sl` gives `run-op`'s result as
+accepted: `proto/review6/06_generic_out.sl` gives `run-op`'s result as
 `(Out2 (Mem) m (Op) o (Mem) RunOp)` [ran, sixth review]. Such a wrapper
-is per input count, and `Nth`, whose `xs` has type `(List A)`, does not
-fit one (`proto/review6/06_generic_out_nth_bad.sl`, refused at the
-relation argument) [ran, sixth review]. So such wrappers could replace
-`OpOut` (compiled) and, I expect, `PickOut` (not compiled), but not
-`NthOut` or `SetOut`. Long positional constructor telescopes (`RWrite` has 15
+serves only relations whose signature has the shape of its relation
+parameter. `Nth`, whose `xs` and `x` have types that mention its first
+entry, does not fit a non-dependent three-input wrapper
+(`proto/review6/06_generic_out_nth_bad.sl`, refused at the relation
+argument) [ran, sixth review], but it fits one written with its own
+signature, which the prelude's `NthLast` also fits; a four-input wrapper
+fits `Pick`, and one written with `SetNth`'s signature fits it
+(`proto/review7/06_generic_out_more.sl`) [ran, round 7]. So wrappers
+could replace each of `NthOut`, `SetOut`, `OpOut`, and `PickOut`, but
+the four relations have four signature shapes, so here they would save
+no types. Long positional constructor telescopes (`RWrite` has 15
 fields) are the main readability cost; patterns are counted by hand.
 
 ### F6. Cost of checking and running
 
 [ran, one machine, single runs; ranges are across the author's run and
 the reviews]: the reference takes 0.29–0.44 s on a one-line file,
-0.36–0.53 s on `std/list.sl spec.sl machine.sl complete.sl`;
-`slc --interpret` 0.18–0.27 s and 0.23–0.33 s. The long runs are `run.sl`
+0.36–0.54 s on `std/list.sl spec.sl machine.sl complete.sl`;
+`slc --interpret` 0.18–0.27 s and 0.23–0.36 s. The long runs are `run.sl`
 with both loop bounds `5` replaced by `300` (7821 steps) and by `1000`
 (26021 steps). 7821 steps take 1.0–1.5 s in the reference interpreter,
 0.39–0.58 s under `slc --interpret`, and under 0.01 s compiled
@@ -298,8 +317,8 @@ not being built at run time, which erasure (§14, §27) already implies.
    `Predates`, it cannot be applied by the stepper; with one, it cannot
    be extended at a fresh level (F4.2). With the `Predates` proofs and
    option 5's counter packed, it works, but, as I read §18 (F4.2), only
-   at one level introduced before the stepper's, so it is option 5 with
-   the level hidden.
+   at one level with a `Predates` to the stepper's, which a step cannot
+   mint afresh, so it is option 5 with the level hidden.
 3. **A first-order "derivation under construction"**: an erased context
    of `Runs` frames, filled as commands finish, so the halt reads off the
    derivation with no fold. *Pro:* no trace. *Con:* needs one frame type
@@ -368,16 +387,19 @@ not being built at run time, which erasure (§14, §27) already implies.
    would use one of these two, or an untested shape such as Q1.3.
 2. **Should the level rules allow a function to apply a closure whose
    level is packed in its argument?** I do not propose a change. As
-   DESIGN.md stands (§17, §18), such a closure can be built but not
-   applied by a function that receives it unless a `Predates` from its
-   level to the caller's level is packed with it, and, as I read §18, a
-   closure at a level minted after the caller's can never have one
-   (F4.2). Code whose level is minted after a top-level destructure of
-   the value can apply it (07's `Certified`,
-   `proto/review6/07_cert_drive.sl`), which does not help a stepper,
-   whose states arise at run time. A closure at a fixed level with a
-   decreasing erased argument works instead (F4.1), so certified
-   steppers do not depend on this.
+   DESIGN.md stands (§17, §18, §19), a function that receives such a
+   closure can apply it only with a `Predates` from the closure's level
+   to its own. The reviews found three ways to have one: packed with the
+   closure (F4.2); by `predates-subterm` from a `Predates` about the value
+   that holds it (`proto/review7/06_packed_subterm.sl`; for 07's
+   `Certified`, `proto/review7/07_cert_predates.sl`); and, for code whose
+   level is minted after a top-level destructure of the value, proved
+   directly (`proto/review6/07_cert_drive.sl`). The last two need the
+   value built before the code's level is minted, which a stepper's
+   states, arising at run time, are not; and, as I read §18, a closure at
+   a level minted after the function's can never have one (F4.2). A
+   closure at a fixed level with a decreasing erased argument works
+   instead (F4.1), so certified steppers do not depend on this.
 3. **Is "never stuck" a target for the formal spec's own machine?** If
    yes, Q2.2 (a typing invariant) is the route that also serves type
    soundness; Q2.1 is cheaper for a toy. They answer different
@@ -394,18 +416,22 @@ not being built at run time, which erasure (§14, §27) already implies.
 
 1. §17, §18 with §24 item 2 ("a function, of `Fn` or `UniqueFn` type" is
    first-class data): a function stored in data whose level is packed
-   beside it, as an erased `(Level)` field, can be held and extended but,
-   as far as the spike found, not called by code whose level was minted
-   earlier, unless a `Predates` to that code's level is packed beside it
-   (F4.2). For a level created later, §18 says this outright ("a
-   function at a later level cannot be called from code at an earlier
-   level"). For a packed level of unknown origin it follows from §18's
-   rule for `prove-predates` ("`x` must have an introduction order (§5)
-   earlier than `L`'s"): the packed level is a binder introduced after
-   the caller's level. So it is a consequence, not a gap; whether it is
-   wanted for packed levels is decision 2. This did not block the
-   spike: a fixed-level closure with a decreasing erased argument works
-   (F4.1).
+   beside it, as an erased `(Level)` field, can be held and extended,
+   but, as far as the spike and its reviews found, code that receives the
+   data can call it only with a `Predates` from the packed level to the
+   code's own level: packed beside it, or derived by `predates-subterm`
+   from a `Predates` about the data, which needs the data built before
+   the code's level was minted (F4.2). For a level created after the
+   code's, §18 says outright that it cannot be called ("a function at a
+   later level cannot be called from code at an earlier level").
+   Otherwise, as I read it, it follows from §18's rule for
+   `prove-predates` ("`x` must have an introduction order (§5) earlier
+   than `L`'s"), the packed level being a binder introduced after the
+   code's level, with `predates-trans` and `predates-subterm` only
+   chaining proofs that exist. So it is a consequence, not a gap;
+   whether it is wanted for packed levels is decision 2. This did not
+   block the spike: a fixed-level closure with a decreasing erased
+   argument works (F4.1).
 2. I found no contradiction in DESIGN.md while doing this spike.
 
 ## 6. Unverified claims
@@ -416,7 +442,10 @@ not being built at run time, which erasure (§14, §27) already implies.
   (`ho_exist_use_bad.sl`, and `proto/review3/06_packed_predates_bad.sl`
   with a packed `Predates`). Two shapes that keep one level do work: the
   fixed-level counter of F4.1, and `proto/review4/06_packed_counter.sl`,
-  which packs that level.
+  which packs that level. A `Predates` about the state, passed beside
+  it, serves a state built before the stepper's level
+  (`proto/review7/06_packed_subterm.sl`) and, as I read §18, no state a
+  step builds.
 - The `--build` timings of F6 were not re-run by the first review; the
   second review got 0.00 s and 0.06 s, and the fifth 0.00 s and 0.07 s.
 - The Q2.1 line estimate.
@@ -829,3 +858,79 @@ Points I am unsure of:
 - That a typing invariant for this toy would need a language change
   (Q2.2); a semantic invariant tracking register contents might not,
   but would amount to running the program.
+
+## Round 7 review notes
+
+A seventh adversarial review read DESIGN.md in full, every file in
+`proto/stepper/`, `proto/review3/06_*`, `proto/review4/06_*`, and
+`proto/review6/06_*`, and the round-7 tests an interrupted reviewer
+left, and re-ran at 13ca61f (no code change since d6644d9): `run.sl` and
+`complete.sl total_demo.sl` under the reference, `--no-extern`,
+`--build`, `slc --interpret`, and `slc --build`; `ho_counter.sl` and
+`06_packed_counter.sl` under the reference, `--no-extern`, and
+`slc --interpret` (both `0`); `ho_exist_build.sl`; the three bad files
+(messages and positions as quoted); `06_packed_predates_bad.sl` cut
+after line 13 (accepted); `06_packed_counter.sl` without `(predates pb)`
+(refused at 24:26); `06_vacuous.sl`; `06_pred_zero.sl` (`stuck`);
+`06_generic_out.sl` in three modes and `06_generic_out_nth_bad.sl`; the
+three teeth checks (`SNext` argument 5, `ExWhile` argument 5, `ExSeq`
+argument 6); a wrong `runs-fn` step; the numeral refusal and its note;
+F4.4's name-clash warnings; the F5 line counts, `runop-fn`'s 47 lines,
+`step-back`'s 15, `RWrite`'s 15 fields, and the 24 + 2 failure sites;
+the `lib/prelude.sl`, `std/list.sl`, 02 A1/A2, 03 F4.1, and 05 F4
+citations; the DESIGN.md quotes; and, with the one-minute load average
+between 0.5 and 1.1, the timings (one-line file 0.42–0.44 s, the four
+files 0.51–0.54 s, slc 0.25–0.27 s and 0.33–0.34 s; 7821 steps 1.45 s,
+0.52 s, and 0.00 s built; 26021 steps 11.8 s, 3.50 s, and 0.06 s built;
+peak 22–41 MB). All matched except as below. Errors found and changes
+made:
+
+1. F5 said a result type indexed by an unapplied relation is accepted
+   "when the relation's signature is not dependent", that such a wrapper
+   "is per input count", and that wrappers could not replace `NthOut` or
+   `SetOut`. A wrapper whose relation parameter has `Nth`'s dependent
+   signature serves `nth-p` and the prelude's `NthLast`, one with
+   `SetNth`'s serves `set-p`, and a four-input one serves `pick`
+   (`proto/review7/06_generic_out_more.sl`, left by the interrupted
+   reviewer and extended here with `SetNth`; reference, `--no-extern`,
+   and `slc --interpret`). Each wrapper serves one signature shape, and
+   the four relations have four, so here wrappers would save no types.
+   Rewritten; this also settles the round-6 open point on `PickOut`.
+2. Decision 2 and §5 rough edge 1 said a packed-level closure cannot be
+   applied by a function that receives it unless a `Predates` is packed
+   with it. `proto/review7/06_packed_subterm.sl` (left by the
+   interrupted reviewer; reference, `--no-extern`, and
+   `slc --interpret`) gives a function at `S` a state built before `S`
+   was minted and a `Predates` from the state to `S`; `prove-subterm`
+   and `predates-subterm` give the packed level its `Predates`, and the
+   closure is applied (`Halted`). This needs the state built before `S`,
+   so it does not help a stepper either. F4.2, decision 2 (now listing
+   the three ways the reviews found), rough edge 1, the summary (now "a
+   stepper that extends it ... cannot apply it"), and §6 say so. It also
+   bears on the fifth review's open point: a level reached through
+   `predates-subterm` can be applied; whether it can change at each step
+   is still not compiled.
+3. F4.2 read §18 as making "any level with a `Predates` to `S`" one
+   "introduced ... before `S`". In `06_packed_subterm.sl` the level is a
+   binder introduced inside `use`, after `S`, and has one through
+   `predates-subterm`. F4.2 and Q1.2 now give what the argument needs,
+   that a step cannot mint such a level afresh, still as a reading.
+4. F6 gave slc's four-file time as 0.23–0.33 s, while the sixth review
+   measured up to 0.36 s and its note 7 says the ranges include its
+   timings; this review got 0.33–0.34 s. Now 0.23–0.36 s, and the
+   reference's four-file range takes in today's 0.54 s.
+5. F4's items 3 and 4 are history on drafts that were not kept, but
+   only "accepted as first written" was marked as the author's report.
+   All three are now, with what the reviews reproduce on edited copies
+   of today's files (item 3's refusal and item 4's name-clash warnings).
+6. Header: names this review's commit.
+
+Points I am unsure of:
+
+- That no route gives each state a stepper builds a `Predates` to the
+  stepper's level. My reading of §18 is that `prove-predates` needs the
+  state introduced before the level, and `predates-trans` and
+  `predates-subterm` only reach levels inside values that already have
+  one; not compiled beyond the shapes F4.2 names.
+- Whether decision 2's three ways to have the `Predates` are all; I
+  found no other in §18 or §19, but did not prove there is none.

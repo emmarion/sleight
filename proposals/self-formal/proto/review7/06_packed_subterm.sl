@@ -1,6 +1,6 @@
 ; Accepted (round-7 review of 06): a function at S given a packed-level closure state, made before S was
 ; minted, and a Predates about that state, applies the closure at a halt through predates-subterm, with no
-; Predates packed in the state. Needs std/list.sl, spec.sl and machine.sl first.
+; Predates packed in the state. Needs std/list.sl, spec.sl, and machine.sl first.
 (def-adts $ (HState : ((Cmd) c0) ((Mem) m0) -> Type)
   enum
   (many HS : (erased (Cmd) c0) (erased (Mem) m0) (many (List (Cmd)) k) (many (Mem) m) (erased (Level) L)
