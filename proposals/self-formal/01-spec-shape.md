@@ -10,7 +10,8 @@ does it (file:line, or a test under `proto/spec-shape/` or a
 `proto/review*/` directory, run with
 `_build/default/bin/main.exe`, the reference, and with an slc built by
 `self/release.sh` and run as `slc --interpret`); **[O]** an owner
-statement from the brief; **[A]** this agent's reading or proposal.
+statement as the brief records it, in an earlier session's paraphrase;
+**[A]** this agent's reading or proposal.
 
 ## 1. Summary
 
@@ -42,12 +43,13 @@ statement from the brief; **[A]** this agent's reading or proposal.
   order of elaboration is visible through gensym numbers (tested; that
   it can decide acceptance is inferred from a program that both accept
   because a macro call gets number 1, §3.6), and a crash at compile time
-  (out of fuel) rejects in both implementations in the case tested,
-  though on a host stack overflow both die instead, naming no form
-  (BUGS.md 27). The first two
-  need an owner decision before the spec can be functional
-  (deterministic); the third concerns the agreement theorem rather than
-  the spec, whose machine does not crash (§31). A fourth, when the
+  rejects in both implementations when the evaluator runs out of fuel in
+  `fuel.sl` (§3.4), though a run that reaches a host limit can kill
+  either one instead, naming no form, and under `--eval-fuel 20` one
+  such program kills slc where the reference refuses it (BUGS.md 27).
+  The first two need an owner decision before the spec can be
+  functional (deterministic); the third concerns the agreement theorem
+  rather than the spec, whose machine does not crash (§31). A fourth, when the
   driver runs a file's `Program` final relative to the files after it,
   makes the two implementations disagree on acceptance (tested; section
   5 item 14).
@@ -81,9 +83,11 @@ depends on it.
    terminating inside Sleight. That looks like the diagonal obstacle
    the owner does not expect to overcome for `no_false` (statement 1);
    this is unverified here. 03 F6 argues a version of it, not checked:
-   if Sleight's functions terminate, and under F6's further premises,
-   no non-erased `compile` function taking no further evidence agrees
-   with the spec on every source. *Options:* (a) relative to H.
+   under SOUNDNESS.md's (T) and (E), as F6 reads them (Sleight's
+   functions terminate, and the stripped run follows the full one), and
+   under F6's further premises, no non-erased `compile` function taking
+   no further evidence agrees with the spec on every source.
+   *Options:* (a) relative to H.
    Statement 4 words H as "every accepted compile-time form's spec run
    halts"; this file uses the broader "every compile-time run in the
    spec halts", and
@@ -125,10 +129,11 @@ depends on it.
    the main agreement theorem, with (c) available in the relation, and
    never (d). *Why:* DESIGN.md speaks of "whichever one the elaborator
    meets first" (§15), though only for which of two conflicting uses of
-   a unique binder is reported, not for errors in general. In the two
-   programs tested, the reference and slc agree on the first message
-   but not on later ones (§3.7). On a compile-time crash they differ
-   even in the first message's position: for `fuel.sl` under
+   a unique binder is reported, not for errors in general. Where both
+   reject, in the programs §3.7 cites, the reference and slc give the
+   same first error line but not the same later messages (§3.7). On a
+   compile-time crash they differ even in the first message's position:
+   for `fuel.sl` under
    `--eval-fuel 5` the reference names the file alone and slc names
    `lib/prelude.sl:354:75` (§3.4). *Depends on it:* how
    much of the elaboration order the spec must pin down (decision 5).
@@ -137,12 +142,14 @@ depends on it.
    first (§3.6). DESIGN.md fixes only part of it. *Recommended:* yes.
    The order would be the one both implementations follow, as tested
    (§3.6): in an application, a head that is a form first; then every
-   macro call among the arguments, left to right, each call's output
-   expanded before the arguments after it; then a head that is a name,
-   whose errors therefore come after the arguments' expansions; then
-   the arguments left to right, each nested application in the same
-   way; and each statement before the code after it. It needs DESIGN.md wording, which is the
-   owner's to give.
+   argument that is a macro call by a name or by `(share n)`, left to
+   right, each call's output expanded before the arguments after it;
+   then a head that is a name, whose errors therefore come after those
+   expansions; then the arguments left to right, each nested
+   application in the same way, so that an argument that is a macro
+   call by any other form is expanded in its turn, after its head; and
+   each statement before the code after it. It needs DESIGN.md wording,
+   which is the owner's to give.
 6. **How is `slot-eq` handled at compile time?** Under DESIGN.md, one
    program can be accepted by one conforming implementation and
    rejected by another, or by the same one on another run (§3.8). *Options:*
@@ -152,7 +159,8 @@ depends on it.
    stream of answers), so the spec is functional for each oracle.
    (c) Fix the compile-time answer to word equality, which is a change
    to the language, and would have to say whose words: the evaluator
-   and `native-compute`'s compiled run answer differently (§3.8).
+   and `native-compute`'s compiled run over the extern implementations
+   answer differently (§3.8).
    (d) Forbid `slot-eq` from reaching run position or a macro, also a
    change to the language. *Recommended:* (b). It
    changes nothing in DESIGN.md and uses the same mechanism as the
@@ -163,11 +171,16 @@ depends on it.
    never crashes (§31's "unlimited stack and heap"). The agreement
    theorem allows a third compiler outcome, `Crashed`, which proves
    nothing about the spec. DESIGN.md says a crash is an error only for
-   `native-compute` (§72); see section 5 below, item 3. Two tensions for the owner: both
-   implementations refuse a run-position form whose run fails with a
-   runtime error (MANUAL.md, `--eval-fuel`), and on a host stack
-   overflow both die, naming no form (BUGS.md 27), so `Crashed` would
-   be a rejection, or a death, the theorem says nothing about; and for `native-compute`, §72 makes a
+   `native-compute` (§72); see section 5 below, item 3. Two tensions
+   for the owner: both implementations refuse a run-position form whose
+   run fails with a runtime error (MANUAL.md, `--eval-fuel`), but a run
+   that reaches a host limit can kill either one, naming no form: both
+   die of a stack overflow on a recursion 10^8 calls deep, and on a
+   request for 2^60 array elements the reference dies of
+   `Invalid_argument("Array.make")` and slc of a stack overflow, slc
+   even under `--eval-fuel 20`, where the reference refuses it with
+   "out of fuel" (BUGS.md 27); so `Crashed` would be a rejection, or a
+   death, the theorem says nothing about; and for `native-compute`, §72 makes a
    crash "an error at its argument", so treating it as `Crashed` departs
    from DESIGN.md unless the spec takes the compiled run's outcome as an
    oracle input. A third: 02 (C4) recommends the opposite for compile
@@ -333,15 +346,26 @@ is the only reference to a mutable value (§13), has not been checked;
 from the one actually used. `proto/review3/gensym_depth.sl`, with the
 nested pair first, prints `(MkPair _ _ (MkPair _ _ 2 3) 1)`, and
 `review3/gensym_splice.sl` confirms the pattern one level deeper, on
-both implementations: every macro call among an application's
-arguments is expanded, left to right, before any argument is
-elaborated, and only then are the arguments elaborated left to right,
-each nested application in the same way. A macro call's output is
-expanded before the arguments after it: in
-`proto/review6/01_splice_output.sl`, `(MkPair _ _ (two) (gs))`, where
-`two` expands to `(gs)`, prints `(MkPair _ _ 1 2)` on both. In the reference this is
-`splicing` (`lib/elab.ml:710-722`), called on a call's arguments before
-its head is checked (`:1380-1383`); a sequence of statements is
+both implementations: every argument that is a macro call is
+expanded, left to right, before any argument is elaborated, and only
+then are the arguments elaborated left to right, each nested
+application in the same way. A macro call counts here only when its
+head is a name or `(share n)` (or a handle, by the code below; not
+tested). One whose head is another form is expanded when its argument
+is elaborated, after its head: in
+`proto/review8/01_form_head_arg.sl`, `(MkPair _ _ ((gs-name)) (gs))`,
+where `(gs-name)` takes a number and expands to `gs`, prints
+`(MkPair _ _ 3 1)` on both, while in the same file
+`(MkPair _ _ ((share ugs)) (gs))`, with `ugs` bound `unique` to the
+macro `gs` is bound to, gives `(MkPair _ _ 4 5)`. A macro call's
+output is expanded before the arguments after it: in
+`proto/review6/01_splice_output.sl`,
+`(MkPair _ _ (two) (gs))`, where `two` expands to `(gs)`, prints
+`(MkPair _ _ 1 2)` on both. In the reference this is `splicing`
+(`lib/elab.ml:710-722`), called on a call's arguments before its head
+is checked (`:1380-1383`) and settling no argument's head (`:713`), so
+that it expands only what `macro_of` recognises, a name, a non-erased
+handle, or `(share n)` (`:622-628`); a sequence of statements is
 expanded one item at a time instead (`expand_seq`, `:723`). A head
 that is a form is elaborated before the arguments are spliced
 (`settle_head`, `:1368`, and `computed_head`): `review3/gensym_head.sl`,
@@ -402,10 +426,11 @@ the items.
   expansion is not gated, so a macro bound before the error still runs
   at compile time (10 §2). A
   run-position `let` whose right-hand side hoists a temporary leaves its
-  binders `Hypothetical`: a call with argument `(Zero)`
-  (`proto/review2/after_error_call.sl`, `after_error_call2.sl`) and
-  `(Succ (Zero))` (`proto/review4/01_after_error_succ.sl`) give no
-  `Settled` result. A macro bound after the error is not dispatched
+  binders `Hypothetical`: the call `(f (Zero))`
+  (`proto/review2/after_error_call.sl`, `after_error_call2.sl`) and the
+  constructor application `(Succ (Zero))`
+  (`proto/review4/01_after_error_succ.sl`) give no `Settled` result. A
+  macro bound after the error is not dispatched
   (`after_error_macro.sl`). Otherwise, in the cases 10 traced (a call
   with a variable argument among them), the binders are
   `Settled` but hold the erased token, not a computed value
@@ -436,17 +461,25 @@ the items.
   reference prints `effect` and exits 0, reporting no error, and slc
   reports the second file's error and exits 1 without running the
   `Program`. The reference reads each file on the command line only
-  when it reaches it (`bin/main.ml:11-16`), and its driver ends the
-  process when the `Program` ends (`lib/program.ml:116`), so it never
-  reads the later file. Each implementation treats files made by a
-  `;! file` pragma (§4) as it treats files on the command line (`proto/review6/01_pragma_file_prog.sl`,
-  `01_pragma_file_late.sl`: the reference prints `effect` and exits 0,
-  slc reports the later file's error and exits 1). Under
+  when it reaches it (`bin/main.ml:11-16`, `:109`), and its driver ends
+  the process when the `Program` ends (`lib/program.ml:116`), so it
+  never reads the later file. Each implementation treats files made by
+  a `;! file` pragma (§4) as it treats files on the command line, as
+  far as the outcome goes (`proto/review6/01_pragma_file_prog.sl`,
+  `01_pragma_file_late.sl`, and `proto/review8/01_pragma_file_lex.sl`,
+  whose later file has a bad escape: the reference prints `effect` and
+  exits 0, slc reports the later file's error and exits 1). The
+  reference does read the later text: it splits the whole command-line
+  file into its files and tokenizes them up front, recording a lexical
+  error on the file it occurs in (`lib/reader.ml:44-49`, `:103`,
+  `:121`), and reports that error, or a parenthesis error, only when it
+  parses that file (`:143`). Under
   `--warnings-as-errors` the reference holds every final value back
   until all files are elaborated (`bin/main.ml:97-102`, `:109-110`), and
   `01_prog_first.sl` then `01_late_error.sl` is refused, with no
   `effect`, though no warning is given. It is refused under `--extract`
-  too, which runs no final (`bin/main.ml:93`). [A]
+  and `--build` too, which run no final (`bin/main.ml:93`); the first
+  file alone builds, and the program built prints `effect`. [A]
   Where reading or elaboration fails only in a
   later file, acceptance then depends on when the driver runs, which
   section 5 item 14 raises; otherwise reading can be a separate total
@@ -475,8 +508,10 @@ the items.
   about the slots of `(add 1 2)` and `3`. The compiled run answers
   `ESome`, and both implementations accept; under `--no-native` the
   evaluator answers `ENone`, and both refuse, as does the reference
-  under `--no-extern`. Acceptance is not a function of the source under
-  DESIGN.md as written.
+  under `--no-extern`, where the run is still compiled (with
+  `ocamlfind` hidden from `PATH` it fails at the form), but over the
+  source models, and answers `ENone` too. Acceptance is not a function
+  of the source under DESIGN.md as written.
 - [D] `native-compute` "may crash where the evaluator would not" (§72).
   §31 crashes are a host matter. [A] These are compiler outcomes, not
   spec outcomes (decision 7).
@@ -571,7 +606,9 @@ DESIGN.md does not define the unit.
   - Run-position rule: `Elab … (Ok code)`, `Strip code c`, and
     `Run Γr Σ c (ws, Σ')`. The entries become `Settled` with words in
     `Σ'.heap`, a minted type, and a minted `is` (§29).
-- `Program flags fs ffi prelude files (Accept Σ finals | Reject e)`,
+- `Program flags fs ffi answers prelude files (Accept Σ finals | Reject e)`,
+  where `fs` is the `read-file` oracle and `answers` the stream of
+  `slot-eq` answers of decision 6 (b) that Σ starts with,
   with one final value per file that ends in an expression (§27: "A
   file that ends in a statement produces nothing. Otherwise the type of
   the final value decides what the driver does with it"), including the
@@ -626,8 +663,8 @@ before one that only adds rules.
 4. S3, multiplicities, erasure, and uses (§13 to §16), `Matchable` and
    its open (§8), and the real strip. S3 could equally come before S2.
    The argument for S2 first is that S2 changes every rule's signature
-   (Σ, ρ, the Run premise), while S3 mostly adds per-entry data and
-   checks. Both orders seem workable.
+   (ρ, the Run premise; Σ is threaded from S1), while S3 mostly adds
+   per-entry data and checks. Both orders seem workable.
 5. S4, extern models with the FFI-table parameter, then `Macro`, `Raw`,
    the macro world, the expansion limit, gensym, the `read-file` oracle,
    literals, and finally the real prelude as input. `Raw` and `String`
@@ -698,7 +735,7 @@ before one that only adds rules.
     run-position forms" (§45), which ties them to site 1. A question for the owner,
     not a resolved contradiction.
 13. A head that is a name: §6 says "The head is elaborated first", but
-    both implementations expand the macro calls among the arguments
+    both implementations expand an argument that is a macro call by name
     before they elaborate a name head, so an error in an argument's
     expansion is reported, and the head's error is not
     (`proto/review4/01_head_name_err.sl`, §3.6). DESIGN.md does not say
@@ -716,12 +753,12 @@ before one that only adds rules.
     or the unit's. The
     reference runs it when its file ends and then exits, never reading
     a later file, except under `--warnings-as-errors`, where it
-    elaborates every file first, and under `--extract`, where it runs
-    no final; slc always elaborates every file first
+    elaborates every file first, and under `--extract` or `--build`,
+    where it runs no final; slc always elaborates every file first
     (§3.7, `proto/review5/01_prog_first.sl`). So the two disagree on
     acceptance for such a unit, and the reference's acceptance depends
     on `--warnings-as-errors` even when nothing warns, and on
-    `--extract`. §4 makes a
+    `--extract` and `--build`. §4 makes a
     `;! file` file mean "what it would as a separate file of the unit",
     and both implementations treat it so here. A question for the
     owner.
@@ -1200,7 +1237,114 @@ Unsure, not changed:
    naming no form (02 r7.3, r7.4; BUGS.md 27). Narrowed. Raised by
    the round-7 check of 00-summary.
 2. §1 said an out-of-fuel crash at compile time rejects in both
-   implementations, as tested. On a host stack overflow, which slc's
-   interpreter can reach after running out (`proto/review7/02_fuel_runpos.sl`
-   under `--eval-fuel 20`), both die instead (02 r7.3; BUGS.md 27).
-   Narrowed. Raised by the round-7 carry-over check of 00-summary.
+   implementations, as tested. On a host stack overflow both die
+   instead (`proto/review7/02_deep_runpos.sl`; 02 r7.3, r7.4; BUGS.md
+   27), and slc's interpreter can reach one after running out
+   (`proto/review7/02_fuel_runpos.sl` under `--eval-fuel 20`, which the
+   reference refuses with "out of fuel" and slc dies on). Narrowed.
+   Raised by the round-7 carry-over check of 00-summary; this note's
+   first wording said both die on `02_fuel_runpos.sl`, which round 8
+   corrected (r8).
+
+## Round 8 review notes
+
+Added by an eighth, independent review. Re-run on the reference and on
+`_build/release/slc --interpret`: every test this file cites under
+`proto/spec-shape/` and `proto/review2/` to `proto/review7/`,
+`tests/dump_context.sl`, `proto/theorems/bove.sl` then `model.sl`,
+`fuel.sl` and a `--no-prelude` program under `--eval-fuel 5`, the
+`slot_eq` pair and `01_slot_eq_native.sl` under the reference's
+`--no-extern` (and `01_slot_eq_native.sl` under `--no-native` on both),
+the `01_prog_first.sl` pair under `--warnings-as-errors` and
+`--extract`, `01_files_6000.sl` with `01_files_10000.sl` and
+`01_files_10001.sl`, and `02_deep_runpos.sl` and `02_fuel_runpos.sl`
+(also under `--eval-fuel 20`), on which the round-7 coordinator notes
+rest. The outputs quoted reproduce, and the code citations in `lib/`,
+`bin/`, `self/`, `mini/`, SOUNDNESS.md, and MINIMAL.md hold. New tests
+are `proto/review8/01_*.sl`.
+
+1. §3.6 and decision 5 said every macro call among an application's
+   arguments is expanded before any argument is elaborated. Only a call
+   whose head is a name or `(share n)` is, or, by the code, a handle:
+   `proto/review8/01_form_head_arg.sl`, `(MkPair _ _ ((gs-name)) (gs))`,
+   prints `(MkPair _ _ 3 1)` on both, so the form-headed call is expanded
+   in its argument's turn, after its head, and `((share ugs))` in its
+   place is expanded first. In the reference, `splicing` settles no
+   argument's head (`lib/elab.ml:713`) and `macro_of` recognises a name,
+   a non-erased handle, or `(share n)` (`:622-628`). §3.6, decision 5,
+   and section 5 item 13 fixed. 00-summary.md item 6 and 02 §2.3 repeat
+   the general wording; not edited here.
+2. Decision 2 condensed 03 F6's premises to "if Sleight's functions
+   terminate", dropping (E), which F6 uses since §27 strips erased
+   positions before a run. Now "(T) and (E), as F6 reads them". 03's
+   summary also lists (C), which its detour does not use (03's own
+   unsure point).
+3. The summary and decision 7, as the round-7 coordinator narrowed
+   them, said that on a host stack overflow both implementations die.
+   That holds for `02_deep_runpos.sl`, but the host limit need not be
+   the stack: on `02_fuel_runpos.sl` the reference dies of
+   `Invalid_argument("Array.make")` (exit 2), and under `--eval-fuel 20`
+   it refuses that file with "out of fuel" (exit 1) while slc dies of a
+   stack overflow (exit 2). So "out of fuel rejects in both" is not
+   general, though it holds for `fuel.sl` and for small variants (BUGS.md
+   27's, and `02_fuel_runpos.sl` with a one-element array). Both
+   reworded. The coordinator notes are left as written, though their
+   note 2 gives `02_fuel_runpos.sl` under `--eval-fuel 20` as a case
+   where "both die", and note 1 cites 02 r7.3 for it; there only slc
+   dies.
+4. The summary lists a `slot-eq` oracle among the spec's parameters,
+   and §4.2's Σ holds its stream, but §4.2's `Program` judgment took no
+   oracle. Added `answers`, and said what `fs` is.
+5. Decision 4 said "In the two programs tested" the first messages
+   agree, a count from the first review. §3.7 now cites thirteen runs
+   that both implementations reject (counting the `01_prog_first.sl`
+   pair under `--warnings-as-errors`); every one gives the same first
+   error line (re-run), though for `tests/dump_context.sl` the report
+   under that line differs. Reworded.
+6. The [O] tag called the brief's statements owner statements; they
+   are an earlier session's paraphrases (REVIEW.md, BRIEF.md). Said so.
+7. Decision 6 (c) said the evaluator and `native-compute`'s compiled
+   run answer `slot-eq` differently. Under the reference's
+   `--no-extern` the run is still compiled (with `ocamlfind` hidden
+   from `PATH`, it fails with "`native-compute`: ocamlfind: not found"),
+   over the source models, and `01_slot_eq_native.sl` is refused there
+   too, so they differ over the extern implementations only. §3.8 and
+   decision 6 (c) say so.
+8. §3.7 said "a call with argument `(Zero)` (...) and `(Succ (Zero))`
+   (...)", which reads as two calls; `01_after_error_succ.sl` binds a
+   constructor application. Reworded.
+9. §3.7 said the reference "never reads the later file" and then that
+   each implementation treats `;! file` files as it treats files on the
+   command line, which suggests the reference never reads a later
+   `;! file` file either. It does: `Reader.files` splits and tokenizes
+   the whole command-line file up front and records a lexical error on
+   the file it occurs in (`lib/reader.ml:44-49`, `:103`, `:121`), and
+   parsing that file raises it (`:143`). A lexical error there is
+   deferred, as a parenthesis error is
+   (`proto/review8/01_pragma_file_lex.sl`: the reference prints
+   `effect` and exits 0, slc reports "unknown escape \q" and exits 1).
+   Qualified to the outcome, the mechanism added, and `bin/main.ml:109`,
+   the fold that reaches each command-line file, added to the citation.
+10. §4.6 argued for S2 before S3 because S2 "changes every rule's
+    signature (Σ, ρ, the Run premise)", while S1 already threads Σ
+    (round 7's unsure point). Σ dropped from that list.
+
+Also added: `--build` on the `01_prog_first.sl` pair, which round 7 did
+not run, is refused with "late" and builds nothing, while the first file
+alone builds a program that prints `effect`; §3.7 and section 5 item 14
+now name `--build` with `--extract`.
+
+Unsure, not changed:
+- Whether slc reaches its stack overflow on `02_fuel_runpos.sl` under
+  `--eval-fuel 20` after running out of fuel, as coordinator note 2
+  says. With a one-element array both report "out of fuel", and with
+  `pickd` given 0 both die, which fits a head run first and slc going
+  on after "out of fuel" (02 §2.2, C4); the order inside that run was
+  not observed.
+- A macro call whose head is a handle, which `macro_of` also accepts,
+  was not tested; nor were special forms' operands one by one.
+- Whether decision 8 should name `--extract` and `--build`, which change
+  the reference's acceptance in item 14's case; item 14 names them.
+- Whether S2 was meant to grow Σ's contents (a heap) rather than its
+  place in the signature; that is the author's to say.
+- The summary is still far beyond the brief's 15 lines.

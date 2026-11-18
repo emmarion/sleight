@@ -1,0 +1,15 @@
+(def-fns _
+  ((many init-top : (many (List $ Stmt) p) -> (many (CState p) s)) (start p))
+  ((many step-top : (erased (List $ Stmt) p) (many (CState p) s) -> (many (Turn CState p) t)) (cstep p s))
+  ((erased excl-top : (erased (List $ Stmt) p) (erased (Elab (Nil (Ent)) p) d) (erased (Fails (Nil (Ent)) p) f) ->
+      (erased (False) no))
+    (exclusive (Nil (Ent)) p d f)))
+(def-lvl F)
+(def-fns F $ (many first-turn : (many (Certified) c) (many (List $ Stmt) p) -> (many (Nat) r))
+  (let ((erased pc)) (prove-predates c F))
+  (let-match many c (MkCertified S L init step excl))
+  (let ((erased ps)) (prove-subterm L c))
+  (let ((erased pl)) (predates-subterm pc ps))
+  (let ((many s)) (init (predates pl) p))
+  (match many (step (predates pl) p s) _ ((More _ _ _) 0) ((Fin _ _ _) 1)))
+(first-turn (MkCertified CState _ init-top step-top excl-top) (Cons _ (Let $ Num 3) $ Nil _))

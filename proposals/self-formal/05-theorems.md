@@ -48,10 +48,11 @@ else is my own reading and is hedged as such. `bove_use.sl`, `fuel.sl`,
   derivation's internal steps go through despite level stratification,
   and the matching lemmas hold, then on my reasoning Sleight cannot prove
   uniform stripped-run safety, nor uniform (T) together with
-  full-semantics safety. Of these conditions only the first, which is
-  OPEN.md 1, has been worked on, and the internal steps have been tried
-  only for an abstract relation in place of `Prov` (§4.3). Nothing builds
-  a `Prov` that formalizes acceptance. Two fuel-free shapes compile: recursion on an
+  full-semantics safety. Of these conditions, the first is OPEN.md 1, on
+  which SOUNDNESS.md and `lean/` work, and the internal steps have been
+  tried only for an abstract relation in place of `Prov`, with G read as
+  ¬`(P ⌜G⌝)` itself (§4.3); the rest are unattempted. Nothing builds a
+  `Prov` that formalizes acceptance. Two fuel-free shapes compile: recursion on an
   erased `Halts` derivation, and a typed step machine driven by
   `Program` [proto]. A third shape, "honest fuel", whose out-of-fuel
   result carries a proof, also compiles [proto], but it uses fuel. The
@@ -241,8 +242,8 @@ preservation of (I1), which "this note does *not* prove". SOUNDNESS.md
 does not mention H; on the readings above, H follows from what it
 *claims and argues*, and is not established. Even if true, it
 is not something Sleight can prove about itself for all programs in a
-form a function can recurse on, if its logic is sound, on my reading of
-§4.3 below. Part 7 also says of its argument for "(E)" (the stripped run
+form a function can recurse on, on my reading of §4.3 below, under the
+premises of its diagonal and if its logic is sound. Part 7 also says of its argument for "(E)" (the stripped run
 follows a run of the full semantics): "Without (T) this step fails".
 That matters for T7.
 
@@ -357,8 +358,9 @@ answers would have to be expressible as an oracle the spec can choose.
   uniform (T) and full-semantics safety cannot both be proved inside
   Sleight if it is consistent, conditions (b) to (d) of §4.3 hold for
   a formalized `Prov`, and the matching lemmas of §4.3 hold (of these,
-  only consistency has been worked on, and (d) only for an abstract
-  relation, §4.3), and on my reasoning there uniform stripped-run safety
+  consistency has been worked on, and (d) only for an abstract relation,
+  §4.3; the rest are unattempted), and on my reasoning there uniform
+  stripped-run safety
   alone would already give internal consistency. So, consistent with
   [owner 1]'s "no `no_false`", I expect T7 for the stripped run to stay
   a meta-theorem. T6 then either assumes
@@ -432,8 +434,11 @@ My reading of the limits, hedged:
   `compile`, the argument needs T1 to T4 and the spec's determinism on
   Q (through T3), not T5: as in 03 F6, Q's macro expands to a
   `compile-error` exactly when `compile` accepts Q. T3 holds per oracle,
-  so the oracle in `compile`'s verdict must govern the run of `compile`
-  inside Q. That holds if `compile` calls no `slot-eq`; otherwise, as
+  so the oracle in `compile`'s verdict must govern Q's run, the run of
+  `compile` inside Q included. For the rest of Q that holds when nothing
+  else Q runs at compile time calls `slot-eq`, as in `diagonal.sl`'s
+  unit, prelude included. For `compile` it holds if `compile` calls no
+  `slot-eq`; otherwise, as
   in 03 F6, the argument goes through its copy with every `slot-eq`
   answered `ENone`, which an oracle may always choose (§67) (my
   reasoning). It also needs crashes kept out of the oracle, as
@@ -444,8 +449,8 @@ My reading of the limits, hedged:
   classical "no total self-interpreter on source text" barrier. Brown
   and Palsberg's typed self-interpreter for F_ω, cited by name, is to my
   understanding not subject to it because its input is a typed
-  representation, not text. The argument is mine and has not been
-  checked by anyone else.
+  representation, not text. The argument is an agent's; only the agent
+  reviews recorded below have checked it.
 - **Gödel.** On my reading, Gödel's second theorem would apply in this
   conditional form. Let `Prov` be a Sleight inductive relation on codes
   of units, formalizing acceptance under `--goal proved` (§71). Suppose

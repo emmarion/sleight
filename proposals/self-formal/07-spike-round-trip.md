@@ -8,11 +8,11 @@ Tags: **[D]** DESIGN.md, quoted; **[C]** compiled or run. Unless marked
 otherwise, files are under `proto/roundtrip/` and were run with
 `_build/default/bin/main.exe` at commit 669b328 (no change to `bin/`,
 `lib/`, `src/`, or `self/` since, up to ad07c35, 07692f2, c236135, e0aaf2c,
-fb2c533, 10bd85d, and 13ca61f), and also with slc
+fb2c533, 10bd85d, 13ca61f, and 634e3ee), and also with slc
 (`_build/release/slc`; `slc --interpret`, `slc --goal`).
-**[A]** marks my own reading or proposal. The only owner item the body
-mentions is the brief's statement 3, in decision 4, and it is an earlier
-session's paraphrase.
+**[A]** marks my own reading or proposal. The only owner items the body
+mentions are the brief's statement 3, in decision 4, and the hypothesis
+H of its statement 4, in §1; both are an earlier session's paraphrases.
 
 ## 1. Summary
 
@@ -69,7 +69,8 @@ session's paraphrase.
   `step` that calls itself is refused (a same-level self-call
   "decreases no subterm argument", §17, §48;
   `proto/review4/07_loop_step_bad.sl`). Completeness, or
-  termination under H, is the main missing piece.
+  termination under H (the brief's statement 4: that every accepted
+  compile-time form's spec run halts), is the main missing piece.
 
 ## 2. Findings
 
@@ -171,8 +172,10 @@ uses `impl.sl`'s lookups and `mstep`, and fails without it), and for
   `CLet c (MkEvals … runs)` and returns to `Checking`. If it is stuck,
   `plug-fails c (FLetStuck …)` gives the rejection.
 - Every `CState p0` value is a valid partial derivation by construction,
-  because its erased fields can be built only by the rules. The theorem
-  needs no separate invariant and no `init` state hypothesis.
+  because its erased fields can be built only by the rules, provided
+  the erased logic has no closed proof of `False`, which nothing here
+  shows (second review notes). The theorem needs no separate invariant
+  and no `init` state hypothesis.
 - [A] The `Fails` rules mirror the `Elab` rules: `FLetRest`,
   `FAssertRest`, and `FNeedRest` carry the same earlier premises as
   `ElLet`, `ElAssert`, and `ElNeed`. That is why one `Ctx` plugs into
@@ -301,11 +304,17 @@ spec has one. The reason string of `Rejected` is free text, so a
 `drive.sl`: the driver, which reaches `cstep` and `rstep` through its
 own wrappers `zipper` and `replay` rather than through a `Certified`
 value, and the text it prints for each verdict, are outside the proved
-statement. A function given only a `Certified` cannot call its `init`
-or `step`: their level `L` is packed, and the call is refused with
-"`L` was not in scope when level `(level-of first-turn)` was minted"
+statement. A function given only a `Certified` cannot, in the two
+shapes tried and as I read §18, call its `init` or `step`: their level
+`L` is packed, and the call is refused with "`L` was not in scope when
+level `(level-of first-turn)` was minted"
 (`proto/review6/07_cert_fn_bad.sl`), as 06 F4.2 found for packed-level
-closures. Given also a `Predates` from the value to the function's
+closures; and a `Predates` from the value to the function's level,
+written out in the function, is refused too, the value being a
+parameter introduced after that level ("`c` was not in scope when level
+`F` was minted", `proto/review8/07_cert_fn_self_bad.sl`; reference,
+`--no-extern`, and `slc --interpret`) [C, round 8]. Given also a
+`Predates` from the value to the function's
 level, which the top level proves for a value built before that level
 is minted, the function calls both, through `prove-subterm` and
 `predates-subterm` (`proto/review7/07_cert_predates.sl`; reference,
@@ -412,9 +421,10 @@ levels"), see §5 below.
      slc itself is retrofitted.
    - Why: both compile. Replay keeps slc's direct style, but it adds
      request equality (on terms and environments in the toy, and [A]
-     probably on heaps in full Sleight) and about quadratic work. The
-     zipper removes both, at the cost of rewriting the elaborator into
-     frames.
+     probably on heaps in full Sleight) and re-elaboration work about
+     quadratic in the number of runs (F6, an estimate). The zipper
+     removes both, at the cost of rewriting the elaborator into frames;
+     its list lookups still cost O(entries) per statement (Q1a).
    - Depends on it: 04's compiler-route choice, and 03 decision 3.
 2. **Is the spec's compile-time run a small-step relation over the same
    machine the compiler steps (Q2a)?**

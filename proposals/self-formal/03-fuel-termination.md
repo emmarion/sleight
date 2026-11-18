@@ -10,11 +10,15 @@ decisions, which is an earlier session's paraphrase, not the owner's words.
 
 - slc has one fuel known to change a verdict: the compile-time interpreter's
   depth bound (default 10⁹, fresh for each run-position form, each macro
-  run, and each step of an interpreted `Program`). Running out is reported
-  as a refusal of the form, which DESIGN.md does not obviously license,
-  except that the run goes on after running out, and if it then
-  overflows the host stack slc dies instead (`proto/review7/02_fuel_runpos.sl`
-  under `--eval-fuel 20`; 02 r7.3; BUGS.md 27). The
+  run, and each step of an interpreted `Program`). Running out at compile
+  time is reported as a refusal of the form, which DESIGN.md does not
+  obviously license.
+  The run does not stop where the fuel runs out: it goes on with an error
+  value, and the form is refused when the run ends
+  (`self/elab-main.sl:178-190`, `self/core.sl:2409-2415` and `2815-2819`).
+  If the run overflows the host stack first, slc dies instead
+  (`proto/review7/02_fuel_runpos.sl` under `--eval-fuel 20`; 02 r7.3;
+  BUGS.md 27). The
   other "fuels" are a language rule (§62's 10000 expansions),
   termination measures (most of them erased), and a handful of bounds that a measure proof could
   replace. One of those, `merge-opens` (F3 row 6), would accept early if
@@ -36,7 +40,7 @@ decisions, which is an earlier session's paraphrase, not the owner's words.
   `UniqueFn` per driver step that calls down to the stepper.
   Counter-indexed closures may be an alternative, but only a chain of
   closures was compiled, not a CPS `bind`. I did not try level-indexed
-  continuations.
+  continuations; 06 F4.2 tried closures packed with their level (F4.1).
 - A diagonal argument (F6; its mechanism is compiled in
   `proto/fuel/diagonal.sl`, the rest is my reasoning) says that, if
   Sleight's functions terminate and its checking ends (SOUNDNESS.md's
@@ -51,9 +55,9 @@ decisions, which is an earlier session's paraphrase, not the owner's words.
   theorem with `OutOfFuel`; or (iii) a function that also takes erased
   evidence of H(src) for the one source. Read as mathematics, "under H,
   compile is a total function" is untouched by F6. "H(src) ⇒ halts" may
-  be provable internally from a spec derivation. My inference is that H
-  for all sources, in a form a function can recurse on, is not, if
-  Sleight is sound.
+  be provable internally from a spec derivation. Under F6's premises, and
+  if Sleight is sound and the stepper faithful, my inference is that H
+  for all sources, in a form a function can recurse on, is not.
 - Recommendation for the owner to weigh: a hybrid. Make the interpreter a
   stepped machine. Run it inline in bursts, and when a burst runs out,
   suspend to the driver and replay the current top-level form. Fuel
@@ -123,9 +127,9 @@ decisions, which is an earlier session's paraphrase, not the owner's words.
 
 | # | Where | What it bounds | On exhaustion | Removable? |
 |---|---|---|---|---|
-| 1 | interpreter `eval`/`apply`, `self/elab-main.sl:159-190, 405-430`. Default `1000000000` in `self/core.sl:3614` (`MkMacros ... 1000000000`), `--eval-fuel` in `self/main.sl:121-132` | Depth of application nesting. Two units per interpreted call, and tail calls spend too. Fresh per run-position form (`elab-main.sl:450-462, 550, 744`), per macro run (`:525`), and per interpreted `Program` step (`interp.sl:109,143`) | `BError "out of fuel"`. The form is refused like any runtime error (MANUAL.md:163-165) | Only by restructuring (options below). This is the fuel that matters. |
+| 1 | interpreter `eval`/`apply`, `self/elab-main.sl:159-190, 405-430`. Default `1000000000` in `self/core.sl:3614` (`MkMacros ... 1000000000`), `--eval-fuel` in `self/main.sl:121-132` | Depth of application nesting. Two units per interpreted call, and tail calls spend too. Fresh per run-position form (`elab-main.sl:450-462, 550, 744`), per macro run (`:525`), and per interpreted `Program` step (`interp.sl:109,143`) | `BError "out of fuel"`, a value the run goes on with. The form is refused when the run ends, like any runtime error (MANUAL.md:162-164), unless the host stack overflows first (§1) | Only by restructuring (options below). This is the fuel that matters. |
 | 2 | Expansion budget: `expansion-limit` 10000 (`self/elab.sl:26`), checked globally at `elab-main.sl:559-560`. Also threaded as the structural `fuel` parameter of the elaborator block, reset to 10000 per top-level item (`elab-main.sl:3379, 3387, 3391`), and as `run-toplevel`'s own `fuel` (`elab-main.sl:3362`), 10000 per file (`self/main.sl:29`), spent at `elab-main.sl:3375` and `3382` | §62's language rule. The per-item parameter is also the block's first termination measure | Error "more than 10000 macro expansions" | The global count is the spec and stays. The two parameters look like measures the global count always hits first. I have not verified that. |
-| 3 | Termination measures: `xf`, `callbacks`, `hop-k` (`elab-main.sl:147-159`; erased in `eval`, though `expand` takes `xf` at `many`, `elab-main.sl:555`), `Steps` (`elab.sl:1241-1244`, whose `SS` field is `many`), and the sugar budget | Termination evidence. I did not check that every zero case is refuted. The sugar budget's zero case is an internal error (README "Choices") | Refuted or internal error | Already not fuel in the sense of an extra outcome. |
+| 3 | Termination measures: `xf`, `callbacks`, `hop-k` (`elab-main.sl:147-159`; erased in `eval`, though `expand` takes `xf` at `many`, `elab-main.sl:555`), `Steps` (`elab.sl:1241-1245`, whose `SS` field is `many`), and the sugar budget | Termination evidence. I did not check that every zero case is refuted. The sugar budget's zero case is an internal error (README "Choices") | Refuted or internal error | Already not fuel in the sense of an extra outcome. |
 | 4 | Generated printer `show-fuel` 100000 (`self/emit.sl:4, 1379-1438`) | Recursion through types when emitting printers | Falls back to `"show_any"` or empty arms (`emit.sl:1380, 1417, 1438`). This changes emitted code, not a verdict | Possibly, by a measure on the memo. Unverified. |
 | 5 | Store walks: `list-refs` and `rope-walk` with fuel = heap size or twice it (`self/eval.sl:171-180, 455-473`), and `heap-strs`/`heap-pairs`/`heap-jobs` with 1000000 (`eval.sl:1018-1055`) | Walking lists in the mutable store | `None` or `Fail`, then an error block | Needs either an acyclicity measure (addresses pointing below) or a visited set. I could not determine whether `hwrite` can make cycles. |
 | 6 | Length-bounded loops: `str-split-fuel` (`self/base.sl:100-109`, fuel = string length), `parse-pieces` (`emit.sl:138-153`), `frame-chain` (`elab.sl:816-828`, fuel = the frame id itself), and `merge-opens` (`elab.sl:1987-2004`, fuel = count of opened objects + 1) | Loops whose real measure is a length or an id | Silent truncation or an early `UOk` | Yes: with a decrease proof, as `reader.sl` already does for `str-split` with an `Add` invariant (README "reader.sl"). |
@@ -305,9 +309,13 @@ total call", though the same sentence puts the driver's loop "outside
 the claim". So this is a reading, not a quotation. Q's text before the
 macro call elaborates as in P, provided it makes no compile-time use of
 its own file's name or text, in which P and Q differ (true of
-`diagonal.sl`, whose text before the call calls no macro). The macro's
-call of `compile` is the same call on the same text, so it returns too,
-if its result is determined by its code and argument (below), and
+`diagonal.sl`, whose text before the call calls no macro), and calls no
+`slot-eq`, whose answer may differ between the two runs (§67; nothing
+that runs before the call in `diagonal.sl`'s unit, prelude included,
+calls one).
+The macro's call of `compile` is the same call on the same text, so it
+returns too, if its run is determined by its code and argument, whether
+the evaluator or the driver runs it (below; 09 §3.4 premise 3), and
 setting aside crashes, which §31 and §42 allow in one run and not in
 another (09 §3.4). The macro's other code
 cannot be given a P, since it needs a `MacroWorld` (§65). In
@@ -480,8 +488,10 @@ count at `elab-main.sl:559-560`.
   2n, either the whole compile or only the current top-level form, using
   the environment checkpoint that `run-toplevel` already has.
 - Pros: small change. Fuel never shows in a result. The fuel bounds
-  depth, not work (MANUAL.md:154-157), so a failed attempt is a prefix of
-  the successful run, but it is not half as long. Doubling from n₀ to n
+  depth, not work (MANUAL.md:154-157), so a failed attempt that stops
+  where its fuel runs out is a prefix of the successful run, but it is
+  not half as long. slc's evaluator today goes on after running out
+  (§1), so it would have to stop there. Doubling from n₀ to n
   costs at most about log₂(n/n₀) + 1 times the successful run, not twice
   (my reasoning).
 - Cons:
@@ -596,8 +606,8 @@ source whose compile-time run diverges has no derivation.
    current behaviour (F3 row 1) is conforming.
 2. **The form of decision 3: (i) "H ⇒ the driver reaches `Exit`", or
    (ii) a three-outcome theorem with `OutOfFuel`?** Recommended: (i).
-   F6 suggests that no hypothesis-free, non-erased Sleight function can
-   do better, and the prototype shows the `Program` loop can carry it.
+   F6 suggests that, under its premises, no hypothesis-free, non-erased
+   Sleight function can do better, and the prototype shows the `Program` loop can carry it.
    (i) can be paired with (iii) of the summary, a Sleight function that
    takes erased H(src) evidence, as an internal form of the same theorem.
    (a), (b), and (e) can give (i), since each leaves any unbounded
@@ -650,7 +660,8 @@ source whose compile-time run diverges has no derivation.
   over to the run of the possibly rejected Q (F6). It assumes that the
   spec accepts P as the checker does, that part 5 covers the driver's
   call, that (E) gives termination of the stripped run, and that Q's
-  text before the macro call does not depend on its file. The rest
+  text before the macro call does not depend on its file or call
+  `slot-eq`. The rest
   of F6 needs the other premises 09 §3.4 lists (a deterministic run of
   `compile`, one semantics for the macro's run and the driver's, no crash, the macro's other code
   ending, a fixed file system, and Q's verdict following the macro's

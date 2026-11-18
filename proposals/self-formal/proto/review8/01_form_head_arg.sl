@@ -1,0 +1,15 @@
+(def-fns _ $ (many gs-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
+    (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
+  (let ((unique mw1) (many k) (erased g)) (gensym mw "t"))
+  (let ((unique mw2) (many h)) (intern-nat mw1 k))
+  (values mw2 $ Cons _ (RawSettled here _ _ _ h) $ Nil _))
+(let ((many gs)) (MkMacro _ gs-fn))
+(def-fns _ $ (many name-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
+    (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
+  (let ((unique mw1) (many k) (erased g)) (gensym mw "t"))
+  (values mw1 $ Cons _ (RawSymbol here (SName "gs")) $ Nil _))
+(let ((many gs-name)) (MkMacro _ name-fn))
+(let ((unique ugs)) (MkMacro _ gs-fn))
+(let ((many a)) (MkPair _ _ ((gs-name)) (gs)))
+(let ((many b)) (MkPair _ _ ((share ugs)) (gs)))
+(MkPair _ _ a b)

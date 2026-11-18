@@ -1,0 +1,5 @@
+(def-fns _ $ (many pick : (many (Bool) b) -> (many (Matchable enum Bool (many BTrue) (many BFalse)) m)) (matchable-of Bool))
+(compile-error "first")
+(open-adt many (pick (BTrue)))
+(let ((many q)) (pick (BTrue)))
+(dump-context)

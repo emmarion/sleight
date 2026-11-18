@@ -1,0 +1,10 @@
+(def-fns _ $ (many ce : (many (Pos) here) (erased (String) t) (many (Settled (MMany) (String) t) h) -> (many (Raw) r))
+  (RawList here $ Cons _ (RawSymbol here (SName "compile-error")) $ Cons _ (RawSettled here _ _ _ h) $ Nil _))
+(def-fns _ $ (many dup-fn : (unique (MacroWorld) mw at vacant-slot) (many (Pos) here) (many (List $ Raw) args) ->
+    (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
+  (let ((unique mw1) (many h)) (intern-string mw "dup"))
+  (let ((unique mw2) (many h2)) (intern-string mw1 "dup2"))
+  (values mw2 $ Cons _ (ce here _ h) $ Cons _ (ce here _ h) $ Cons _ (ce here _ h2) $ Nil _))
+(let ((many dup)) (MkMacro _ dup-fn))
+(compile-error "first")
+(dup)

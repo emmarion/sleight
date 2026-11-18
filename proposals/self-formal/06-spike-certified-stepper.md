@@ -8,9 +8,9 @@ Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
 **[ran]** is a run tonight of the reference (`_build/default/bin/main.exe`,
 commit d6644d9; the first review re-ran everything at ad07c35, the
 second at 07692f2, the third at c236135, the fourth at e0aaf2c, the
-fifth at fb2c533, the sixth at 10bd85d, and the seventh at 13ca61f,
-with no change to `bin/`, `lib/`, `src/`, `self/`, or `std/` in
-between) and, where said, of `_build/release/slc`. The
+fifth at fb2c533, the sixth at 10bd85d, the seventh at 13ca61f, and
+the eighth at 634e3ee, with no change to `bin/`, `lib/`, `src/`,
+`self/`, or `std/` in between) and, where said, of `_build/release/slc`. The
 prototype is `proto/stepper/`. Every command line starts with the
 repository's `std/list.sl`, then `spec.sl machine.sl`.
 
@@ -40,11 +40,12 @@ repository's `std/list.sl`, then `spec.sl machine.sl`.
   ("the rest composed with the current focus gives the spec's run") also
   works at one fixed level if it takes an erased step counter, which
   each extension's call to the previous closure decreases
-  (`ho_counter.sl`, added in review) [ran]. Without that counter it is
-  refused at a fixed level. With its level packed in the state it can be
-  built, but a stepper that extends it at a fresh level each step cannot
-  apply it (§18); with a `Predates` to the stepper's level packed too, it
-  can be applied but not extended at a fresh level [ran].
+  (`ho_counter.sl`, added in review) [ran]. Without a decreasing
+  argument such as that counter it is refused at a fixed level. With its
+  level packed in the state it can be built, but in the shapes tried, and
+  as I read §18, a stepper that extends it at a fresh level each step
+  cannot apply it (F4.2); with a `Predates` to the stepper's level packed
+  too, it can be applied but not extended at a fresh level [ran].
   Packing the level with its `Predates` proofs and the counter, and
   extending at that same packed level, is accepted
   (`proto/review4/06_packed_counter.sl`) [ran, fourth review].
@@ -110,7 +111,7 @@ from `lib/prelude.sl:407`, and `alloc-fn` from `spec.sl`. A wrong final step in 
   theorem: whatever the machine halts with, the spec relates the program
   to it. `c0` and `m0` are pinned by the trace's type: any trace a
   caller supplies is a chain of `Step` derivations from
-  `(c0 :: nil, m0)` to the current state, the one for the start state
+  `(c0 :: nil, m0)` to the current state, one for the start state
   being `TNil (c0 :: nil) m0` (`machine.sl:26`), and `Running` hands
   back a trace with the same `c0` and `m0` (`machine.sl:178`). It says
   nothing about a run that never halts or gets stuck.
@@ -193,10 +194,16 @@ refused in `step-back` at `ExSeq` [ran, third review].
 2. **A closure invariant at a packed level.** If the state packs
    `(erased (Level) L)` with `inv` at `L`, each step can `def-lvl` a fresh
    `L2` and build `inv2` at `L2` calling `inv`: accepted
-   (`ho_exist_build.sl`). But the stepper cannot apply it at a halt:
-   "`L` was not in scope when level `(level-of adv-ho)` was minted"
-   (`ho_exist_use_bad.sl`). §17: "A function may call a function of a
-   strictly lower level"; §18: for `(prove-predates x L)`, "`x` must have
+   (`ho_exist_build.sl`). But a stepper given only the state cannot
+   apply it at a halt: "`L` was not in scope when level
+   `(level-of adv-ho)` was minted" (`ho_exist_use_bad.sl`). A `Predates`
+   from the state to the stepper's level, written out in the stepper, is
+   refused too, the state being a parameter introduced after that level
+   ("`st` was not in scope when level `S` was minted",
+   `proto/review8/06_use_self_predates_bad.sl`; reference,
+   `--no-extern`, and `slc --interpret`) [ran, round 8]. §17: "A
+   function may call a function of a strictly lower level"; §18: for
+   `(prove-predates x L)`, "`x` must have
    an introduction order (§5) earlier than `L`'s", and "`L` must be an
    entry created by `def-lvl`, or a `let` binder forwarding from one".
    §18 also says: "A level created later is strictly higher than one
@@ -213,8 +220,15 @@ refused in `step-back` at `ExSeq` [ran, third review].
    (`proto/review7/06_packed_subterm.sl`; reference, `--no-extern`, and
    `slc --interpret`) [ran, round 7]. As I read §18, a state a step builds
    can have no such `Predates`, so this does not help a stepper either.
-   Inside a closure defined at a packed level, even a call to a lower-level
-   function such as `step-back` needs a packed `Predates`: without one,
+   Nor is a `Predates` needed when an `Eq` packed with the level makes it
+   the stepper's own: the call is then a same-level call, and a `subterm`
+   proof on a decreasing erased argument serves
+   (`proto/review8/06_packed_same_level.sl`; reference, `--no-extern`, and
+   `slc --interpret`) [ran, round 8]. That closure is at the stepper's own
+   level, so this is item 1's fixed level, hidden, not a way to extend at
+   a fresh level. Inside a closure defined at a packed level, even a call
+   to a lower-level function such as `step-back` needs a packed
+   `Predates`: without one,
    "`L` is not a level minted by `def-lvl`" (§18: "`L` must be an entry
    created by `def-lvl`, or a `let` binder forwarding from one") [ran,
    fourth review]. Packing both `Predates` proofs and item 1's counter,
@@ -224,20 +238,25 @@ refused in `step-back` at `ExSeq` [ran, third review].
    and `slc --interpret`) [ran, fourth review]; its loop is the same
    fuel-bounded test driver as item 1's. Here the packed level is `L0`,
    minted at the top level before the stepper's `S`, and as I read §18 a
-   level with a `Predates` to `S` is an entry introduced before `S` or a
+   level with a `Predates` to `S` is an entry introduced before `S`, a
    part of a value that has such a `Predates` (as in
    `06_packed_subterm.sl`, whose level binder is introduced after `S`),
-   so a step cannot mint it afresh, and this is item 1 with the level
-   hidden; item 1's counter makes packing the level
-   unnecessary. The trace of F2 is the same closure defunctionalized:
+   or a parameter passed in with one (as 05's `proto/theorems/drive.sl`
+   passes its step's level), so a step cannot mint it afresh, and this
+   is item 1 with the level hidden; item 1's counter makes packing the
+   level unnecessary. The trace of F2 is the same closure defunctionalized:
    `step-back` is the code of each closure, and `Trace` is the list of
    them.
 3. **Numerals in an erased derivation** (`total_demo.sl`, first draft):
    `RSet ... 0 ...` was refused against `(SetNth ... (Zero) ...)`, with
    the note that `0` "is a numeral literal, opaque to the checker". §45:
    "`3` is not `(Succ (Succ (Succ (Zero))))`." A register index that
-   proofs inspect has to be written `(Zero)` or `(Succ ...)`, or exposed
-   with `unary` (§49). At run time `nth-p` matches literals as usual.
+   proofs inspect has to be written `(Zero)` or `(Succ ...)`, or exposed,
+   for example with `unary` (§49) or by a `let-match` of its `numeral-of`
+   proof (§45) against the prelude's `NZ`
+   (`proto/review8/06_numeral_of.sl`; reference, `--no-extern`, and
+   `slc --interpret`) [ran, round 8]; the note also names
+   `prove-literal-lt`. At run time `nth-p` matches literals as usual.
 4. **Style warnings**: lopsided `match` and unmarked same-level calls;
    fixed by `let-match` and `notail`. `Exec` and `SCons` clashed with
    prelude names (warning only); renamed.
@@ -313,12 +332,16 @@ not being built at run time, which erasure (§14, §27) already implies.
    proof term, as long as the run; being erased, it is not built at run
    time (§14; F6's memory figures are consistent with that). *Cost:* 41
    lines here.
-2. **Closure invariant with a packed level.** *Con:* with no packed
-   `Predates`, it cannot be applied by the stepper; with one, it cannot
-   be extended at a fresh level (F4.2). With the `Predates` proofs and
-   option 5's counter packed, it works, but, as I read §18 (F4.2), only
-   at one level with a `Predates` to the stepper's, which a step cannot
-   mint afresh, so it is option 5 with the level hidden.
+2. **Closure invariant with a packed level.** *Con:* as far as the
+   reviews found (F4.2, decision 2), the stepper can apply it only given
+   a `Predates` from its level to the stepper's, packed with it or
+   obtained for a state built before the stepper's level, or an `Eq`
+   making its level the stepper's own; as I read §18, a step that
+   extends it at a fresh level can give the new state none of these, and
+   with a packed `Predates` that step is refused. With the `Predates`
+   proofs and option 5's counter packed, it works, but, as I read §18
+   (F4.2), only at one level with a `Predates` to the stepper's, which a
+   step cannot mint afresh, so it is option 5 with the level hidden.
 3. **A first-order "derivation under construction"**: an erased context
    of `Runs` frames, filled as commands finish, so the halt reads off the
    derivation with no fold. *Pro:* no trace. *Con:* needs one frame type
@@ -387,19 +410,26 @@ not being built at run time, which erasure (§14, §27) already implies.
    would use one of these two, or an untested shape such as Q1.3.
 2. **Should the level rules allow a function to apply a closure whose
    level is packed in its argument?** I do not propose a change. As
-   DESIGN.md stands (§17, §18, §19), a function that receives such a
-   closure can apply it only with a `Predates` from the closure's level
-   to its own. The reviews found three ways to have one: packed with the
-   closure (F4.2); by `predates-subterm` from a `Predates` about the value
-   that holds it (`proto/review7/06_packed_subterm.sl`; for 07's
-   `Certified`, `proto/review7/07_cert_predates.sl`); and, for code whose
-   level is minted after a top-level destructure of the value, proved
-   directly (`proto/review6/07_cert_drive.sl`). The last two need the
-   value built before the code's level is minted, which a stepper's
-   states, arising at run time, are not; and, as I read §18, a closure at
-   a level minted after the function's can never have one (F4.2). A
-   closure at a fixed level with a decreasing erased argument works
-   instead (F4.1), so certified steppers do not depend on this.
+   DESIGN.md stands (§17, §19, §48), a function that receives such a
+   closure needs a `Predates` from the closure's level to its own,
+   unless that level canonicalizes to its own (an `Eq` packed beside it
+   can make it), when a same-level call with a `subterm` proof serves
+   instead (`proto/review8/06_packed_same_level.sl`). The reviews found
+   three ways to have the `Predates`, and did not rule out others:
+   packed with the closure (F4.2); by `predates-subterm` from a
+   `Predates` about the value that holds it
+   (`proto/review7/06_packed_subterm.sl`; for 07's `Certified`,
+   `proto/review7/07_cert_predates.sl`); and, for code whose level is
+   minted after a top-level destructure of the value, proved directly
+   (`proto/review6/07_cert_drive.sl`). As I read §18, the last two need
+   the value built before the code's level is minted, which the states a
+   stepper builds as it runs are not (nor can a function prove one from
+   its own parameter to its own level,
+   `proto/review8/06_use_self_predates_bad.sl`); a closure at a level
+   minted after the function's can never have one (F4.2); and the `Eq`
+   serves only a closure at the function's own level, F4.1's fixed level
+   hidden. A closure at a fixed level with a decreasing erased argument
+   works instead (F4.1), so certified steppers do not depend on this.
 3. **Is "never stuck" a target for the formal spec's own machine?** If
    yes, Q2.2 (a typing invariant) is the route that also serves type
    soundness; Q2.1 is cheaper for a toy. They answer different
@@ -419,10 +449,12 @@ not being built at run time, which erasure (§14, §27) already implies.
    beside it, as an erased `(Level)` field, can be held and extended,
    but, as far as the spike and its reviews found, code that receives the
    data can call it only with a `Predates` from the packed level to the
-   code's own level: packed beside it, or derived by `predates-subterm`
+   code's own level, packed beside it or derived by `predates-subterm`
    from a `Predates` about the data, which needs the data built before
-   the code's level was minted (F4.2). For a level created after the
-   code's, §18 says outright that it cannot be called ("a function at a
+   the code's level was minted (F4.2), or, when an `Eq` packed beside it
+   makes the level the code's own, by a same-level call (decision 2).
+   For a level created after the code's, §18 says outright that it
+   cannot be called ("a function at a
    later level cannot be called from code at an earlier level").
    Otherwise, as I read it, it follows from §18's rule for
    `prove-predates` ("`x` must have an introduction order (§5) earlier
@@ -439,13 +471,16 @@ not being built at run time, which erasure (§14, §27) already implies.
 - That Q1.3 (a derivation context) would work, and its size.
 - That no placement of levels lets a stepper apply a closure extended
   at a fresh level each step (F4.2); two packed shapes were tried
-  (`ho_exist_use_bad.sl`, and `proto/review3/06_packed_predates_bad.sl`
-  with a packed `Predates`). Two shapes that keep one level do work: the
+  (`ho_exist_use_bad.sl`, also with a `Predates` about the state written
+  out, `proto/review8/06_use_self_predates_bad.sl`, and
+  `proto/review3/06_packed_predates_bad.sl` with a packed `Predates`). Two shapes that keep one level do work: the
   fixed-level counter of F4.1, and `proto/review4/06_packed_counter.sl`,
   which packs that level. A `Predates` about the state, passed beside
   it, serves a state built before the stepper's level
   (`proto/review7/06_packed_subterm.sl`) and, as I read §18, no state a
-  step builds.
+  step builds; an `Eq` packed with the level serves a closure at the
+  stepper's own level (`proto/review8/06_packed_same_level.sl`, which
+  applies it and does not extend it).
 - The `--build` timings of F6 were not re-run by the first review; the
   second review got 0.00 s and 0.06 s, and the fifth 0.00 s and 0.07 s.
 - The Q2.1 line estimate.

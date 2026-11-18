@@ -1,0 +1,10 @@
+(def-lvl M)
+(let ((many d0)) (lt-dec 0 u8-modulus))
+(comptime-match many d0 (Yes _ _ za0 zb0 zp0))
+(let ((many ok)) (MkU8 0 zp0))
+(def-unique M $ (unique start : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program M) p))
+  (let ((unique w1) (many _)) (world-do _ w (WriteOut "effect\n")))
+  (values w1 (Exit M ok)))
+(Continue M start)
+;! file "late.sl"
+"a\qb"
