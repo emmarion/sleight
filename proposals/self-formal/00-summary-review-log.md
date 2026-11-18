@@ -2154,3 +2154,74 @@ Unsure:
   `intern-string`. The shorter wording is 09 §4's own suggestion and was kept.
 - 05's coordinator note says README.md's derivation "supplies no interpretation of arithmetic closed
   under deduction"; 09 says it "does not by itself supply" one. The body uses 09's sense.
+
+## Round 6 propagation
+
+The sixth review notes of 01 to 10 and `proto/bugs/REVIEW-round6.md` (BUGS.md) were carried into
+00-summary.md and 00-glance.md, each claim checked against the corrected body text the note points
+to. Nothing below is a decision.
+
+1. Header: `r6.N` names a file's sixth review note.
+2. Key finding 2: (T) and (E) are "read as 03 F6 reads them" (03 r6.7); the detour now points to key
+   finding 21 for its readings and premises, including (E)'s "follows" read step by step (03 r6.1).
+   Its 05 §4.3 and quine sentences were condensed without change of content.
+3. Key finding 4: the packed-level clause now concerns a function given such a closure and points
+   to 18c, which adds that code minted after a top-level destructure can apply it
+   (`proto/review6/07_cert_drive.sl`), no help to a stepper (06 r6.5). Rough edge 27 is narrowed the
+   same way.
+4. Key finding 6: the claim that `proto/review3/00_arg_head_order.sl` shows `slc --interpret`
+   running a head form first is removed. slc's out of fuel is an error value after which the run
+   goes on (`self/elab-main.sl:185-187`), so it overflows in either order; its interpreter's order
+   is now stated as unobserved (02 §6, r6.4, r6.5). Added: slc's emitter writes the head before the
+   hoisted argument and a `values` as nested `let`s in written order (02 r6.3); a macro call's
+   output expands before the arguments after it (`proto/review6/01_splice_output.sl`, 01 §3.6);
+   "observable without divergence" is now a real run's observation through a §31 crash, the spec's
+   run not crashing there (04 r6.4). Rough edges 4 and 5, decision 4, and the glance's
+   evaluation-order bullet follow. The §6 bullet on slc's runtime order is removed, its content now
+   in key findings 6 and 8.
+5. Key finding 8: slc's interpreter runs on after out of fuel, a defect against MANUAL.md or not
+   (02 C4, r6.4, unsure point); exactly 10000 expansions accepted and 10001 refused, so the shipped
+   prelude adds none (01 r6.4). Rough edge 18 and decision 6's 02 bullet follow.
+6. Key finding 10: `self/README.md` is "silent or contradicted" on `show-at` (04 r6.2).
+7. Key finding 11: the barrier-free stores are `lib/ffi_core.ml`'s `-imm` functions and templates,
+   not all of the FFI's `-imm` operations (04 r6.5); both words immediate is sufficient, not
+   necessary (04 r6.1).
+8. Key finding 15: `--first-error` cuts only slc's report (01 r6.1); the reference never reads a
+   later file after a `Program` final ends the process (`bin/main.ml:11-16`,
+   `lib/program.ml:116`); under `--warnings-as-errors` it holds finals back, so `01_prog_first.sl`
+   with a late error is refused with no warning; `;! file` files behave as separate files (01
+   r6.5). Rough edge 31 and decision 15 follow.
+9. Key finding 17 and §7: refuting `AgreeStuck` needs `step` to find every step `Step` allows, not
+   progress, which the spec lacks (`proto/review6/06_pred_zero.sl`; 06 r6.1); decision 11 cites
+   06 r6.1.
+10. §7, 06: the ~210 lines are proofs and `complete.sl`'s code (06 r6.4); timing ranges widened to
+    06 F6's (r6.7); a generic wrapper serves partial helpers over non-dependent relations
+    (`proto/review6/06_generic_out.sl`; 06 r6.2).
+11. §7, 07: a function given a `Certified` value cannot call its packed-level `step`
+    (`proto/review6/07_cert_fn_bad.sl`); destructured at the top level it drives program 0
+    (`07_cert_drive.sl`; 07 r6.2).
+12. Key finding 19: over 5,000 debug heap checks; mutable loads confirmed for a match by `-dcmm` (08
+    r6.1, r6.8); `array-blit-many-imm` also crashes the reference, `array-move-imm` untried (08
+    r6.4; BUGS.md 26 as revised). The glance's GC bullet names both blits.
+13. Key finding 20: "the unit's own text" is now its own file's text, the unit also holding
+    `std/macro.sl` (09 r6.1); the G1-style statement is no longer credited to 03's diagonal but to a
+    separate Kleene-style argument with its premises (09 r6.2, r6.3); condition (d), the derivation's
+    internal steps such as ⊢ Con → G under level stratification, is added as missing (05 r6.1; 09
+    r6.13). §6's Gödel bullet and the glance's Gödel bullet follow.
+14. Key finding 21: premise 1 now reads (E) step by step; premise 2 adds that Q's prefix makes no
+    compile-time use of its own file's name or text; premise 3 sets crashes aside; premise 6 counts
+    what follows the call (03 r6.1 to r6.4; 09 §3.4).
+15. Key finding 22 and rough edge 20: §4's warning sentence can be read as an error stopping
+    elaboration, which would make slc's going on a difference from DESIGN.md (10 r6.1).
+16. Decision 14 and §6: H from (T) needs (T) read form by form, part 1 covering only accepted
+    programs (03 r6.6; 05 r6.5).
+17. Rough edge 12: §33 states the word of a fieldless value unconditionally; only the FFI's
+    obligation is "With externs on" (02 r6.1).
+18. To stay near the length limit, key findings 2, 6, 15, 20, and 21, and §7's 06 paragraph were
+    condensed, and sections 2, 3, 4, 6, and 7 rewrapped. 00-summary.md is 722 lines, a little over
+    the ~710 aimed at; 00-glance.md is 110.
+
+Checked and unchanged: 02 r6.2 (§72's erased fields; neither summary file calls those results
+fieldless); 03 r6.5 (not carried by either summary file); 07 r6.1 (decision 13 already says only
+"a plain induction either way"); BUGS.md 13, 18, 19, 23, 24, and 25 as revised, which change
+nothing the summary files cite.

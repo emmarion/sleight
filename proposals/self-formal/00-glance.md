@@ -23,8 +23,7 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
   source, though, if Sleight is sound, the diagonal source cannot produce that evidence for itself (03's reasoning).
   03 carries (T) and (E) to that source through an accepted detour that calls `compile` in a final value (compiled
   with a toy), reading part 5, which never mentions that call, as covering it, under six premises 09 lists; (C) is not
-  used. slc does not escape it (03's reading). 05's version also needs soundness of the logic (00-summary §2 items 2,
-  21).
+  used. slc does not escape it (03's reading). 05's version also needs logic soundness (00-summary §2 items 2, 21).
 - **Spikes.** The intrinsic-derivation plus `Program`-driver pattern compiles and runs at toy scale, fuel-free, on
   both implementations, but proves partial correctness only: an always-"stuck" `step`, `advance`, or `run-total` (06)
   or a never-answering `step` (07) passes, and 07's `Rejected` reason text is unconstrained. For one variant with a
@@ -37,9 +36,9 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
 - **Evaluation order.** DESIGN.md fixes eagerness and some run-position order, but not body statements, sibling
   arguments, `values` entries, or several §15 bindings in general. Elaboration order is visible through gensyms; both
   implementations elaborate a head that is a form, then expand an application's argument macro calls, then elaborate a
-  head that is a name, then the arguments, left to right. At runtime the reference, `slc --interpret`, and, in one
-  test, slc's compiled code run a head form before an argument. Order is observable without divergence: an argument's
-  write precedes another's crash, though §15 allows either order (00-summary §2 item 6).
+  head that is a name, then the arguments, left to right. At runtime the reference and, in one test, slc's compiled
+  code run a head form before an argument; `slc --interpret`'s order is unobserved. A real run observes order via a
+  §31 crash: an argument's write precedes another's crash, §15 allowing either order (00-summary §2 item 6).
 - **slc printer defect.** `slc --interpret` on a 100003-element list prints 49,999 `Cons _ 0` then `Cons _ _ _)`: a
   wrong value, not a §31 crash, from `show-at`, which also feeds `comptime-match` messages and `dump-context` reports;
   compiled slc output and the reference print all elements. `heap-strs-fuel` likewise cuts a request's string list
@@ -49,9 +48,10 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
 
 - **GC.** Compiled `imm` stores look GC-safe on OCaml 4.14.1 when both words are immediates, among 08's conditions
   (08's reading); OCaml 5, flambda, arm64, and systhreads are untested. The reference interpreter's `-imm` blits
-  corrupt its heap (BUGS.md 26).
+  corrupt its heap (`array-blit-imm` and `array-blit-many-imm` tried; BUGS.md 26).
 - **Gödel II** may apply; nothing establishes it. Missing: a formalized `Prov` with D1 to D3, a diagonal sentence (a
-  macro in a goal type can build one), and lemmas tying `Prov` to the stripped run. 03's diagonal already rules out a
+  macro in a goal type can build one from its own file's text), the derivation's internal steps (such as ⊢ Con → G)
+  despite level stratification, and lemmas tying `Prov` to the stripped run. 03's diagonal already rules out a
   faithful hypothesis-free `compile`; Gödel II, if those hold, would make uniform stripped-run safety unprovable (09).
 - **slc after its first error** can print false later messages; acceptance seems unchanged (10; BUGS.md 25). Defects
   found are in BUGS.md 13, 18, 19, and 23 to 26.
