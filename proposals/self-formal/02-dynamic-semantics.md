@@ -233,8 +233,8 @@ before an overflow is shown, and nothing runs after the overflow. With
 the overflow made harmless (depth 10 in place of 10^8), each prints its
 write and exits 0. So in these two tests, one call shape each, every
 implementation and mode tried runs the head form before the argument
-form. The reference's `--no-extern --build` was not tried: it
-overflows while extracting these files.
+form. The reference's `--no-extern --build` was tried on the controls
+only: it overflows while extracting the files with depth 10^8.
 
 ### 2.3 Is order observable in the abstract machine?
 
@@ -242,8 +242,8 @@ overflows while extracting these files.
 - `world-do`: ordered by the unique world (2.2 item 5). Not affected by
   the order of independent pure work.
 - In-place mutation (cells §37, FFI §43): only through a unique binder,
-  which §13 says is "the only reference". Slot words are pointers but
-  "inert" (§38): no read goes through them except `at` reconstruction,
+  which §13 says is "the only reference". A slot's word may be a
+  pointer, but a slot is "inert" (§38): no read goes through it except `at` reconstruction,
   which reads back a live or just-consumed binder's word (§36). If
   §13's property holds as a heap invariant, a write cannot be seen by
   independent work.
@@ -505,7 +505,13 @@ Values as words:
   an oracle also depends on E2 (Q6), or some other choice that makes
   equal `Nat`s one word: compiled code answers `ESome` for `(add 1 2)`
   against `3` (`imm_eq.sl`, 2.4), which a spec running the `Nat` model,
-  with separately built `Succ` blocks, could not match (reading).
+  with separately built `Succ` blocks, could not match (reading). It
+  also depends on how A1 treats constants: ocamlopt can share two equal
+  immutable constants, and `proto/04-compiler-route/slot_eq_share.sl`,
+  two run-position `(str-append "a" "b")`, answers `ESome` when built
+  natively by slc or by the reference (04 §2.5) [compiled], which a
+  spec that gives the two strings never-reused addresses (A1) could not
+  match under any oracle (reading).
   Pros: deterministic, fits a `Program`-driven spec. Cons: the theorem
   is existential.
 - **N2: relation.** `slot-eq` is a nondeterministic step, and the
@@ -545,8 +551,9 @@ Values as words:
   taken as compiler input, as `--eval-fuel` already is (MANUAL.md: the
   reference has no bound without the flag; slc's default is 1000000000).
   (reading) Accepting or rejecting would then be a function of (source,
-  bound, flags, `read-file` oracle), once the order and the `slot-eq`
-  answers are fixed (Q3, Q4),
+  bound, flags, `read-file` oracle), once the evaluation order, the
+  elaboration order (2.3), and the `slot-eq` answers are fixed (Q3,
+  Q4),
   so owner statement 3 ("accepted or rejected") would hold per bound,
   provided the rest of elaboration terminates (SOUNDNESS.md part 6
   argues that canonicalization, unification, and meta solving do
@@ -669,8 +676,11 @@ option, with the spec's own store a heap (as 01's Σ is).
    is lock-step (cheap) or needs confluence (expensive).
 4. **`slot-eq`: oracle (N1)?** Recommended: yes. It keeps the spec a
    function, and "there is an oracle" covers every implementation seen
-   tonight, provided `Nat` words are immediates as E2 proposes (N1) and
-   the spec's store shares `Settled` values (Q8).
+   tonight, provided `Nat` words are immediates as E2 proposes (N1), the
+   spec's store shares `Settled` values (Q8), and either the spec lets
+   two equal immutable constants share one word, which A1's never-reused
+   addresses do not, or native builds stop sharing them (N1,
+   `slot_eq_share.sl`; reading).
 5. **Crash: C2 at runtime, C4 at compile time?** Recommended: yes, with
    C3 as a later strengthening; 01's decision 7 is the alternative.
    The depth bound counts activations, tail calls included (C4).

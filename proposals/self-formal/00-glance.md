@@ -18,12 +18,12 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
 ## Five things worth knowing first
 
 - **Diagonal.** If Sleight's functions terminate (SOUNDNESS.md's (T) and (E), argued, not proved, and read as 03 reads
-  them), no non-erased `compile : Src -> Verdict` with no further evidence can be faithful on every source; only the
-  mechanism is tested. It does not refute owner statement 4(ii) as mathematics, nor a `compile` taking erased evidence
+  them), then, under further premises 09 lists, no non-erased `compile : Src -> Verdict` with no further evidence can be
+  faithful on every source; only the mechanism is tested. It does not refute owner statement 4(ii) as mathematics, nor a `compile` taking erased evidence
   of H for its one source, though, if Sleight is sound, the diagonal source cannot produce that evidence for itself
   (03's reasoning). 03 carries (T) and (E) to that source through an accepted detour that calls `compile` in a final
-  value (compiled with a toy), reading part 5, which never mentions that call, as covering it, under six premises 09
-  lists; (C) is not used. slc does not escape it (03's reading). 05's version also needs logic soundness (00-summary
+  value (compiled with a toy), reading part 5, which never mentions that call, as covering it; (C) is not used. slc
+  does not escape it (03's reading). 05's version also needs logic soundness and crashes kept out of the oracle (00-summary
   §2 items 2, 21).
 - **Spikes.** The intrinsic-derivation plus `Program`-driver pattern compiles and runs at toy scale, fuel-free, on
   both implementations, but proves partial correctness only: an always-"stuck" `step`, `advance`, or `run-total` (06)

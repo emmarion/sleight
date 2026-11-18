@@ -223,8 +223,7 @@ definition whose header is `(erased name :`.
   contains the call". [T] In `ord2.sl`, `(values (f a a) (f (Succ a) a))`
   binds `Succ a` *before* `(f a a)`, consistent with that sentence.
 - [T] **In the tests run, a head that is a form runs before the
-  arguments.** In
-  `proto/review5/04_head_arg_compiled.sl`, `((pickbig h) (bigbytes k))`
+  arguments.** In `proto/review5/04_head_arg_compiled.sl`, `((pickbig h) (bigbytes k))`
   has a head whose run crashes in `Array.make` and an argument whose run
   crashes in `Bytes.create`. slc emits, with its generated names shortened here,
   `let v1 = (pickbig h) in let v2 = (bigbytes k) in ((of_any v1 : ...) v2)`,
@@ -236,9 +235,9 @@ definition whose header is `(erased name :`.
   `head_write_arg_crash.sl`) show the same order under the reference,
   `slc --interpret`, and slc's native and `--byte` builds. The three
   tests are all inside a function body, one call shape each. [P] A
-  reading of §15 by timing
-  alone, the argument's binding placed before the statement or final
-  form and the head run inside it, would give the other order. In run
+  reading of §15 by timing alone, the argument's binding placed before
+  the statement or final form and the head run inside it, would give
+  the other order. In run
   position §6 elaborates the head first ("The head is elaborated
   first") and a head that is a form "runs as soon as it is elaborated";
   inside a body I found no sentence that places a head that is a form
@@ -778,9 +777,9 @@ IR's call and constructor arguments syntactically atomic in either case.
    "after every write". A crash and a divergence in two arguments are a
    second such case, if §17's levels ("Termination rests on levels")
    leave any divergence, which is not settled here. Head-versus-argument
-   order is in 2.5 and 02 §2.2. Question for the owner: is order meant to be fixed,
-   and if not, is every order a correct run, so that the output above
-   may differ between implementations?
+   order is in 2.5 and 02 §2.2. Question for the owner: is order meant
+   to be fixed, and if not, is every order a correct run, so that the
+   output above may differ between implementations?
 2. **A crash at compile time.** §31: "A real run may crash where the host
    cannot represent what is asked of it." §72 makes a crashed native run
    "an error at its argument". DESIGN.md does not say what a crash (or
@@ -874,7 +873,8 @@ Evidence files: `proposals/self-formal/proto/04-compiler-route/`
 `tc4.ml`, `share.ml`, `argorder.ml`), `proto/review2/04-deep-fn.sl`
 and `proto/review2/04-tc-direct.ml` from the second review, and
 `proto/review5/04_head_arg_compiled.sl`, `04_effect_vs_crash.sl`, and
-`04_barrier.ml` from the fifth. Compile them with
+`04_barrier.ml` from the fifth, and, from 02, `proto/dyn/head_crash_arg_write.sl`,
+`head_write_arg_crash.sl`, and `proto/review7/02_deep_runpos.sl`. Compile them with
 an slc built by `self/release.sh` and with `ocamlfind ocamlopt` (4.14.1).
 
 ## Review notes

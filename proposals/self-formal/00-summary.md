@@ -75,7 +75,8 @@ Each item is the tracks' recommendation, not a decision.
    (03 F2, F3), its `World` blocking only the literal construction (03's reading, r2.1). 05 §4.3's
    version, through `read-file` in a macro, needs T1 to T4 (determinism through T3, per oracle, so
    the `ENone` copy too), not T5, and, T1 to T3 being erased derivations, soundness of the logic (05
-   §1, r4.2, r4.3); its quine form, its call in Q's final value, needs an unwritten quine (05 r2.1,
+   §1, r4.2, r4.3), and crashes kept out of the oracle, since by T3 a `compile` may reject under an
+   oracle that crashes at once (05 §4.3, r7.2); its quine form, its call in Q's final value, needs an unwritten quine (05 r2.1,
    r5.2).
 3. **Theorems must be intrinsic.** §9: "The elaborated form of a type never contains a function
    call" (tested). A toy checker returning its verdict with an erased `Elab` or `Fails` and an
@@ -89,7 +90,7 @@ Each item is the tracks' recommendation, not a decision.
    another only with a decreasing argument, such as an erased counter (03 F4.1; 06 F4.1); a function
    given a closure with a packed level applies and extends it only as 18c says; these demos' test
    loop takes a fuel of 1000, the closures none (06 r5.4); a function cannot iterate `Program` steps
-   (03 F4.2); every function a step calls must be minted before the program's level (03 F4.3, 05
+   unless it is given fuel (03 F4.2, r7.2; `proto/review7/03_fuel_iterate.sl`, both); every function a step calls must be minted before the program's level (03 F4.3, 05
    F6); a driven run's result reaches only its own later steps, never compile-time code or `qed` (05
    F6, r2.5).
 5. **`slot-eq` makes acceptance implementation-dependent.** §67: "which one a call answers may
@@ -227,7 +228,9 @@ Each item is the tracks' recommendation, not a decision.
     stratification, holds in one abstract form: for any relation given D2, D3, and the diagonal's
     D1 instance as packed hypotheses, a packed ⊢ Con → G passes `--goal proved` on both
     implementations, applying those hypotheses directly in a body is refused, and the last step to
-    ⊥ is a top-level application (`proto/godel/g2_*.sl`; 09 §2.4 B, round-7 coordinator note 1). A macro in a goal type can splice in its own file's text (`r_self_goal.sl`, with
+    ⊥ is a top-level application (`proto/godel/g2_*.sl`; 09 §2.4 B, round-7 coordinator note 1; 05
+    §4.3, r7.1). G there is taken to be ¬`(P ⌜G⌝)` itself, as a macro-built G would be; a relationally
+    built G adds steps not tried (05 r7.1). A macro in a goal type can splice in its own file's text (`r_self_goal.sl`, with
     `std/macro.sl`, both; 09 r6.1); D2 and D3 for such codes are open (§45). Level stratification
     blocks the obvious translation of nested implications, not obviously a PRA-style one (09 §2.3,
     §2.4 A). Without Gödel, 03's diagonal rules out, under its premises, a faithful hypothesis-free
@@ -656,8 +659,8 @@ Open ones; numbers follow the review log, gaps being resolved items.
 - **The diagonal beyond its mechanism**: no faithful `compile` was put in Q; "H for all sources
   yields a runnable `compile`" is untested and assumes soundness (03 F6, r5); the detour rests on
   09's six premises (key finding 21), only P's shape compiled, and the `slot-eq` step is reasoning
-  (03 §6, r2.3, r3.4, r5.1); all rests on (T) and (E), and 05's version also on logic soundness, all
-  unproved; 05's quine form assumes unwritten quines (05 §9, r5.2).
+  (03 §6, r2.3, r3.4, r5.1); all rests on (T) and (E), and 05's version also on logic soundness and
+  on crashes kept out of the oracle, all unproved; 05's quine form assumes unwritten quines (05 §9, r5.2).
 - **Gödel II** (key finding 20): `Prov`, D1 to D3, the diagonal sentence, condition (d) beyond an
   abstract relation with hypothetical D2, D3, and D1 instance, route C's lemmas, any interpretation of HA, IΣ₁, or PRA, and the r.e. readings are unattempted or unchecked;
   the named results are from memory (09 §5); README.md's IΣ₂ / ω^ω^ω claim is unchecked (05 §9).

@@ -251,12 +251,12 @@ records none. So in `proto/review7/10_macro_crash.sl`, under
 `--eval-fuel 100`, a pre-error macro that runs out of fuel when
 expanded after the error is reported by nothing; without the error,
 that message is the only one slc gives for the crash. The "unnecessary
-`(predates _)`" warning
-(`unneeded`, `elab.sl:4344-4354`) and the "`;! suppress warn` ...
-silenced nothing" warning (`end-file`, `elab-main.sl:3280-3285`) are
-skipped (`proto/review7/10_unreported.sl`), and so, read only, are the
-`--warn-unused` warnings (`report-unused`, `:3343-3349`) and the
-closing of the goal (`main.sl:140`).
+`(predates _)`" warning, and its `(subterm _)` form (`unneeded`,
+`elab.sl:4344-4354`), and the "`;! suppress warn` ... silenced
+nothing" warning (`end-file`, `elab-main.sl:3280-3285`) are skipped
+(`proto/review7/10_unreported.sl` shows both kinds), and so, read only,
+are the `--warn-unused` warnings (`report-unused`, `:3343-3349`) and
+the closing of the goal (`main.sl:140`).
 
 ## 3. Test matrix
 
@@ -283,7 +283,7 @@ make the value had the run-position form run.
 | 12_succ_hoisted | `x` = `(Succ (Zero))`; `Succ` | needs a Settled scrutinee; expected `Succ`, got `?` | yes (both) |
 | 13_inline | `comptime-match many (Succ (Zero)) (Succ _)` | the same two | yes (both) |
 | 14_string_msg | `s` = `"abc"`; `compile-warn s`, `compile-error s` | `s` is `Hypothetical` (twice) | yes (both): by §27-§29 `s` would be `Settled`, and in slc it is `Settled` too, holding the token, which `message-of` words as `Hypothetical` |
-| 15_macro_alias | `m` bound before; `m2` = `m` after; `(m)`, `(m2)` | `Zero` is not a statement (from `(m)`); `m2` is a macro, expanded only where its head is constant-known | first no; second yes: `m2` is `Settled` in slc too but holds the token, while by §29 site 3 it would forward `m`'s value and §6 would expand it |
+| 15_macro_alias | `m` bound before; `m2` = `m` after; `(m)`, `(m2)` | `Zero` is not a statement (from `(m)`); `m2` is a macro, expanded only where its head is constant-known | first no; second yes: `m2` is `Settled` in slc too but holds the token, while by §29 site 3 it would forward `m`'s value and §19 would dispatch it as a macro (§6, §62) |
 | 16_pre_error_field | `y` = 2 before; `comptime-match y (Succ p)`, `p` `Zero` | expected `Zero`, got 1 | no |
 | 17_type_error_first | first error is a refuted branch, not `compile-error` | expected `BFalse`, got `(BTrue)`; `end` | the first of these, probably: it asks what an ill-formed `let` would have computed (`BFalse`, as `y` is `(Succ (Zero))`) |
 
