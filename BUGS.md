@@ -228,30 +228,42 @@ is a design decision. Remove an entry when it is fixed.
     side needed no hoisted temporaries then gets the erased token as
     its binders' value (`env-set-tokens`, `self/elab-main.sl:2209-2216`;
     also `:672-678`), and the discriminant read takes a token as the
-    word 0 (`self/eval.sl:51`), so the binder seems to read as its
-    type's first fieldless constructor, or as the `Nat` 0, whatever
-    was written. Reproduced on the tree at `5fba336`, compiled and
-    under `--interpret`, with files under
+    word 0 (`self/eval.sl:51`), so, whatever was written, a `Nat`
+    binder seems to read as 0, a `String` binder as `(SNil)`, and a
+    binder of a tagged enum as its first fieldless constructor; a
+    binder of `Pair`, whose one constructor has fields, passes a
+    `comptime-match` on `MkPair`, and its fields then read as `_`.
+    Other kinds of type were not surveyed. Reproduced on the tree at
+    `5fba336`, compiled and under `--interpret`, with files under
     `proposals/self-formal/proto/aftererr/` that each start with
     `(compile-error "first")`: in `02_bfalse.sl`, `x` bound to
     `(BFalse)` is reported as "expected `BFalse`, got `(BTrue)`"; in
     `04_lit.sl`, `x` bound to `3` as "expected `Succ`, got 0"; and in
     `05_lit_missing.sl`, `(comptime-match many x (Zero))` on that `3`
     passes with no message. `17_type_error_first.sl` gives the same
-    false message after a refuted branch as its first error.
+    message after a refuted branch as its first error; it is probably
+    false too, but the `let` it reads failed its own check, so what
+    that `let` would have computed is a reading.
     `proposals/self-formal/10-slc-after-error.md` reports more such
-    cases, including ones where a binder is called `Hypothetical`, and
-    that macro expansion has no such gate; those were not re-run here.
+    cases, including ones where a binder is called `Hypothetical`,
+    messages that are dropped once an error is recorded, and that
+    macro expansion has no such gate; those were not re-run here.
     The reference stops at the first error and prints only that one;
     `self/README.md:301-302` says only that `slc` "may report a few
     more that follow from it".
     Acceptance seems unaffected, since the first error already makes
     `slc` exit 1, and `--first-error` hides the later messages.
-    DESIGN.md seems not to say whether more than one error is reported;
-    the later messages seem to conflict with §27's "its results become
-    `Settled` with the resulting values" and §28's "the error prints
-    the expected constructor and the actual value". Which answer is
-    wanted is not decided here.
+    DESIGN.md seems to say nothing explicit about whether more than one
+    error is reported. §4's "Warnings go to standard error and do not
+    stop elaboration" may be read as implying that an error does, and
+    §54 says that `dump-context` "stops elaboration with a report of
+    the context", while `slc` goes on after that report too: on
+    `tests/dump_context.sl` it adds two errors and a warning, where the
+    reference prints the report alone. The later messages seem to
+    conflict with §27's "its results become `Settled` with the
+    resulting values" and §28's "the error prints the expected
+    constructor and the actual value". Which answer is wanted is not
+    decided here.
 
 26. **The reference interpreter's `-imm` blits corrupt its heap.** `lib/ffi.ml:117-119`
     maps `array-blit-imm`, `array-blit-many-imm`, and `array-move-imm` to
@@ -293,3 +305,30 @@ is a design decision. Remove an entry when it is fixed.
     approach. The analysis, and the reasoning that
     compiled `-imm` stores are safe when both words are immediates, are
     in `proposals/self-formal/08-gc-imm-stores.md`.
+
+27. **A run-position form that runs into a host limit is not refused
+    as MANUAL.md describes.** MANUAL.md:162-164 says "A run-position
+    form whose evaluation crashes is refused, the reference naming the
+    file alone, as for any runtime error, and slc the form". That holds
+    for "out of fuel": `02_deep_runpos.sl` below, with 100 in place of
+    10^8 and under `--eval-fuel 20`, gives "runtime error: out of fuel"
+    with the file's name from the reference and "compile-time
+    evaluation failed: out of fuel" at the form from `slc`, each
+    exiting 1. When a host limit is hit instead, both die of an
+    uncaught OCaml exception, with exit code 2 and no message naming
+    the file or the form. Reproduced at the default 8 MB stack with
+    `proposals/self-formal/proto/review7/02_deep_runpos.sl`, a
+    run-position recursion 10^8 calls deep: `_build/default/bin/main.exe`,
+    `_build/release/slc`, and `slc --interpret` each stop with "Fatal
+    error: exception Stack overflow", with no flag and with
+    `--eval-fuel 1000000000`. `02_fuel_runpos.sl`, whose run-position
+    call asks `array-new` for 2^60 elements, stops the reference with
+    "Fatal error: exception Invalid_argument("Array.make")" and `slc`,
+    under `--interpret` too, with the stack overflow; under
+    `--eval-fuel 20` the reference refuses it with "out of fuel", as
+    MANUAL.md says, and `slc` still dies of the overflow. DESIGN.md §31
+    says that how a crash is reported "is not specified; it need not be
+    a runtime error", so this seems to be a gap in MANUAL.md's account
+    of the implementations rather than a departure from DESIGN.md;
+    MANUAL.md also gives exit code 2 to a `--build` whose compile fails.
+    Which of the two should change is not decided here.

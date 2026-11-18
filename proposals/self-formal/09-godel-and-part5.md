@@ -873,9 +873,9 @@ instance.
 7. The coordinator's note said that 05 still carries the earlier
    wording on (d) and that 00-summary and 00-glance call (d) untried.
    8ea3540 had already changed both summaries, and 05's own round-7
-   review has since put the abstract (d), with the reading of G, in its
-   §1, §4.3, T7, and §9. Both clauses removed, and §1 now says that 05
-   revised §4's wording. An intermediate state of this review, which
+   review has since put the abstract (d) in its §1, §4.3, T7, and §9,
+   with the reading of G in §4.3. Both clauses removed, and §1 now says
+   that 05 revised §4's wording. An intermediate state of this review, which
    said that 05 did not yet carry it, was committed in passing.
 8. §5 still said that `r_self_goal.sl` shows a goal type containing
    "the unit's own text"; round 6 corrected the phrase in §1 and §2.4 B

@@ -575,7 +575,7 @@ become 3,627 for the cells driver with `s=4k,o=20`), which accounts for
 the first run's different figures there.
 
 BUGS.md entries 23 to 26, reviewed in the same pass (BUGS.md has no
-notes section of its own):
+notes section of its own), and entry 27, added in it:
 
 1. Entry 26 listed the move sweep's runs as printing `0`, segfaulting,
    or aborting with "Fatal error: out of memory". A second sweep of
@@ -588,6 +588,27 @@ notes section of its own):
    `--build`. Added.
 3. Entry 26 said the blit-many reproducer segfaulted in "both runs
    tried"; two more runs here did too. Now "every run tried".
+4. Entry 25 said a binder holding the token reads as "its type's first
+   fieldless constructor, or as the `Nat` 0", for any type. Re-run
+   after `(compile-error "first")`: a `String` binder reads as
+   `(SNil)` and a `Maybe` binder as `(None _)`, but a `Pair` binder
+   passes a `comptime-match` on `MkPair`, and its field then gives
+   "expected `Succ`, got `_`". Narrowed to the kinds tried, as 10 §1
+   has it (raised by 10's round-7 reviewer, through the coordinator).
+5. Entry 25 called 17's later message false outright; the `let` it
+   reads failed its own check, and 10 §3 says "probably". Hedged.
+6. Entry 25 said DESIGN.md seems not to say whether more than one
+   error is reported, leaving out §4's sentence on warnings and §54's
+   "stops elaboration with a report of the context". Re-run: on
+   `tests/dump_context.sl` slc adds two errors and a warning after the
+   report, and the reference prints the report alone. Added, with 10's
+   dropped messages among the cases it reports.
+7. New entry 27, from 02's round-7 reviewer through the coordinator:
+   MANUAL.md:162-164's account of a crashing run-position form fails
+   for a host stack overflow and for `Array.make`'s refusal of 2^60
+   elements. Every run the entry quotes was made here. It is recorded
+   as drift between MANUAL.md and the implementations, in the way
+   entry 24 records `self/README.md`'s; MANUAL.md is not edited.
 
 Checked and unchanged: entry 23's four reproducers (with `ulimit -s
 unlimited`, 49,999 `Cons _ 0` then `Cons _ _ _)` from slc, emitting
