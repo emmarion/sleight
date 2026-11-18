@@ -16,19 +16,22 @@ code, so they are not distinguished further.
 
 ## 1. Summary
 
-- DESIGN.md says nothing about reporting more than one error (01 §3.7;
-  §4's "Warnings go to standard error and do not stop elaboration" is
-  the nearest text). The reference stops at the first error. slc
-  records errors and goes on (self/README.md, "Errors are values"),
-  and `--first-error` only cuts the report short (self/main.sl:45).
-  Everything below is therefore a difference from the reference, not
-  from DESIGN.md, except where a message slc prints is false.
+- DESIGN.md says nothing explicit about reporting more than one error
+  (01 §3.7). The nearest text is §4's "Warnings go to standard error and
+  do not stop elaboration", which may be read as implying that an error
+  does stop it; on that reading slc's going on is itself a difference
+  from DESIGN.md. The reference stops at the first error. slc records
+  errors and goes on (self/README.md, "Errors are values"), and
+  `--first-error` only cuts the report short (self/main.sl:45). Apart
+  from that reading of §4, everything below is a difference from the
+  reference, not from DESIGN.md, except where a message slc prints is
+  false.
 - After an error, slc does not run run-position code through its
   evaluator for `let`s, calls, constructor applications, run-position
   `match`es, or `let-match`. Macro expansion is not gated: a macro bound
   before the error still runs, at compile time, after it.
-- The nullary `(Zero)` that 01 §3.7 says "is still `Settled`" is
-  `Settled`, but it seems not to hold the value `(Zero)`. A run-position
+- A nullary `(Zero)` bound after the error is `Settled`, but it seems
+  not to hold the value `(Zero)`. A run-position
   `let` whose right-hand side needed no hoisted temporaries gets its
   binders set to the erased token (`env-set-tokens`), and slc's
   discriminant read takes a token as the word 0 (`self/eval.sl:51`). So
@@ -49,7 +52,7 @@ code, so they are not distinguished further.
 - No test changed acceptance: the first error already makes slc exit 1
   (`self/main.sl:139-143`), and every test exits 1 on both
   implementations. The defects, if they are taken as such, are in the
-  second and later messages only.
+  second and later messages only. BUGS.md 25 records them.
 
 ## 2. The traced code path
 
@@ -80,12 +83,12 @@ gates have refused to run:
 
 - `elab-main.sl:2209-2216`, `elab-let`. If the right-hand side's
   context `ctx3` is non-empty (some temporary was left unrun by
-  `:539`), `env3` is `env2` and the binders stay as `bind` made them,
+  `:539`), `env3` is `env2` and the binders stay as `bind-let` made them,
   `Hypothetical`. If `ctx3` is empty, `run` is true, and the inner
   environment is failed, the binders are set by `env-set-tokens`
   (`eval.sl:1640-1643`), which gives each a `Settled` state holding a
   fresh `BToken` block (`set-state-closed`, `core.sl:2439`;
-  `heap-set-closed`, `core.sl:2430-2437`).
+  `heap-set-closed`, `core.sl:2433-2437`).
 - `elab-main.sl:672-678`, `open-bind`, does much the same for the
   anonymous entry of an `open`, with one difference read but not
   tested: there a non-empty context (`:675`) also gives the token,
@@ -250,9 +253,6 @@ These are options for the owner, not recommendations to adopt.
    the word 0 (`eval.sl:51`) may deserve a look on its own: this file
    found it reachable only after an error, through `env-set-tokens`, but
    did not check every other caller.
-5. For 01: replace "A nullary `(Zero)` bound after an error is still
-   `Settled` … by a path in slc's source that was not traced" with this
-   file's account (the binder holds the token, read as 0).
 
 ## Review notes
 
@@ -320,8 +320,49 @@ Unsure:
   through this mechanism as far as the reviewer can see, but that was
   not proved.
 - Whether every run-position form is gated: `coerce`, and special forms
-  that the elaborator evaluates itself (`gensym`, `read-file`, the
+  that the elaborator evaluates itself (`gensym`, `read-file`, and the
   `settled-*` family), were not checked after an error.
 - Why a string literal and a `Settled` string variable leave the binder
   `Hypothetical` while a `Nat` variable gets the token remains
   untraced.
+
+## Round 6 review notes
+
+A sixth reviewer read the brief, CLAUDE.md, all of DESIGN.md, 01 §3.7
+and its Coordinator note, BUGS.md 25, and self/README.md's "Errors are
+values"; re-ran all 17 reproducers on the reference, `slc --interpret`,
+and slc with no flag (the two slc modes byte-identical on all 17, exit 1
+everywhere, every message in the table as quoted); re-ran `--first-error`
+(the trailer on exactly the 14 tests with a second message), the
+no-first-error reference runs of §4 (as stated, and 15 without `(m)`
+prints `_`), `proto/review2/after_error_call.sl`,
+`proto/review4/01_after_error_succ.sl`, review note 2's `MkPair`,
+`Cons`, and `Some` cases, a forwarded `Settled` string, `compile-error`
+on a pre-error string, and a self-expanding macro after the error (all
+as stated); confirmed that `self/` is unchanged from `5fba336` to HEAD;
+and opened every cited line.
+
+1. §1 said DESIGN.md "says nothing" about more than one error and
+   called everything a difference from the reference only. 01 §3.7
+   says "nothing explicit" and notes that §4's warning sentence may be
+   read as implying that an error stops elaboration, which would make
+   slc's going on a difference from DESIGN.md too. Reworded to carry
+   that reading.
+2. §1 quoted 01 §3.7 as saying the `(Zero)` binder "is still
+   `Settled`" by an untraced path, and follow-up 5 asked 01 to replace
+   that sentence. 01 §3.7 now gives this file's account (its
+   Coordinator note 1), so both were stale. The quote is dropped and
+   follow-up 5 removed; §1 now points to BUGS.md 25, which records the
+   defect.
+3. `heap-set-closed` was cited as `core.sl:2430-2437`; it is
+   `:2433-2437` (2430 ends the previous function). Fixed.
+4. §2 said the binders "stay as `bind` made them"; the function is
+   `bind-let` (`elab-main.sl:2206`). Fixed.
+5. Unsure list: a three-item list lacked its conjunction. Fixed.
+
+Unsure:
+- The review notes' monotonicity check lists four writers of
+  `env-set-said`; there are four more (`core.sl:3428`,
+  `elab-main.sl:3356`, `:3358`, `elab.sl:935`). Each read here prepends
+  to the existing list, but none was traced further, and an `Env`
+  rebuilt from an older one was still not looked for.

@@ -16,7 +16,9 @@ references.
   derivation") and consistency of a coded system as goals, with no call
   in a type (compiled, `proto/godel/`). The missing step is the internal
   one: a Sleight relation `Prov` that formalizes acceptance and meets the
-  derivability conditions D1 to D3 inside Sleight. Nobody has built it.
+  derivability conditions D1 to D3 inside Sleight, with the usual
+  derivation's internal steps going through despite level stratification
+  (§2.4 B). Nobody has built it.
   So 03 and 05 may claim Gödel-based limits only conditionally on that
   step (§4 gives the wording they now carry). §9 does not force the
   diagonal sentence to be built from a relational `Sub`: a macro in a
@@ -262,12 +264,17 @@ then needs:
   the checker (§45), so whether D2 and D3 can be proved about such codes
   is open.
 
-Every internal implication here goes from inductive derivations to
-inductive derivations or to `False`. It calls earlier, closed lemmas,
-as `con.sl` does. The final step ("from ⊢ Con build ⊢ ⊥") applies
-closed proofs at the top level, as `top_mp.sl` does. So the
-stratification of §2.3 does not obviously block route B (my
-reasoning). The usual G2 argument from D1 to D3 is intuitionistic, so
+Most internal implications here go from inductive derivations to
+inductive derivations or to `False`, calling earlier, closed lemmas, as
+`con.sl` does. Some do not: Con, ¬`Prov ⌜G⌝`, and G are themselves
+closure types, so a step such as ⊢ Con → G takes a packed closure and
+must build a new one by a factory, as `hyp_factory.sl` does, since a
+body cannot apply a packed closure (`hyp_packed_bad.sl`). The final
+step ("from ⊢ Con build ⊢ ⊥") applies closed proofs at the top level,
+as `top_mp.sl` does. So the stratification of §2.3 does not obviously
+block route B (my reasoning), but whether every internal step of the
+derivation goes through is untried, and is a condition of its own
+((d) in §4). The usual G2 argument from D1 to D3 is intuitionistic, so
 anticlassicality (README.md, `tests/anticlassical.sl`) is no exemption.
 G2 fails for some very weak theories with suitably weak consistency
 statements (Willard's self-verifying systems, from memory). So D3 is a
@@ -291,7 +298,8 @@ Internally that needs two lemmas about the formalization:
 - `Prov ⌜False⌝` implies acceptance of that program;
 - its formalized stripped run reaches absurd code.
 
-Neither has been tried. With them and route B's D1 to D3, consistency
+Neither has been tried. With them and route B's D1 to D3, its
+diagonal sentence, and its internal steps ((d) in §4), consistency
 gives ⊬ uniform stripped-run safety. The same holds for (T) together
 with full-semantics safety, since then `p` runs first. This is the form
 in which type theories usually meet G2: "the system cannot prove its own
@@ -324,7 +332,7 @@ some internalized Σ₁ completeness, at least D3.
 |---|---|---|
 | No faithful, hypothesis-free, non-erased `compile : Src -> Verdict` (03 F6) | Gives it, under §3.4's premises | Nothing |
 | Uniform H not provable in a form a function can recurse on (03 F6/F7, 05 §4.3) | Gives it, with soundness ((T), (S), (E)) and a faithful stepper | Needs only consistency, and also covers non-recursable forms (¬¬H, Π-forms), but only for H *with* safety (H alone does not give Con: a stripped run that reaches absurd code still "halts" in some sense) |
-| Uniform stripped-run safety not provable (05 §4.3, T7) | Does not give it: a Π statement yields nothing to run | Gives it under route B's D1 to D3 and route C's two lemmas, or under a route A translation with the same lemmas; I know no other route |
+| Uniform stripped-run safety not provable (05 §4.3, T7) | Does not give it: a Π statement yields nothing to run | Gives it under route B's D1 to D3, diagonal, and internal steps ((d) in §4) and route C's two lemmas, or under a route A translation with the same lemmas; I know no other route |
 | Uniform (T) + full-semantics safety not provable (05 T7) | Only in recursable form, with soundness | Every form, from consistency, under the same conditions |
 
 ## 3. Q2: SOUNDNESS.md and the detour
@@ -518,7 +526,8 @@ theorem (r.e. checker, enough arithmetic, derivability conditions)"
 with: "r.e. appears to hold under the readings of 09 §2.2. Σ₁
 statements and consistency of a coded system are expressible as goals
 (09 §2.3, compiled). D1 to D3 for a formalized `Prov`, the diagonal
-sentence, and any interpretation of HA, IΣ₁, or PRA are unattempted.
+sentence, the derivation's internal steps under level stratification,
+and any interpretation of HA, IΣ₁, or PRA are unattempted.
 The obvious translation of nested implications meets level
 stratification (09 §2.3, compiled); a PRA-style translation with
 first-order implications does not obviously meet it (09 §2.4)."
@@ -541,7 +550,8 @@ first-order implications does not obviously meet it (09 §2.4)."
 - The macro-built diagonal: `r_self_goal.sl` shows only that a goal type
   can contain the unit's own text, not that D2 or D3 can be proved about
   such codes.
-- Route B: no `Prov`, D2, D3, `Sub`, or G was built. Whether D2 holds
+- Route B: no `Prov`, D2, D3, `Sub`, or G was built, and the
+  derivation's internal steps ((d) in §4) were not tried. Whether D2 holds
   given §71's one goal per unit and the global gensym and literal state
   is open.
 - Route C's two lemmas, and the claim that normalization implies
@@ -652,3 +662,77 @@ Unsure:
   still be interpreted instance by instance was not examined.
 - Whether a macro-built G is compatible with D3, given that a string
   literal has no `is` rule (§45).
+
+## Round 6 review notes
+
+A sixth reviewer read the brief, CLAUDE.md, all of DESIGN.md, all of
+SOUNDNESS.md, README.md's "The author asserts" paragraph, 03 F6, 05
+§1, §2.2, §4.3, and T7 as they now stand, and 00-summary item 20. It
+re-ran `hyp_fixed.sl`, `hyp_packed_bad.sl`, `hyp_factory.sl`, and
+`r_result_closure_bad.sl` (as stated, both implementations); `--goal
+proved` on `sys.sl` with `sigma1.sl`, `con.sl`, and `top_mp.sl`, and on
+`r_induction_rule.sl` and `std/macro.sl r_self_goal.sl` (PASS, both);
+`call_in_type_bad.sl` (refused, citing §9); `03_detour.sl` under the
+reference, `--extract` to a scratch path, `--build`, `slc --interpret`,
+and `slc --build` (each `(BFalse)`, exit 0); the `--extract` misuse on a
+scratch copy of `std/macro.sl` ("unbound name `macro-fail`", copy
+unchanged); `diagonal.sl` (969 bytes, both); the byte comparisons (909
+bytes, literal equal); and `05_stripped_absurd_final.sl` under
+`--no-prelude` ("absurd code reached", both).
+
+1. Summary and §2.4 B said `r_self_goal.sl` splices "the unit's own
+   text". It splices its own file's text; the unit also holds
+   `std/macro.sl`, which it needs (it fails alone, "unbound name
+   `str-raw`"). Both fixed.
+2. Summary credited 03's diagonal with "a G1-style corollary". §2.4's
+   Kleene argument uses r.e., Σ₁-completeness for a halting relation,
+   and consistency, none of which 03's diagonal supplies; the other two
+   items also rest on premises. Reworded.
+3. §2.4's Kleene G1 lacked a condition: `Halts` must be about a machine
+   whose halting is undecidable; Sleight's own functions return by (T).
+   Added.
+4. §2.2 said the reference "terminates on accepted inputs within its
+   fuel". The reference has no fuel bound unless `--eval-fuel` sets one
+   (MANUAL.md), and only the inputs run are evidence. Reworded.
+5. §2.4 A inferred "infinitely many levels below one" from the S axiom.
+   That needs the levels of B→C to be distinct, which holds only if an
+   implication with an implication antecedent must sit above it. The
+   condition is now stated.
+6. §2.4 B said HBL-style route B "is how self-formalizations meet G2",
+   then described proving a weaker system's consistency, a different
+   thing. Reworded.
+7. Route C cited `05_stripped_absurd_final.sl` without saying that it
+   runs under `--no-prelude` with `p` from a `def-prim`, which
+   SOUNDNESS.md part 1 excludes. Added, with what `lift` is.
+8. §2.1 cited DESIGN.md §59 for "the prelude's `False`"; §59 is a worked
+   example. Now `lib/prelude.sl:15`.
+9. §3.2 named the invariants "(I1) to (I3)"; part 4 lists (I1) to (I4).
+   Fixed.
+10. §3.3 placed the layout warning "inside the string literal" and said
+    every run warns. It is at 37:2, the `))` after the literal closes,
+    and the built programs print nothing on standard error. Fixed.
+11. §3.4 premise 4 put `diag-fn` in `std/macro.sl:5-36` (it is
+    `diagonal.sl:8-15`) and quoted 03's "the same way", which 03 no
+    longer says. Fixed.
+12. §4 was headed "(not applied)" and said 00-summary's bullet "should
+    then point to 09"; 03 F6, 05 (§1, §4.3, T7, §9), and 00-summary
+    item 20 already carry it. Now stated in the present tense, with 03
+    and 05 as the current text.
+13. §4's conditional, and with it the summary, §2.4 B, §2.4 C, §2.5,
+    and §5, omitted a condition, raised by the round-6 reviewer of 03
+    and 05 and checked here: the usual G2 derivation builds implications
+    inside Sleight, such as ⊢ Con → G, whose antecedent is itself a
+    packed closure. §2.4 B said "every internal implication" goes
+    between inductive derivations, which is false for those. Added as
+    condition (d), matching 05 §4.3, and §2.4 B now says which steps
+    need a factory.
+14. D3 was called "formalized Σ₁ completeness of `Prov`", and the
+    Kleene paragraph said "D3 or an instance of it"; D3 is an instance
+    of formalized Σ₁ completeness. Reworded both.
+
+Unsure:
+- Whether a factory-built Con → G (item 13) really goes through: no G
+  exists to try it on.
+- 00-summary item 20 still says the diagonal sentence can splice "the
+  unit's own text" and credits 03's diagonal with the G1-style
+  statement (items 1 and 2); that file is not this reviewer's.
