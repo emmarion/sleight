@@ -5,8 +5,9 @@ Sleight's FFI and emitter. It is not a decision, and nothing in it is
 approved. Where it and DESIGN.md disagree, DESIGN.md is right.
 
 Tags: **[D]** DESIGN.md, quoted or paraphrased. **[S]** OCaml or Zarith
-source, read at the release tag that matches the installed version, or,
-for 5.4.1, in the source package its compilers were built from.
+source, read at the release tag of the version named (the installed
+4.14.1 and Zarith 1.13, or OCaml 5.2.0), or, for 5.4.1, in the source
+package its compilers were built from.
 **[C]** compiled or run here. **[A]** my own reading or argument.
 Repository files are at commit 5fba336. Test sources are in
 `proto/gc/`, and binaries and outputs are in the session scratchpad,
@@ -52,7 +53,8 @@ of these compilers and run them; they do not build the compilers.
   integer" (§6). `--build` crashes the same way, because the program's
   final call runs in run position in that interpreter.
   `proto/review6/08_blit_many_imm_interp.sl`, the same program through
-  `array-blit-many-imm`, fails in the same two ways, and
+  `array-blit-many-imm`, fails in the same two ways and under
+  `--build`, and
   `proto/bugs/move_imm_interp.sl`, through `array-move-imm`, segfaults
   in every run tried, with the default minor heap, with `s=4k`, and
   under `--build`. The
@@ -177,7 +179,7 @@ of these compilers and run them; they do not build the compilers.
   `caml_modify`. `08_match_loads.ml` reads the fields with `load_mut`.
   That flambda never moves a load of a field that an `imm` store writes
   across the store is not shown beyond these shapes.
-- [S] **OCaml 5** (5.2.0 tag). `write_barrier` (`runtime/memory.c:178-199`)
+- [S] **OCaml 5** (5.2.0 tag). `write_barrier` (`runtime/memory.c:178-198`)
   has the same two tests, `Is_block(old_val)` and
   `Is_block_and_young(new_val)`. With immediates, `caml_modify`
   (`:204-`) reduces to an acquire fence and a release store.
@@ -248,21 +250,27 @@ each with `OCAMLRUNPARAM` unset, `s=4k`, and `s=4k,o=1` (`stress.ml`) or
 `s=4k,o=20` (`slc_cells_driver.ml`). `s` is the minor heap in words.
 Values below 4k are clamped to `Minor_heap_min`, 4096 words
 (`gc_ctrl.c:398`, `caml/config.h:210`) [S], and `s=256` gave the same
-counts as `s=4k` [C].
+counts as `s=4k` [C]. On 4.14.1, with and without flambda, `stress.ml`'s
+counts with `s=4k` differ between runs of one binary: most runs give one
+set and some a set with fewer major collections, as the rows below say.
+With address-space randomization off (`setarch -R`), every run tried
+gave the more frequent set, so the difference seems to come from where
+memory is mapped. The other single-domain counts were the same in every
+run tried [C].
 
 | Test | What it does | Result |
 |---|---|---|
-| `stress.ml` (links `sleight.cmxa`) | 48 arrays, half node pointers and half ints, plus 256 cells, all promoted by a full major collection before the first operation. 2,000,000 random ops: `array_swap_imm`, `array_place_imm`, `array_blit_imm`, and the emitted cell-store shape. Barriered pointer stores and garbage are mixed in, with `major_slice`, `full_major` and `compact` on a schedule. Shadow arrays check every word. | All 6 configurations ok. Up to 8,113 minor and 2,049 major collections, and 3 compactions. The three debug runs made 2,479 heap checks (32, 393 and 2,054, counted as the debug runtime's `### OCaml runtime: heap check ###` lines) and none failed. |
+| `stress.ml` (links `sleight.cmxa`) | 48 arrays, half node pointers and half ints, plus 256 cells, all promoted by a full major collection before the first operation. 2,000,000 random ops: `array_swap_imm`, `array_place_imm`, `array_blit_imm`, and the emitted cell-store shape. Barriered pointer stores and garbage are mixed in, with `major_slice`, `full_major` and `compact` on a schedule. Shadow arrays check every word. | All 6 configurations ok. Up to 8,113 minor and 2,049 major collections, and 3 compactions. The three debug runs made 32, 393, and 2,054 heap checks, counted as the debug runtime's `### OCaml runtime: heap check ###` lines, and none failed. With `s=4k`, 5 of 12 later runs of the debug build made 386 instead, with 382 major collections against 389, and 2 of 10 of the normal build made 382. |
 | `slc_cells_driver.ml` + `build_slc_cells.sh` | slc's own output for `tests/cell_imm.sl`, with its last line replaced by a driver. The driver runs `swap-in`, `write-in` and `fresh-in` 2,000,000 times on 512 cells beside pointer-holding boxes, under the same collection schedule. | All 6 configurations ok. Up to 5,461 minor and 1,389 major collections, and 8 compactions. The three debug runs made 2,678 heap checks (45, 1,235 and 1,398), and none failed. |
 | `neg_young.ml` | Stores a young pointer into an old array through `int array`, then runs a minor collection and allocation. | Without the barrier: 10,000 of 10,000 corrupted (normal and debug). With `caml_modify`: 0. |
 | `neg_mark.ml` | Reads header colours to find the window in which `a` is black and `x` is white, while `x`'s only reference sits in `b`'s still-unscanned tail. It then moves `x` into `a` and overwrites `b`'s slot. | Without the barrier: `x` freed while still referenced in 20 of 20 windows. The debug runtime fails `gc_ctrl.c:64` (`Color_hd != Caml_blue`). With `caml_modify`: 0 of 20. In `imm` mode (only immediate-over-immediate stores in the same window, across all of `b` and `a`): 0 of 20. |
 | `interp_blit.ml` | The interpreter's `blit_imm` call on `Value.value` arrays. | 80,000 of 80,000 elements wrong (normal and debug). |
 | `../bugs/blit_imm_interp.sl`, run as `bin/main.exe std/immediate.sl …` | 1,000 trials. Each makes a 3-element `Copy U62` array, allocates (`churn 2000`) so that it is promoted, blits two freshly computed `U62`s into it with `array-blit-imm`, allocates again, reads them back, and counts mismatches. The control replaces the call with `array-blit` and drops the two `ImmAll` arguments. | Segfault (exit 139) in 3 of 3 runs, and with the debug runtime too. With `OCAMLRUNPARAM=s=4k`: "runtime error: not an extern integer: _" (exit 1) in 3 of 3 runs. A single trial with `churn 2000` also segfaults. The control prints `0` in every configuration. `slc --interpret` prints `0`, with or without `s=4k`. |
-| `../review6/08_blit_many_imm_interp.sl` | The same program with a `many` source array, through `array-blit-many-imm`. | Segfault (exit 139) in 2 of 2 runs with the normal runtime; with `s=4k`, "not an extern integer: _". Its control (`array-blit-many`) prints `0`, and so does `slc --interpret`. Not run with the debug runtime. |
+| `../review6/08_blit_many_imm_interp.sl` | The same program with a `many` source array, through `array-blit-many-imm`. | Segfault (exit 139) in every run tried with the normal runtime; with `s=4k`, "not an extern integer: _". `--build` also segfaults (exit 139, 3 of 3) and writes no binary. Its control (`array-blit-many`) prints `0`, as its `--build` binary does; `slc --interpret` prints `0`. Not run with the debug runtime. |
 | `kinds.ml` | `-dcmm` | Described in §4. |
 | `zarith_small.ml` | Described in §5. | No boxed value below 2^62. |
-| `stress.ml`, `slc_cells_driver.ml` (built from slc's output for `tests/cell_imm.sl`), on 4.14.1 with flambda (`-O3`), 5.4.1, and 5.4.1 with flambda (`-O3`) | The six configurations above on each compiler. On 5.4.1, the debug runs add `V=1`, which walks the heap from the roots at the end of every major cycle and, in the debug runtime, asserts that each reachable block is outside the minor heap and has the new cycle's unmarked status, so that a reachable block the collector judged dead fails it (`runtime/shared_heap.c:884-931`, called from `major_gc.c:1617-1618` on each domain). | All ok. On 4.14.1 with flambda the debug runs printed, for `stress.ml` with `OCAMLRUNPARAM` unset, `s=4k`, and `s=4k,o=1`, 32, 405, and 2,056 heap checks (an earlier build printed 393 for `s=4k`, with 389 major collections against 401), and for `slc_cells_driver.ml` 48, 1,304, and 1,399. On 5.4.1 a rerun of `stress.ml`'s debug build with `s=4k,V=1,v=0x800` logged 215 verifications for its 215 major collections. |
-| The same two with `helpers_thr.ml` (three systhreads that allocate and yield) on all three compilers, and with `helpers_dom.ml` (three domains that allocate and call `Gc.major_slice`) on the two 5.4.1 compilers | Normal runtime with `OCAMLRUNPARAM` unset and `s=4k`; debug runtime with `s=4k` (and `V=1` on 5.4.1). | All ok. These counts depend on scheduling and vary between runs. The domains raise the collection counts: three runs of `stress.ml` with `s=4k` on 5.4.1 made 67,250, 31,698, and 97,124 minor and 2,429, 1,164, and 3,626 major collections, against 7,245 and 215 without them. With domains, each domain logs a verification at the end of each major cycle, so two debug runs logged 1,755 for 439 major collections and 1,943 for 486. |
+| `stress.ml`, `slc_cells_driver.ml` (built from slc's output for `tests/cell_imm.sl`), on 4.14.1 with flambda (`-O3`), 5.4.1, and 5.4.1 with flambda (`-O3`) | The six configurations above on each compiler. On 5.4.1, the debug runs add `V=1`, which walks the heap from the roots at the end of every major cycle and, in the debug runtime, asserts that each reachable block is outside the minor heap and has the new cycle's unmarked status, so that a reachable block the collector judged dead fails it (`runtime/shared_heap.c:884-931`, called from `major_gc.c:1617-1618` on each domain). | All ok. On 4.14.1 with flambda the debug runs printed, for `stress.ml` with `OCAMLRUNPARAM` unset, `s=4k`, and `s=4k,o=1`, 32, 405, and 2,056 heap checks (with `s=4k`, 1 of 10 runs of the same debug binary printed 393 instead, with 389 major collections against 401, and 2 of 12 runs of the normal one made 389), and for `slc_cells_driver.ml` 48, 1,304, and 1,399. On 5.4.1 a rerun of `stress.ml`'s debug build with `s=4k,V=1,v=0x800` logged 215 verifications for its 215 major collections. |
+| The same two with `helpers_thr.ml` (three systhreads that allocate and yield) on all three compilers, and with `helpers_dom.ml` (three domains that allocate and call `Gc.major_slice`) on the two 5.4.1 compilers | Normal runtime with `OCAMLRUNPARAM` unset and `s=4k`; debug runtime with `s=4k` (and `V=1` on 5.4.1). | All ok. These counts depend on scheduling and vary between runs. The domains raise the collection counts: three runs of `stress.ml` with `s=4k` on 5.4.1 made 67,250, 31,698, and 97,124 minor and 2,429, 1,164, and 3,626 major collections, against 7,245 and 215 without them. With domains, each domain logs a verification at the end of each major cycle, about four per major collection: two debug runs logged 1,755 for 439 major collections and 1,943 for 486. |
 | `neg_young.ml` on the three compilers; `neg_mark.ml` on 4.14.1 with flambda | Normal and debug runtime. | `neg_young`: 10,000 of 10,000 without the barrier and 0 with it, everywhere. `neg_mark`: 20 of 20 freed without the barrier, 0 with it, and 0 in `imm` mode; the debug runtime fails `gc_ctrl.c:64` without the barrier. |
 | `stress_noz.ml` (`stress.ml` with `noz_ops.ml`'s copies of Ffi_core's three `-imm` operations, taking `int` indices, in place of Zarith), its systhreads and domains variants, and `neg_young.ml`, built by the 5.4.1 arm64 cross compiler and run under `qemu-aarch64-static` (`arm64.sh`) | The six `stress.ml` configurations, debug with `V=1`; the variants as above. | All ok, with 43, 230, and 14,021 verifications in the three debug runs, one per major collection, the same in each of three runs of the script. With systhreads, the three runs logged 745, 936, and 1,131, one per major collection, and with domains 2,375, 2,448, and 2,315, about four per major collection; these vary with scheduling. `neg_young`: 10,000 of 10,000 without the barrier and 0 with it, normal and debug. |
 | `../bugs/move_imm_interp.sl`, run as `bin/main.exe std/immediate.sl …` | `blit_imm_interp.sl`'s design through `array-move-imm`: 1,000 trials, each moving two placed `U62`s from a fresh array into an older array of `Vacant` slots. The control uses `array-move` and drops the two `ImmAll` arguments. | Segfault (exit 139) in 3 of 3 runs, and in 3 of 3 with `s=4k`. `--build` also segfaults (exit 139, 3 of 3) and writes no binary. The control prints `0`; so does `slc --interpret`, with or without `s=4k`. Smaller variants print `0` or stop, some with "not an extern integer: _" or "out of memory", never with another value (BUGS.md 26). Not run with the debug runtime. |

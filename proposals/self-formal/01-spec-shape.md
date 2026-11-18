@@ -1243,7 +1243,9 @@ Unsure, not changed:
    27), and slc's interpreter seems to reach one after running out
    (`proto/review7/02_fuel_runpos.sl` under `--eval-fuel 20`, which the
    reference refuses with "out of fuel" and slc dies on; the order
-   inside that run was not observed, r8.3). Narrowed.
+   inside that run was not observed, r8.3, though
+   `proto/review8/03_fuel_goes_on.sl` shows slc going on after running
+   out and then overflowing, 03 r8). Narrowed.
    Raised by the round-7 carry-over check of 00-summary; this note's
    first wording said both die on `02_fuel_runpos.sl`, which round 8
    corrected (r8).

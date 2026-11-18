@@ -623,7 +623,8 @@ source whose compile-time run diverges has no derivation.
 2. **The form of decision 3: (i) "H ⇒ the driver reaches `Exit`", or
    (ii) a three-outcome theorem with `OutOfFuel`?** Recommended: (i).
    F6 suggests that, under its premises, no hypothesis-free, non-erased
-   Sleight function can do better, and the prototype shows the `Program` loop can carry it.
+   Sleight function can do better, and the prototype shows the `Program`
+   loop can carry it.
    (i) can be paired with (iii) of the summary, a Sleight function that
    takes erased H(src) evidence, as an internal form of the same theorem.
    (a), (b), and (e) can give (i), since each leaves any unbounded

@@ -243,7 +243,8 @@ does not mention H; on the readings above, H follows from what it
 *claims and argues*, and is not established. Even if true, it
 is not something Sleight can prove about itself for all programs in a
 form a function can recurse on, on my reading of §4.3 below, under the
-premises of its diagonal and if its logic is sound. Part 7 also says of its argument for "(E)" (the stripped run
+premises of that section's diagonal and if Sleight's logic is sound.
+Part 7 also says of its argument for "(E)" (the stripped run
 follows a run of the full semantics): "Without (T) this step fails".
 That matters for T7.
 
@@ -471,12 +472,15 @@ My reading of the limits, hedged:
   `proto/godel/g2_step.sl`, after `g2_defs.sl`, proves ⊢ Con →
   ¬`(P g)` for every such `P` and code `g`, and `--goal proved` passes on
   both implementations. That is ⊢ Con → G when G is ¬`(P ⌜G⌝)` itself,
-  as a macro-built G would be (a relationally built G adds steps that
-  were not tried), which needs `g` to be a code of ¬`(P g)`. In
+  as a macro-built G would be, and that needs `g` to be a code of
+  ¬`(P g)` (a relationally built G adds steps that were not tried). In
   `g2_defs.sl`'s coding no code built from the formula's structure can
   be one, since §7's occurs check refutes `g` = `(Imp (Pv g) (Bot))`
   (`proto/review7/09_g2_cycle.sl`, accepted by both); a text code, such
-  as the file text a macro-built G splices in, might be (09 §2.4 B). The
+  as the file text a macro-built G splices in, might be, though D1's
+  instance `Imp g (Imp (Pv g) Bot)` then mixes it with structural codes,
+  and whether a `Prov` that formalizes acceptance meets D1 and D2 for
+  such codes is not examined (09 §2.4 B). The
   last step, to ⊢ ⊥, is a top-level application (09 §2.4 B).
   `proto/review7/09_g2_final.sl`, under `--no-prelude` after
   `09_g2_pre.sl` and `g2_defs.sl`, takes it and is accepted by both, but
@@ -712,7 +716,9 @@ value is the only reference to it." My reading of its role:
   derivation's internal steps go through (§4.3 (d)) was tried only for
   an abstract relation, with D2, D3, and the diagonal's D1 instance as
   hypotheses, and with G read as ¬`(P g)` itself, which needs `g` to be
-  a code of that type, such as a text (09 §2.4 B, compiled); its last
+  a code of that type, as no structural code is and a text might be,
+  and D1 to hold for codes that mix such a code with structural ones
+  (09 §2.4 B, compiled); its last
   step was compiled only with an axiom that gives every type
   (`proto/review7/09_g2_final.sl`); nothing builds a `Prov` that
   formalizes acceptance. The
@@ -1245,3 +1251,84 @@ Unsure:
   implementations accept it here, with `con` taken from an axiom.
 - Item 6's remedy (deriving `Elab` for the worked examples) is my
   suggestion, not something the spec tracks propose.
+
+## Round 8 review notes
+
+An eighth adversarial reviewer read REVIEW.md, the brief, CLAUDE.md,
+DESIGN.md in full, SOUNDNESS.md in full, OPEN.md 1 to 4, README.md's
+"Logic and strength", and 09 §1 to §5 with its round-7 notes, and
+re-ran, under the reference and `slc --interpret` (plain `slc` for the
+goals, since `--goal proved` does not take `--interpret`): every
+`proto/theorems/` file, with `bove.sl`, `fuel.sl`, and `fuel_run.sl`
+first where needed, `halts_reflect.sl` with fuel 2 on a scratch copy
+(refused at the `comptime-match`), and `drive.sl` with its step's level
+minted after `P` on a scratch copy (refused); `--goal proved spec.sl
+proof.sl` and the two `review2` level files; `review3/05_halts_uniform.sl`
+(`7`); `review3/05_det_param_bad.sl`; `review2/05_generic_match.sl`;
+`review2/05_erased_to_many_false.sl`; `review4/05_stripped_absurd.sl`
+(`--extract` fails); `review5/05_stripped_absurd_final.sl` (`--extract`
+and `--build` succeed, and the reference, the built program, and `slc
+--interpret` stop with "absurd code reached"); every `proto/godel/`
+file; `review7/09_g2_cycle.sl` after `g2_defs.sl` (accepted by both; a
+copy with `(Bot)` for the inner `g` is refused as not refuted); and
+`review7/09_g2_final.sl` under `--no-prelude` after `09_g2_pre.sl` and
+`g2_defs.sl` (accepted by both). Each behaves as stated.
+
+Errors found and changed:
+
+1. §4.3, condition (d): "`g2_step.sl` ... proves ⊢ Con → G for every
+   such `P` and code". It proves ⊢ Con → ¬`(P g)` for every `P` and
+   code `g`, which is ⊢ Con → G only when `g` codes ¬`(P g)` itself. In
+   `g2_defs.sl`'s coding no code built from the formula's structure
+   can, by §7's occurs check (`review7/09_g2_cycle.sl`), as 09 §2.4 B
+   and §5 now say. Added, with 09's reading that a text code might, and
+   that D1's instance then mixes the text code with structural ones,
+   for which D1 and D2 are not examined (09's round-7 unsure point, now
+   in its §2.4 B).
+2. §4.3, "09 §2.4 B places the last step, to ⊢ ⊥, at the top level".
+   `review7/09_g2_final.sl` compiles that step, but only with Con
+   postulated by a `def-prim` that, as `09_g2_pre.sl` declares it, gives
+   an element of every type, so it shows how the step elaborates and
+   nothing about Con (09 §2.4 B; 09's round-7 coordinator note 2). Added.
+   The round-7 notes' unsure point, "with `con` taken from an axiom",
+   left this out.
+3. §9's Gödel item had neither the reading of G, which 09 §4's wording
+   for 05 §9 carries, nor item 2's caveat. Added both, with item 1's
+   conditions on `g`.
+4. §1, "Of these conditions only the first ... has been worked on, and
+   the internal steps have been tried", contradicted itself once round
+   7 added its second clause, and T7 had the same shape. Reworded both;
+   §1 now also gives the reading of G.
+5. §2.3, "it is not something Sleight can prove ... if its logic is
+   sound, on my reading of §4.3", dropped the premises of §4.3's
+   diagonal. Added.
+6. §4.3 option 1, "under its premises, no Sleight code can supply `h`
+   for every `src`". The conclusion also needs the logic to be sound, as
+   the option's next sentences say (an unsound logic could supply a fake
+   `h`). Added.
+7. §4.3, the diagonal applied to an intrinsic `compile`. T3 needs the
+   oracle in `compile`'s verdict to govern Q's whole run, not only the
+   run of `compile` inside it. Added that the rest of Q's compile-time
+   code must call no `slot-eq`, as in `diagonal.sl`'s unit, prelude
+   included (its only `slot-eq` is in the body of `slot-search`, which
+   only the extern models `slots-find` and `slots-intern` call; `std/`
+   has none).
+8. §4.3, "The argument is mine and has not been checked by anyone else".
+   The third and fourth reviews checked it step by step, and so did this
+   one. Now says that only agent reviews have.
+9. §4.3, "H ... says its run halts with a value". H says that the run
+   halts; that it halts with a value is progress, the safety half of the
+   pair (09 §2.5: a stripped run that reaches absurd code still
+   "halts"). Reworded.
+10. §4.4 option 2 named an `--extern` flag. There is none: MANUAL.md
+    has `--no-extern` only (line 65). Now "runs with and without
+    `--no-extern`".
+
+Unsure:
+- §4.3's quine diagonal says that soundness and completeness contradict
+  each other. Completeness alone, with termination and determinism,
+  already does (the fourth review's check: `Ok v` gives v = v + 1, and
+  `Fail` gives `Ok 0`), so the stated result is weaker than the
+  argument gives. Unchanged.
+- The header's "compiled with the reference ... at commit 164fcf1" is
+  provenance; each round re-runs the files at its own commit.

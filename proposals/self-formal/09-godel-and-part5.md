@@ -16,15 +16,20 @@ references.
   derivation") and consistency of a coded system as goals, with no call
   in a type (compiled, `proto/godel/`). The missing step is the internal
   one: a Sleight relation `Prov` that formalizes acceptance and meets the
-  derivability conditions D1 to D3 inside Sleight, with the usual
-  derivation's internal steps going through despite level stratification
-  (§2.4 B). Nobody has built it. For an abstract relation given D2, D3,
-  and the diagonal's D1 instance as hypotheses, with G taken to be
-  ¬`Prov ⌜G⌝` itself, the derivation's internal steps compile
-  (`g2_step.sl`), and so does its final step to ⊥ at the top level,
-  with consistency postulated (`review7/09_g2_final.sl`).
-  So 03 and 05 may claim Gödel-based limits only conditionally on that
-  step (§4 gives the wording they carry, revised there since). §9 does
+  derivability conditions D1 to D3, with D2 and D3 proved inside
+  Sleight, and with the usual derivation's internal steps going through
+  despite level stratification (§2.4 B). Nobody has built it. For an
+  abstract relation given D2, D3, and the diagonal's D1 instance as
+  hypotheses, with G taken to be ¬`Prov ⌜G⌝` itself, the derivation's
+  internal steps compile (`g2_defs.sl` with `g2_step.sl`); reading G
+  that way puts conditions on its code (§2.4 B). Its final step to ⊥
+  is accepted at the top level,
+  but only with consistency postulated by a `def-prim` that gives an
+  element of every type, for a relation that holds of every code
+  (`review7/09_g2_final.sl`), which shows how the step elaborates and
+  nothing more. So 03 and 05 may claim Gödel-based limits only
+  conditionally on the missing step (§4 gives the wording they carry,
+  revised there since). §9 does
   not force the diagonal sentence to be built from a relational `Sub`:
   a macro in a goal type can splice in the text of its own file
   (`r_self_goal.sl`, compiled).
@@ -33,7 +38,8 @@ references.
   no faithful, hypothesis-free, non-erased `compile`; and no uniform H
   in a form a function can recurse on. Separately, a Kleene-style
   argument (§2.4) would give an unprovable true non-halting statement,
-  given r.e., Σ₁-completeness for a halting relation, and consistency.
+  given r.e., Σ₁-completeness for a halting relation of a machine whose
+  halting is undecidable, and consistency.
   Gödel II adds limits on Π-type statements: uniform safety,
   and (T) together with safety. It also needs only consistency, not
   soundness. Its price is the internal `Prov` step above.
@@ -46,7 +52,10 @@ references.
   implications are first-order (data to data): an induction function
   from packed premises to a packed conclusion compiles
   (`r_induction_rule.sl`). Whether that covers all of PRA is unchecked.
-  The `Prov` route also needs only first-order implications.
+  The `Prov` route needs first-order implications too, apart from
+  steps such as ⊢ Con → G, whose antecedent is itself a closure; like
+  the induction function, that step compiles through a factory in the
+  abstract form of §2.4 B.
 - **Q2, 03's detour.** SOUNDNESS.md never mentions the driver's call of
   a final `Fn` value. Part 5 says only that "the driver's loop over a
   `Program` (§42) is outside the claim, each step being a total call".
@@ -286,11 +295,12 @@ so far only in an abstract form:
   `g`, D2, D3, and the D1 instance ⊢ `P (Imp g (Imp (Pv g) Bot))`,
   that is, `P` of the code of G → ¬`Pv` ⌜G⌝ with ⌜G⌝ = `g`, as
   hypotheses packed with their level (`Hbl`). With G read as ¬`P g`,
-  so that ¬`Prov ⌜G⌝` → G holds by definition, `g2_step.sl` proves,
+  so that ¬`Prov ⌜G⌝` → G holds by definition, its `con-to-g` proves,
   for every such `P` and `g`, a packed ¬`P g` from a packed
-  ¬`P ⌜⊥⌝`: ⊢ Con → G (`--goal proved` PASS, reference and slc). The
-  proof unpacks the hypotheses, mints a level, and defines the new
-  closure there, as `hyp_factory.sl` does.
+  ¬`P ⌜⊥⌝`: ⊢ Con → G, which `g2_step.sl` states as its goal
+  (`--goal proved` PASS, reference and slc). The proof unpacks the
+  hypotheses, mints a level, and defines the new closure there, as
+  `hyp_factory.sl` does.
 - [compiled] Applying the packed hypotheses in the body itself, to
   reach `False` from a proof of `P g`, is refused by both
   (`g2_direct_bad.sl`: "`K` was not in scope when level
@@ -305,17 +315,27 @@ so far only in an abstract form:
   axiom, which SOUNDNESS.md part 1 excludes and which, as declared in
   `09_g2_pre.sl`, gives an element of every type, so the file shows how
   the step elaborates, not anything about Con; it proves the other
-  hypotheses for a `P` that holds of every code. The same step inside a
-  function body is refused by both, as `g2_direct_bad.sl` is.
+  hypotheses for a `P` that holds of every code, for which Con is
+  false. The same step inside a function body is refused by both, as
+  `g2_direct_bad.sl` is (`review8/09_g2_body_bad.sl`, run under
+  `--no-prelude` after those three files: "`N2` was not in scope when
+  level `(level-of fin)` was minted").
 - Reading G as ¬`P g` needs `g` to be a code of the type ¬`P g`
-  itself. In `g2_defs.sl`'s coding, ¬`Pv g` is `Imp (Pv g) Bot`, and
-  no `g` equals a term that contains `g`: §7's occurs check refutes
-  the equation (`review7/09_g2_cycle.sl`, accepted by both). So, on my
+  itself, so that D1 turns ⊢ G into ⊢ `P g` in the last step. In
+  `g2_defs.sl`'s coding, ¬`Pv g` is `Imp (Pv g) Bot`, and no `g`
+  equals a larger term that contains it: §7's occurs check refutes the
+  equation (`review7/09_g2_cycle.sl`, accepted by both). So, on my
   reading, `g` has to be a code not built from the formula's
   structure, such as a `Txt` holding the source text that states G, as
   the macro-built diagonal of `r_self_goal.sl` splices in its own
-  file's text. For a
-  relational diagonal, G ↔ ¬`Prov ⌜G⌝` is a theorem rather than a
+  file's text. ¬`P g` then has two codes, and the D1 instance uses
+  both: `g` as its antecedent, which `p : P g` must match, and
+  `Imp (Pv g) Bot` as its consequent, which D2 splits. A coding that
+  gives each formula one code and codes implications with `Imp` would
+  need `g` = `Imp (Pv g) Bot` there, so, on my reading, a `Prov` that
+  formalizes acceptance would have to meet D1 for a code that mixes a
+  text code with structural ones; whether one can is not examined. For
+  a relational diagonal, G ↔ ¬`Prov ⌜G⌝` is a theorem rather than a
   definition, and its two directions are further internal steps, not
   tried.
 - This checks (d) for this derivation and this way of stating the
@@ -450,8 +470,9 @@ From `proto/review5/`:
 - `--build` builds a program that prints `(BFalse)`.
 - `slc ... --interpret` prints `(BFalse)`.
 - `slc ... --build` builds a program that prints `(BFalse)`.
-- From `proto/fuel/`, `diagonal.sl` (969 bytes) is accepted and prints
-  its string.
+- From `proto/fuel/`, `diagonal.sl` (969 bytes), run after
+  `std/macro.sl` as `03_detour.sl` is, is accepted and prints its
+  string; alone it is refused ("unbound name `macro-fail`").
 
 A byte comparison (Python) shows two things:
 - `03_detour.sl` up to `(def-fns _ $ (many run-q` equals `diagonal.sl`
@@ -608,9 +629,11 @@ the conditions.
 - Route B: no `Prov`, D2, D3, `Sub`, or G was built. The derivation's
   internal steps ((d) in §4) were tried only with D2, D3, and one D1
   instance as hypotheses about an abstract `P`, and with G read as
-  ¬`P g`, which needs `g` to be a code of that type such as the text
-  of the file that states G (`g2_step.sl`, §2.4 B); its final step was compiled only with
-  consistency postulated (`review7/09_g2_final.sl`). For a relational
+  ¬`P g`, which needs `g` to be a code of that type, such as the text
+  of the file that states G, and D1 to hold for a code that mixes such
+  a code with structural ones (`g2_step.sl`, §2.4 B); its final step
+  was accepted only with consistency postulated by a `def-prim` that
+  gives an element of every type (`review7/09_g2_final.sl`). For a relational
   diagonal, the two directions of G ↔ ¬`Prov ⌜G⌝` were not tried.
   Whether D2 holds given §71's one goal per unit and the global gensym
   and literal state is open.
