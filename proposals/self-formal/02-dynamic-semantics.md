@@ -1134,8 +1134,8 @@ Unsure, not changed:
 1. The Round 6 notes left slc's interpreter's order of a head form
    against an argument form unobserved. `proto/dyn/head_crash_arg_write.sl`
    and `proto/dyn/head_write_arg_crash.sl` observe it with a world write
-   on one side and a stack overflow on the other, which a stack
-   overflow in slc's interpreter does not survive (`proto/dyn/crash_probe.sl`
+   on one side and a stack overflow on the other; unlike "out of fuel",
+   a stack overflow ends a run of slc's interpreter (`proto/dyn/crash_probe.sl`
    prints "before" and not "after"). Both show the head form first
    under the reference (interpreted and `--build`), `slc --interpret`,
    and slc's native and `--byte` builds; their controls, with the

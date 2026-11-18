@@ -145,7 +145,7 @@ definition whose header is `(erased name :`.
 | `str-split-fuel` (`base.sl:100-109`) | fuel equal to the string's length | unreachable but not refuted |
 | sugar budget (`elab-main.sl:1871`, `README:385-394`) | budget sized by the form | "internal" error, not refuted |
 | `Steps n` (`elab-main.sl:1243...`) | budget | zero case refuted by type |
-| macro expansions ≤ 10000 (`elab-main.sl:560`: the run's count, `env-expansions`, is checked at `:560`. The elaborator group's first `subterm` parameter, named `fuel` (`elab-main.sl:752`), starts at the same limit for each top-level form (`:3379-3391`), loses one per expansion along a nesting path, and its zero case gives the same message at about twenty sites, among them `:766, 781, 1126, 1258, 1266, 1501, 1541` and `env-expand`'s check at `:511`; `splice-go` keeps a separate counter, started at the limit at `:593` and checked at `:586`, and `run-toplevel` another, started at the limit at `main.sl:29` and checked at `:3375, 3382`) | **specified**: [D] §62 "At most 10000 expansions run in one run, every file on the command line included." | refusal, as §62 requires |
+| macro expansions ≤ 10000 (`elab-main.sl:560`: the run's count, `env-expansions`, is checked at `:560`. The elaborator group's first `subterm` parameter, named `fuel` (`elab-main.sl:752`), starts at the same limit for each top-level form (`:3379-3391`), loses one per expansion along a nesting path, and its zero case gives the same message at about twenty sites, among them `:766, 781, 1126, 1258, 1266, 1501, 1541` and `env-expand`'s check at `:511`; `splice-go` keeps a separate counter, started at the limit at `:593` and checked at `:586`, and `run-toplevel` another, started at the limit at `main.sl:29` and checked at `elab-main.sl:3375, 3382`) | **specified**: [D] §62 "At most 10000 expansions run in one run, every file on the command line included." | refusal ("more than 10000 macro expansions"); §62 states the limit but not what happens past it |
 
 - [P] So the fuel a correctness theorem must face is the interpreter's;
   `show-at`'s and `heap-strs-fuel`'s, whose zero cases give a wrong answer
@@ -222,7 +222,8 @@ definition whose header is `(erased name :`.
   a statement (§27) placed just before the statement or final form that
   contains the call". [T] In `ord2.sl`, `(values (f a a) (f (Succ a) a))`
   binds `Succ a` *before* `(f a a)`, consistent with that sentence.
-- [T] **A head that is a form runs before the arguments.** In
+- [T] **In the tests run, a head that is a form runs before the
+  arguments.** In
   `proto/review5/04_head_arg_compiled.sl`, `((pickbig h) (bigbytes k))`
   has a head whose run crashes in `Array.make` and an argument whose run
   crashes in `Bytes.create`. slc emits, with its generated names shortened here,
@@ -230,8 +231,12 @@ definition whose header is `(erased name :`.
   and the program built by `slc --build` (ocamlopt) and by
   `slc --build --byte` dies with `Invalid_argument("Array.make")`, as the
   reference interpreter does; with a small `h` it dies in
-  `Bytes.create`, so the argument's crash is reachable. Only this one
-  test, inside a function body, was run. [P] A reading of §15 by timing
+  `Bytes.create`, so the argument's crash is reachable. 02 §2.2's two
+  world-write tests (`proto/dyn/head_crash_arg_write.sl`,
+  `head_write_arg_crash.sl`) show the same order under the reference,
+  `slc --interpret`, and slc's native and `--byte` builds. The three
+  tests are all inside a function body, one call shape each. [P] A
+  reading of §15 by timing
   alone, the argument's binding placed before the statement or final
   form and the head run inside it, would give the other order. In run
   position §6 elaborates the head first ("The head is elaborated
@@ -845,7 +850,8 @@ Not DESIGN.md, but found:
   does not depend on it: shown for two tests only, and resting on the
   untyped atom invariant.
 - That slc's compiled code runs a head that is a form before the
-  arguments in general: one test in a function body (2.5).
+  arguments in general: three tests in a function body, one call shape
+  each (2.5).
 - Whether flambda shares more constants than plain ocamlopt does: not
   tried (plain ocamlopt already shares, 2.5).
 - That the `-imm` and `imm`-store barrier bypass is GC-safe beyond

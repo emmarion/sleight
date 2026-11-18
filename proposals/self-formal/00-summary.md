@@ -9,7 +9,8 @@ Citations: `01 §3.6` is section 3.6 of `01-spec-shape.md`; `02` dynamic semanti
 termination, `04` compiler route, `05` theorems, `06` spike: certified stepper, `07` spike: round
 trip, `08` GC safety of `imm` stores, `09` Gödel and SOUNDNESS.md part 5, `10` slc after an error.
 After a file number, `rN` is its review note N, `r2.N` its second, `r3.N` its third, `r4.N` its
-fourth, `r5.N` its fifth, and `r6.N` its sixth. `§n` alone is DESIGN.md. "Owner statement n" is item
+fourth, `r5.N` its fifth, `r6.N` its sixth, and `r7.N` its seventh; a "round-7 coordinator note" is in the
+file's "Round 7 coordinator notes". `§n` alone is DESIGN.md. "Owner statement n" is item
 n of the brief's "Owner decisions", an earlier session's paraphrases, not the owner's words; they
 and the goals the brief lists beside them (such as "minimize fuel use") are the only owner positions
 reported. "Tested" means run on the reference and, where stated, on slc.
