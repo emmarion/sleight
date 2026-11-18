@@ -793,11 +793,11 @@ IR's call and constructor arguments syntactically atomic in either case.
 2. **A crash at compile time.** §31: "A real run may crash where the host
    cannot represent what is asked of it." §72 makes a crashed native run
    "an error at its argument". Of a crash (or fuel exhaustion) in an
-   *evaluator* run of a run-position form, DESIGN.md says only what §31
-   says of any crash: "A crash produces no value", and how it "is
-   reported is not specified". It does not say whether the form is
-   refused. MANUAL.md:162-164 says both implementations refuse such a
-   form, which describes the implementations, not the language. On the
+   *evaluator* run of a run-position form, DESIGN.md says what §31 says
+   of any crash: "A crash produces no value", and how it "is reported is
+   not specified". It does not say whether the form is refused.
+   MANUAL.md:162-164 says both implementations refuse such a form,
+   which describes the implementations, not the language. On the
    host limits tried in run position, both instead die of an uncaught
    OCaml exception, with no message naming the file or the form
    (BUGS.md 27): a stack overflow in both
@@ -1495,3 +1495,58 @@ Points I am unsure of:
 1. 2.5 cited `lib/ffi_core.ml:315-320` for the `-imm` blits;
    `array_move_imm` is at `:321`. Extended, as 08 §2 has it. Raised by
    the round-7 reviewer of 08.
+
+## Round 8 review notes
+
+An eighth adversarial review read the brief, CLAUDE.md, all of
+DESIGN.md, and SOUNDNESS.md, opened the cited lines, and re-ran
+`04_head_arg_compiled.sl` (the reference interpreter, and slc's native
+and `--byte` builds, whose OCaml binds the head first),
+`04_effect_vs_crash.sl` (the reference interpreter and slc's native
+build), 02's two world-write tests in seven modes and slc's OCaml for
+them, `slot_eq_share.sl` in eight modes, `ord2.sl`'s emission,
+`share.ml` under ocamlopt and ocamlc, `04_barrier.ml` (assembly), the
+five `imm` stores of `tests/cell_imm.sl`, `02_deep_runpos.sl`, and
+`02_fuel_runpos.sl` (also in slc's compile mode), and recounted the
+files, lines, FFI functions, `extern at` functions, and `"internal:`
+sites. All [T] results held. Not re-run: `deep.sl`, `04-deep-fn.sl`
+(whose "about 7 minutes" is a timing, and the load average was above
+1.5 for part of the session), `argorder.ml`, `tc3.ml`, `tc4.ml`, and
+`04-tc-direct.ml`.
+
+1. Rough edge 2 said "DESIGN.md does not say what a crash (or fuel
+   exhaustion) in an *evaluator* run of a run-position form is". §31
+   says of any crash that it "produces no value" and that how it "is
+   reported is not specified"; what DESIGN.md leaves open is whether
+   the form is refused. Reworded. The edge also said both
+   implementations die "on a host stack overflow"; the host limit need
+   not be the stack: on `02_fuel_runpos.sl` without `--eval-fuel` the
+   reference dies of `Invalid_argument("Array.make")` (exit 2) and slc,
+   compiling or under `--interpret`, of a stack overflow. Added, with
+   BUGS.md 27, which records both.
+2. The summary and 2.5 traced compiled `ESome` against interpreted
+   `ENone` to ocamlopt's sharing of equal immutable constants, in
+   native builds. `proto/review8/02_append_share.sl` shows a second
+   source, in `--byte` builds too: the FFI's `append` returns its first
+   argument when the second is empty (`lib/ffi_core.ml:146-147`), where
+   the model rebuilds it, so `x` against `(str-append x "")` answers
+   `ESome` built by either compiler, natively or with `--byte`, and
+   `ENone` interpreted and in the reference's `--no-extern` build. Added
+   to 2.5 and the summary, as an instance of §42's `slot-eq` exception;
+   02 N1 records what it means for an oracle.
+3. The 2.3 row on the interpreter's fuel said "out of fuel" is
+   "reported as an error", without 02 C4's finding that slc's run goes
+   on after it and can die of a stack overflow first
+   (`review3/head_arg_order.sl` under `--eval-fuel 20`). Added.
+4. 2.5 said the `-imm` operations write "through `(cast a : int
+   array)` with `Array.unsafe_set` and `caml_blit_bytes`"; the blits
+   (`ffi_core.ml:318-321`) hand the blocks to `caml_blit_bytes` as
+   `Obj.t`, with no `int array` cast. Reworded.
+5. The evidence list left out `crash_probe.sl`, on which the inference
+   from 02's world-write tests rests, and the files that rough edge 2
+   and 2.5 now cite. Added.
+
+Points I am unsure of:
+
+- `slc --interpret` on `04_head_arg_compiled.sl` was not run here; the
+  round 7 review found that it dies of a stack overflow whatever `h` is.

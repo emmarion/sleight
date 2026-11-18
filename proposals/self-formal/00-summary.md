@@ -111,7 +111,11 @@ Each item is the tracks' recommendation, not a decision.
    spec with 02's never-reused addresses gives under no oracle, on 02's reading (02 N1, decision 4,
    r7.6); `bootstrap.sh`'s `--byte` test builds would not see it, its
    ocamlopt-built `native-compute` runs could (04 §2.5, r2.7, r5.6); `const_share.sl` is `ENone`
-   everywhere tried (02 second review).
+   everywhere tried (02 second review). `proto/review8/02_append_share.sl`, `x` against
+   `(str-append x "")` and `(str-append "" x)`, is `ESome` in native and `--byte` builds of both,
+   since the FFI's `append` returns the non-empty argument itself (`lib/ffi_core.ml:146-147`), and
+   `ENone` interpreted; the prelude's model rebuilds the string, so a spec running it gives `ESome`
+   under no oracle (02 N1, decision 4, r8.1; 04 r8).
 6. **Evaluation order.** DESIGN.md fixes eagerness (§31), inner forms first in run position (§27),
    there, with §6, a head that is a form before the arguments (a reading), and, as 02 reads it,
    world effects through the unique `World`; in general it does not fix body statements, sibling
@@ -347,7 +351,8 @@ fail it, and both implementations' built code on two separately computed `Nat`s 
 (a), shapes differing: 01 an answer stream; 02 a step → bit map with `ESome` needing the bit *and*
 equal words, theorem "some oracle exists", which on 02's reading needs equal `Nat`s to be one word,
 as E2 makes them (9), a shared store (12), and either equal immutable constants sharing a word or
-native builds not sharing them (key finding 5) (02 Q4, r5.1, r7.6); 05 an oracle also recording crash
+native builds not sharing them, and likewise an FFI result that is one of its arguments (key finding
+5), conditions 02 now gives as necessary, not sufficient (02 Q4, r5.1, r7.6, r8.1); 05 an oracle also recording crash
 points and file contents, existentially quantified in the verdict and logged by the compiler; 04
 treats the answers as an oracle (key finding 18). 05 warns an oracle free to answer `ENone` or crash
 lets a compiler over-reject while meeting T1 to T3, a crash rejecting every source that runs

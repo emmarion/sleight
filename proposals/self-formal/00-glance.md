@@ -31,7 +31,8 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
   nondeterministic rule added, both derivations exist (compiled). Neither models Sleight's own machine (00-summary §2
   items 16, 17).
 - **`slot-eq`.** §67 lets answers differ between runs, so acceptance can depend on the implementation; answers already
-  differ between implementations and modes, though not between runs as far as seen (`imm_eq.sl`, `slot_eq_share.sl`).
+  differ between implementations and modes, though not between runs as far as seen (`imm_eq.sl`, `slot_eq_share.sl`,
+  `02_append_share.sl`, whose built `ESome` no spec run of the prelude's models can give).
   Both answers reach acceptance: a `comptime-match` on `slot-eq` asked through `native-compute` passes by
   default and fails under `--no-native`, on both implementations (`01_slot_eq_native.sl`). The output theorem therefore
   cannot be "the same values, up to crash";

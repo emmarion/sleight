@@ -19,10 +19,15 @@ is a design decision. Remove an entry when it is fixed.
     Another is a refuted branch in a run-position `match`
     (`proposals/self-formal/proto/aftererr/17_type_error_first.sl`,
     line 2): the reference says "omit it or write `(absurd Zero)`" at
-    column 45, `slc` "omit it or write `absurd`" at column 44.
-    `self/README.md:304-309` allows the column to differ but says the
-    first message is the reference's on every error test; this file is
-    not one of `tests/`, so that claim may not cover it.
+    column 45, `slc` "omit it or write `absurd`" at column 44. A third,
+    seen outside the sweep, is a macro whose run crashes: under
+    `--eval-fuel 100`,
+    `proposals/self-formal/proto/review8/bugs_macro_crash.sl` gets
+    "macro `m` failed: out of fuel" from the reference and
+    "compile-time evaluation failed: out of fuel" from `slc`, at the
+    same position. `self/README.md:304-309` allows the column to differ
+    but says the first message is the reference's on every error test;
+    neither file is one of `tests/`, so that claim may not cover them.
 
 
 18. **`self/eval.sl` answers a failed step with an ordinary value.**
@@ -229,11 +234,18 @@ is a design decision. Remove an entry when it is fixed.
     its binders' value (`env-set-tokens`, `self/elab-main.sl:2209-2216`;
     also `:672-678`), and the discriminant read takes a token as the
     word 0 (`self/eval.sl:51`), so, whatever was written, a `Nat`
-    binder seems to read as 0, a `String` binder as `(SNil)`, and a
-    binder of a tagged enum as its first fieldless constructor; a
-    binder of `Pair`, whose one constructor has fields, passes a
+    binder seems to read as 0, a `String` binder as `(SNil)`, a binder
+    of a tagged enum as its first fieldless constructor, and one of a
+    tagged enum with no fieldless constructor as no constructor at all;
+    a binder of `Pair`, whose one constructor has fields, passes a
     `comptime-match` on `MkPair`, and its fields then read as `_`.
-    Other kinds of type were not surveyed. Reproduced on the tree at
+    Other kinds of type were not surveyed. Special-form dispatch takes
+    the token as the word 0 too (`self/elab.sl:127` calls
+    `word-of-block`, which holds that line), and once an error is
+    recorded `resolve` answers `RHypothetical` for a non-erased entry
+    that holds a token (`resolve-answer`, `self/eval.sl:1335`), which
+    `vacant-slot` does from the start (`self/core.sl:3649`).
+    Reproduced on the tree at
     `5fba336`, compiled and under `--interpret`, with files under
     `proposals/self-formal/proto/aftererr/` that each start with
     `(compile-error "first")`: in `02_bfalse.sl`, `x` bound to
@@ -243,16 +255,32 @@ is a design decision. Remove an entry when it is fixed.
     passes with no message. `17_type_error_first.sl` gives the same
     message after a refuted branch as its first error; it is probably
     false too, but the `let` it reads failed its own check, so what
-    that `let` would have computed is a reading.
+    that `let` would have computed is a reading. Files under
+    `proposals/self-formal/proto/review8/` that start the same way add
+    three cases: in `10_no_fieldless.sl`, `x` bound to `(Ok (Nat) 1)`
+    is reported as "expected `Ok`, got `_`"; in `10_special_rename.sl`,
+    a binder of `compile-warn` bound after the error dispatches as
+    `let` ("malformed `cw` form"), where without the error both
+    implementations warn `hello`; and in `10_resolve_vacant.sl`,
+    `resolve` answers `RHypothetical` after the error for `vacant-slot`
+    and for a `let` of it bound before the error, where it answers
+    `RSettled` for both before the error.
     `proposals/self-formal/10-slc-after-error.md` reports more such
     cases, including ones where a binder is called `Hypothetical`,
     messages that are dropped once an error is recorded, and that
-    macro expansion has no such gate; those were not re-run here.
+    macro expansion has no such gate
+    (`proposals/self-formal/proto/review7/10_letmatch.sl`,
+    `10_macro_crash.sl` under `--eval-fuel 100`, and
+    `10_macro_after.sl` after `std/macro.sl` show one each, re-run
+    here).
     The reference stops at the first error and prints only that one;
     `self/README.md:301-302` says only that `slc` "may report a few
     more that follow from it".
-    Acceptance seems unaffected, since the first error already makes
-    `slc` exit 1, and `--first-error` hides the later messages.
+    Acceptance seems unaffected: `slc` exits 1 when its message list
+    holds an error at the end (`self/main.sl:143`), and no writer of
+    that list that 10 §4 read drops a recorded error, which is a
+    reading of the code rather than a proof; every reproducer here
+    exits 1, and `--first-error` hides the later messages.
     DESIGN.md seems to say nothing explicit about whether more than one
     error is reported. §4's "Warnings go to standard error and do not
     stop elaboration" may be read as implying that an error does, and

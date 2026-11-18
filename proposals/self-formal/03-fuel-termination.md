@@ -12,13 +12,19 @@ decisions, which is an earlier session's paraphrase, not the owner's words.
   depth bound (default 10⁹, fresh for each run-position form, each macro
   run, and each step of an interpreted `Program`). Running out at compile
   time is reported as a refusal of the form, which DESIGN.md does not
-  obviously license.
-  The run does not stop where the fuel runs out: it goes on with an error
-  value, and the form is refused when the run ends
-  (`self/elab-main.sl:178-190`, `self/core.sl:2409-2415` and `2815-2819`).
-  If the run overflows the host stack first, slc dies instead
-  (`proto/review7/02_fuel_runpos.sl` under `--eval-fuel 20`; 02 r7.3;
-  BUGS.md 27). The
+  obviously license. The run does not stop where the fuel runs out: it
+  goes on with an error value, and the form is refused when the run ends
+  (`self/elab-main.sl:178-197`, `self/core.sl:2409-2415` and
+  `2815-2819`), unless the rest of the run hits a host limit, which kills
+  slc instead. Under `--eval-fuel 200`, `proto/review8/03_fuel_goes_on.sl`
+  runs out in its first `let`, spends in the second as long as that
+  computation takes alone, and dies of a stack overflow in an `array-new`
+  of 2^60 elements after it, where the reference refuses at once with
+  "out of fuel"; the `let`s run in written order (`self/elab-main.sl:192-197`).
+  On `proto/review7/02_fuel_runpos.sl` under `--eval-fuel 20` slc also
+  dies of a stack overflow (02 r7.3; BUGS.md 27), but there its running
+  out before the overflow is inferred from the head form running before
+  the argument (02 §2.2). The
   other "fuels" are a language rule (§62's 10000 expansions),
   termination measures (most of them erased), and a handful of bounds that a measure proof could
   replace. One of those, `merge-opens` (F3 row 6), would accept early if
@@ -127,7 +133,7 @@ decisions, which is an earlier session's paraphrase, not the owner's words.
 
 | # | Where | What it bounds | On exhaustion | Removable? |
 |---|---|---|---|---|
-| 1 | interpreter `eval`/`apply`, `self/elab-main.sl:159-190, 405-430`. Default `1000000000` in `self/core.sl:3614` (`MkMacros ... 1000000000`), `--eval-fuel` in `self/main.sl:121-132` | Depth of application nesting. Two units per interpreted call, and tail calls spend too. Fresh per run-position form (`elab-main.sl:450-462, 550, 744`), per macro run (`:525`), and per interpreted `Program` step (`interp.sl:109,143`) | `BError "out of fuel"`, a value the run goes on with. The form is refused when the run ends, like any runtime error (MANUAL.md:162-164), unless the host stack overflows first (§1) | Only by restructuring (options below). This is the fuel that matters. |
+| 1 | interpreter `eval`/`apply`, `self/elab-main.sl:159-190, 405-430`. Default `1000000000` in `self/core.sl:3614` (`MkMacros ... 1000000000`), `--eval-fuel` in `self/main.sl:121-132` | Depth of application nesting. Two units per interpreted call, and tail calls spend too. Fresh per run-position form (`elab-main.sl:450-462, 550, 744`), per macro run (`:525`), and per interpreted `Program` step (`interp.sl:109,143`) | `BError "out of fuel"`, a value the run goes on with. The form is refused when the run ends, like any runtime error (MANUAL.md:162-164), unless a host limit kills slc first (§1) | Only by restructuring (options below). This is the fuel that matters. |
 | 2 | Expansion budget: `expansion-limit` 10000 (`self/elab.sl:26`), checked globally at `elab-main.sl:559-560`. Also threaded as the structural `fuel` parameter of the elaborator block, reset to 10000 per top-level item (`elab-main.sl:3379, 3387, 3391`), and as `run-toplevel`'s own `fuel` (`elab-main.sl:3362`), 10000 per file (`self/main.sl:29`), spent at `elab-main.sl:3375` and `3382` | §62's language rule. The per-item parameter is also the block's first termination measure | Error "more than 10000 macro expansions" | The global count is the spec and stays. The two parameters look like measures the global count always hits first. I have not verified that. |
 | 3 | Termination measures: `xf`, `callbacks`, `hop-k` (`elab-main.sl:147-159`; erased in `eval`, though `expand` takes `xf` at `many`, `elab-main.sl:555`), `Steps` (`elab.sl:1241-1245`, whose `SS` field is `many`), and the sugar budget | Termination evidence. I did not check that every zero case is refuted. The sugar budget's zero case is an internal error (README "Choices") | Refuted or internal error | Already not fuel in the sense of an extra outcome. |
 | 4 | Generated printer `show-fuel` 100000 (`self/emit.sl:4, 1379-1438`) | Recursion through types when emitting printers | Falls back to `"show_any"` or empty arms (`emit.sl:1380, 1417, 1438`). This changes emitted code, not a verdict | Possibly, by a measure on the memo. Unverified. |
@@ -172,11 +178,21 @@ The file behind 3 was not saved. Reproduce each from the text here.
    found that a closure whose level is packed with it in the state can be
    applied and extended at that packed level when two `Predates` proofs
    and a counter are packed with it too
-   (`proto/review4/06_packed_counter.sl`). A closure extended at a newly
-   minted level is accepted, but the stepper cannot then apply it, and a
-   packed `Predates` cannot reach the new level: both are refused
-   (`proto/stepper/ho_exist_use_bad.sl`,
-   `proto/review3/06_packed_predates_bad.sl`), which 06 reads as
+   (`proto/review4/06_packed_counter.sl`), and applied as a same-level
+   call, with a `subterm` proof, when an `Eq (Level)` packed with it makes
+   that level the stepper's own (`proto/review8/06_packed_same_level.sl`);
+   06 reads both as its fixed-level closure with the level hidden. A
+   function at the stepper's level also applies such a closure when the
+   state was built before that level was minted and comes with a
+   `Predates` to it, through `predates-subterm`
+   (`proto/review7/06_packed_subterm.sl`); as 06 reads §18, a state a
+   step builds can have no such `Predates`. A closure extended at a newly
+   minted level is accepted, but the stepper cannot then apply it, a
+   packed `Predates` cannot reach the new level, and the stepper cannot
+   write a `Predates` from its state to its own level: all three are
+   refused (`proto/stepper/ho_exist_use_bad.sl`,
+   `proto/review3/06_packed_predates_bad.sl`,
+   `proto/review8/06_use_self_predates_bad.sl`), which 06 reads as
    following from §18.
 2. **A function cannot iterate `Program` steps without fuel.** The function `run-all :
    (subterm unique (Program L) p) (World) -> ...` matches `Continue _ k`,

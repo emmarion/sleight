@@ -626,7 +626,9 @@ Values as words:
   Its extern operations are primitive steps whose results are proved, in
   the spec, equal to their models. The FFI agreement of the other
   externs (`String`, `Array`, `Bytes`, `Raw`, `Slots`, `Half`) is a
-  hypothesis per function, with `slot-eq` under the oracle (N1). Pros:
+  hypothesis per function, with `slot-eq` under the oracle (N1), which
+  does not cover an FFI function that returns an argument its model
+  rebuilds (`02_append_share.sl`, N1). Pros:
   §33's "word of the `Nat` of its position" and §35's tag-slot literals
   get a meaning, and `ImmNat` is true in the spec. Cons: `Nat` is
   special in the spec.
@@ -1255,4 +1257,85 @@ Unsure, not changed:
   that literal, before running anything, and its `--no-extern`
   extraction overflows on a literal of 10^5 (and of 10^8). Not looked
   up in BUGS.md.
+- The summary is still longer than the brief's 15 lines.
+
+## Round 8 review notes
+
+Added by an eighth, independent review. Re-run: `proto/dyn/head_crash_arg_write.sl`,
+`head_write_arg_crash.sl`, and `crash_probe.sl`, with their depth-10
+controls, under the reference (interpreted, `--no-extern`, built
+natively and with `--byte`, and `--no-extern --build`, which overflows
+extracting the 10^8 files), `slc --interpret`, and slc's native and
+`--byte` builds, and slc's OCaml for the first two (the head is bound
+first); `proto/review7/02_fuel_runpos.sl` with and without
+`--eval-fuel 20`, and with a three-element array; `02_deep_runpos.sl`
+with and without `--eval-fuel 1000000000`, and with depth 1000;
+`review3/head_arg_order.sl`, `review3/00_arg_head_order.sl`, and
+`review6/02_fuel_head_alone.sl`, with and without `--eval-fuel 20`;
+`imm_eq.sl`, `slot_eq_share.sl`, `review2/const_share.sl`,
+`review4/02_share_pair.sl`, and `review5/02_big_nat_slot_eq.sl` (and a
+copy with small `Nat`s) in the modes cited; `tagslot.sl`; `machine.sl`
+(also with an all-false and a 3-bit tape) and
+`review2/machine_fn_oracle.sl`; `order1.sl` and `order2.sl` under
+`--extract`; slc's OCaml for `review6/02_values_order_slc.sl`; and the
+OCaml order test on 4.14.1. The outputs quoted reproduce, and the code
+citations hold. New tests are `proto/review8/02_append_share.sl` and
+`02_fuel_then_write.sl`.
+
+1. N1 and decision 4 said "there is an oracle" covers every
+   implementation seen, given three conditions. `02_append_share.sl`
+   compares `x` with `(str-append x "")`: built with externs by either
+   compiler, natively or with `--byte`, it answers `ESome`, because the
+   FFI's `append` returns its first argument when the second is empty
+   (`lib/ffi_core.ml:146-147`); every interpreted run and the
+   reference's `--no-extern` build answer `ENone`. The prelude's model
+   of `append` rebuilds its first argument (`lib/prelude.sl:1120-1123`),
+   so a spec that runs it (E2) answers `ENone` there under every
+   oracle. None of the three conditions covers this, and the bytecode
+   builds rule out constant sharing. Added to N1, E2, and decision 4,
+   which now gives the conditions as necessary ("only if") and says the
+   list may be incomplete.
+2. N1 said `slot-eq` answers `ESome` "only if" the bit is set and the
+   words are equal, which leaves the answer open when both hold, against
+   "The spec run is a function". The prototype answers `ESome` exactly
+   then (`machine.sl:99-104`). Now "exactly when".
+3. Relayed by the coordinator from 01's reviewer, and confirmed: 2.3
+   said both implementations expand every macro call among an
+   application's arguments before elaborating any argument. Only a call
+   whose head is a name or `(share n)` is (the reference's `macro_of`,
+   `lib/elab.ml:622-628`, also takes a non-erased handle):
+   `proto/review8/01_form_head_arg.sl` prints `(MkPair _ _ (MkPair _ _ 3
+   1) $ MkPair _ _ 4 5)` on both, so `((gs-name))` is expanded in its
+   argument's turn and `((share ugs))` before the arguments. Narrowed.
+4. C4's "Neither implementation is yet such a function of the bound in
+   its message" lost, in round 7, the colon that tied "in its message"
+   to a reason, and the phrase was left vague. Now "Neither
+   implementation's outcome".
+5. C4 said that after an exhausted bound slc's code "still runs",
+   without saying that under `--interpret` no world request is then
+   performed: `perform` refuses one once an error is recorded
+   (`self/interp.sl:131-133`; `halloc` records the first error block,
+   `self/core.sl:2411`). `02_fuel_then_write.sl`, the first world-write
+   test with depth 100, writes nothing under `--eval-fuel 20` on either
+   implementation and writes without the flag. Added, and BUGS.md 27
+   cited for the deaths.
+6. 2.2 said the reference's `--no-extern --build` "was tried on the
+   controls only", then that it overflows on the 10^8 files, on which it
+   was tried. Now "could run only the controls".
+7. Rough edge 5 said §31 does not say "where a crash may occur"; §31
+   says "where the host cannot represent what is asked of it". Narrowed
+   to which steps, and added that on the host limits tried in run
+   position both implementations die rather than refuse (BUGS.md 27).
+
+Unsure, not changed:
+- 2.3 says no read goes through a slot word "except `at` reconstruction".
+  A skipped store (§37's `(at)`) also leaves a slot's word in a field
+  that a later match reads, justified as a reading-back is, by the
+  argument being at that slot; whether it counts as `at` reconstruction
+  is a question of wording.
+- BUGS.md has no entry for the reference's `--no-extern` failures on
+  large literals (the round 7 unsure point): a file whose only large
+  thing is a 2^60 literal dies of `Invalid_argument("Array.make")`, and
+  `--extract` overflows on a used 10^5 literal, though not on an unused
+  one.
 - The summary is still longer than the brief's 15 lines.
