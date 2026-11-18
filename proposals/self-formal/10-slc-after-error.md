@@ -270,28 +270,45 @@ Review tests under `proto/review7/`, each with a `(compile-error
 
 ## 4. Are reported messages false?
 
-[A] Yes, in this agent's reading, for every "yes" row above: each one
-states a fact about the program (a value's constructor, its number, or
-that it is `Hypothetical`) that DESIGN.md §27 ("its results become
-`Settled` with the resulting values"), §28, and §29 site 1 (site 3
-for 06 and 15's second) contradict. As a check on the "computed value"
+[A] Yes, in this agent's reading, for every "yes" row above, and for
+10_macro_prims's `RHypothetical`: each one states a fact about the
+program (a value's constructor or number, that it is not `Settled` or
+not a datatype value, that a head is not constant-known, or what
+`resolve` finds) that DESIGN.md §27 ("its results become `Settled` with
+the resulting values"), §28, and §29 site 1 (site 3 for 06,
+10_string_token's `t`, and 15's second) contradict, with §72 for
+`native-compute` and §65 for `resolve`. As a check on the "False?"
 column, each reproducer was also run on the reference with the
 `compile-error "first"` line removed (15 also without `(m)`): every
-`comptime-match` of a "yes" row passed, 03 and 05 failed with the error
-slc omits, 14 printed `abc` twice, and `(m2)` expanded.
-The first message is never affected, and acceptance is never affected,
-since slc fails on the first error whatever follows. DESIGN.md does not
-require a second message at all, so the reading that these are defects
-rests on a message being false, not on its being extra. Two further
-kinds of difference were seen that are not false messages: errors that
-do not appear (03, 05), which DESIGN.md cannot require since it
-requires no second message, and genuine later errors that the reference
-would not reach (15's first).
+`comptime-match` of a "yes" row passed (17 aside, which has no such
+line and stops at its refuted branch), 03 and 05 failed with the error
+slc omits, 14 printed `abc` twice, 10_string_token printed it once,
+`(m2)` expanded, and `resolve` answered `RSettled` all three times.
+slc, run on the same files, printed what the reference did on every
+one but 17.
+The first message seems never to be affected, since every message
+before it is recorded with no gate shut, and acceptance seems never to
+be affected, since slc exits 1 once an error is recorded, whatever
+follows (below). DESIGN.md does not require a second message at all,
+so the reading that these are defects rests on a message being false,
+not on its being extra. Two further kinds of difference were seen that
+are not false messages: errors that do not appear (03, 05), which
+DESIGN.md seems not to require since it requires no second message,
+and genuine later errors that the reference would not reach (15's
+first).
 
 [A] One case looked for and not found: a later error that slc would
 have to report and does not, in a way that could make a program
-accepted. Since `env-failed` is monotone and decides the exit code,
-this agent does not see how one could arise, but did not prove it.
+accepted. No gate shuts until an error is recorded, and `env-failed`
+decides the exit code (`main.sl:143`), so acceptance could change only
+if a recorded `SaidError` were later dropped. None of the eight writers
+of the list drops one (`core.sl:2806`, `:2808`, `:3428`, `:4133`;
+`elab-main.sl:3285`, `:3356`, `:3358`; `elab.sl:935`), and
+`env-restore`, `env-hide`, and `env-discard` (`core.sl:2844-2895`),
+which rebuild an `Env` from two, keep the newer one's list. An `Env`
+discarded whole after a speculative elaboration was not looked for. So
+this agent does not see how a dropped error could arise, but did not
+prove that none does.
 
 ## 5. Suggested follow-ups
 
