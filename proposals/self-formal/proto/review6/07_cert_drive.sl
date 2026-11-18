@@ -1,0 +1,52 @@
+; Accepted (round-6 review of 07): a Certified value destructured at the top level, before the driver's levels are
+; minted, drives program 0 of drive.sl. Run as spec.sl goal.sl det.sl impl.sl 07_cert_drive.sl from proto/roundtrip/.
+(let ((many d0)) (lt-dec 0 u8-modulus))
+(comptime-match many d0 (Yes _ _ za0 zb0 zp0))
+(let ((many code0)) (MkU8 0 zp0))
+(let ((many d1)) (lt-dec 1 u8-modulus))
+(comptime-match many d1 (Yes _ _ za1 zb1 zp1))
+(let ((many code1)) (MkU8 1 zp1))
+
+(let ((many omega)) (App (Lam $ App (Var 0) (Var 0)) (Lam $ App (Var 0) (Var 0))))
+(let ((many k-comb)) (Lam $ Lam $ Var 1))
+
+(def-fns _ $ (many prog : (many (Nat) which) -> (many (List $ Stmt) p))
+  (let ((many ok)) (Cons _ (Let $ App (App k-comb (Num 3)) (Num 0)) $ Cons _ (Assert 0 (CSucc)) $ Cons _ (Need 0 (CSucc))
+    $ Cons _ (Let $ App (Lam $ Var 1) k-comb) $ Cons _ (Assert 0 (CSucc)) $ Cons _ (Need 1 (CSucc)) $ Nil _))
+  (let-match many which (Succ w1) ((Zero) ok))
+  (let-match many w1 (Succ w2) ((Zero) (Cons _ (Let $ Num 3) $ Cons _ (Need 0 (CSucc)) $ Nil _)))
+  (let-match many w2 (Succ w3) ((Zero) (Cons _ (Let $ Num 0) $ Cons _ (Assert 0 (CSucc)) $ Nil _)))
+  (let-match many w3 (Succ w4) ((Zero) (Cons _ (Let $ App (Num 1) (Num 2)) ok)))
+  (let-match many w4 (Succ w5) ((Zero) (Cons _ (Let $ Var 5) $ Nil _)))
+  (let-match many w5 (Succ w6) ((Zero) (Cons _ (Let $ Num 1) $ Cons _ (Assert 1 (CZero)) $ Nil _)))
+  (Cons _ (Let omega) $ Cons _ (Need 0 (CZero)) $ Nil _))
+
+(def-fns _
+  ((many init-top : (many (List $ Stmt) p) -> (many (CState p) s)) (start p))
+  ((many step-top : (erased (List $ Stmt) p) (many (CState p) s) -> (many (Turn CState p) t)) (cstep p s))
+  ((erased excl-top : (erased (List $ Stmt) p) (erased (Elab (Nil (Ent)) p) d) (erased (Fails (Nil (Ent)) p) f) ->
+      (erased (False) no))
+    (exclusive (Nil (Ent)) p d f)))
+(let ((many c)) (MkCertified CState _ init-top step-top excl-top))
+(let-match many c (MkCertified S L init step excl))
+(def-lvl PA)
+(def-lvl P)
+(def-fns PA $ (many drive : (erased (List $ Stmt) p0) (many (S p0) s) (many (Nat) n) (unique (World) w at vacant-slot) ->
+    (unique (World) w2 at w) (unique (Program P) next))
+  (let-match many (step p0 s) (Fin _ _ v)
+    ((More _ _ s2)
+      (def-unique P $ (unique again : (unique (World) u at vacant-slot) -> (unique (World) u2 at u) (unique (Program P) next))
+        (drive p0 s2 (Succ n) u))
+      (values w (Continue P again))))
+  (let ((many after)) (str-append " after " $ str-append (nat-str $ Succ n) " Program steps\n"))
+  (match many v _
+    ((Accepted _ _)
+      (let ((unique w1) (many _)) (world-do _ w (WriteOut $ str-append "accepted" after)))
+      (values w1 (Exit P code0)))
+    ((Rejected _ _ why)
+      (let ((unique w1) (many _)) (world-do _ w (WriteOut $ str-append "rejected: " $ str-append why after)))
+      (values w1 (Exit P code1)))))
+(def-unique P $ (unique main : (unique (World) w at vacant-slot) -> (unique (World) w2 at w) (unique (Program P) p))
+  (let ((many p0)) (prog 0))
+  (drive p0 (init p0) 0 w))
+(Continue P main)

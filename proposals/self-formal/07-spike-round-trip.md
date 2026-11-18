@@ -8,7 +8,7 @@ Tags: **[D]** DESIGN.md, quoted; **[C]** compiled or run. Unless marked
 otherwise, files are under `proto/roundtrip/` and were run with
 `_build/default/bin/main.exe` at commit 669b328 (no change to `bin/`,
 `lib/`, `src/`, or `self/` since, up to ad07c35, 07692f2, c236135, e0aaf2c,
-and fb2c533), and also with slc
+fb2c533, and 10bd85d), and also with slc
 (`_build/release/slc`; `slc --interpret`, `slc --goal`).
 **[A]** marks my own reading or proposal. The only owner item the body
 mentions is the brief's statement 3, in decision 4, and it is an earlier
@@ -296,7 +296,14 @@ spec has one. The reason string of `Rejected` is free text, so a
 `drive.sl`: the driver, which reaches `cstep` and `rstep` through its
 own wrappers `zipper` and `replay` rather than through a `Certified`
 value, and the text it prints for each verdict, are outside the proved
-statement. Program 6 has a diverging run, so (by my reading, not
+statement. A function given a `Certified` cannot call its `init` or
+`step` at all: their level `L` is packed, and the call is refused with
+"`L` was not in scope when level `(level-of first-turn)` was minted"
+(`proto/review6/07_cert_fn_bad.sl`), as 06 F4.2 found for packed-level
+closures. Destructured at the top level before the driver's levels are
+minted, the same value drives program 0 to "accepted after 26 Program
+steps" (`proto/review6/07_cert_drive.sl`; reference, `--no-extern`, and
+`slc --interpret`) [C, sixth review]. Program 6 has a diverging run, so (by my reading, not
 proved) it has neither derivation, since `Evals` and `Sticks` both need
 a finite `Runs` and `Step` is deterministic; the loop runs at constant
 memory. That is consistent with "no verdict if and only if a run that
@@ -410,7 +417,9 @@ levels"), see §5 below.
    - Recommended: yes. One context then serves both. Exclusivity is a
      plain induction with or without the mirror shape: 05's
      `proto/theorems/t1_toy.sl` has an order-free `FPlusR`, which needs
-     no `Elab` of the left operand, and the same induction.
+     no `Elab` of the left operand, and its `exclusive` is also a plain
+     induction, on the source term with no determinism lemma, where the
+     toy's is on `Fails` with one.
    - Consequence: the spec then fixes the order of premises, which is
      01's decision 5.
 4. **Must the packaged theorem include completeness?**

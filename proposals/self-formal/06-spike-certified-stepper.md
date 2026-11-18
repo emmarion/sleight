@@ -7,8 +7,8 @@ Where it and DESIGN.md disagree, DESIGN.md is right.
 Sources are marked: **§n** quotes DESIGN.md; **file:line** is code;
 **[ran]** is a run tonight of the reference (`_build/default/bin/main.exe`,
 commit d6644d9; the first review re-ran everything at ad07c35, the
-second at 07692f2, the third at c236135, the fourth at e0aaf2c, and the
-fifth at fb2c533, with no change to `bin/`, `lib/`, `src/`, `self/`, or
+second at 07692f2, the third at c236135, the fourth at e0aaf2c, the
+fifth at fb2c533, and the sixth at 10bd85d, with no change to `bin/`, `lib/`, `src/`, `self/`, or
 `std/` in between) and, where said, of `_build/release/slc`. The
 prototype is `proto/stepper/`. Every command line starts with the
 repository's `std/list.sl`, then `spec.sl machine.sl`.
@@ -46,10 +46,13 @@ repository's `std/list.sl`, then `spec.sl machine.sl`.
   Packing the level with its `Predates` proofs and the counter, and
   extending at that same packed level, is accepted
   (`proto/review4/06_packed_counter.sl`) [ran, fourth review].
-- Missing: refuting "stuck" (progress), an in-place (unique) heap in the
-  implementation, and abstract addresses. Proof is about 210 lines
-  against 90 lines of stepper code and 67 lines of spec. Checking all of
-  it adds about 0.1 s to the prelude's 0.4 s [ran].
+- Missing: refuting "stuck" when a `Runs` derivation exists (that `step`
+  finds every step `Step` allows), an in-place (unique) heap in the
+  implementation, and abstract addresses. Determinism, the soundness
+  glue, the result types, and `complete.sl` come to about 210 lines
+  (`complete.sl`'s 52 include `finish` and `run-total`, which are code),
+  against 90 lines of stepper code and 67 lines of spec (F5). Checking
+  all of it adds about 0.1 s to the prelude's 0.3–0.4 s [ran].
 
 ## 2. Findings
 
@@ -134,7 +137,8 @@ refused in `step-back` at `ExSeq` [ran, third review].
 - `step-det` is accepted.
 - `finish` iterates `advance` by recursion on an erased
   `(Star k m nil mf)`: `step-det` equates the machine's step with the
-  derivation's first step, so the rest of the derivation is a subterm.
+  derivation's first step, so the rest of the derivation, a subterm,
+  starts from the machine's next state.
   When `advance` returns `Running`, the derivation's `StarRefl` case,
   which would make the stack empty, is refuted by the step `s` that
   `Running` carries (`(absurd (StarRefl _ _) s)`). This is the Bove–Capretta
@@ -146,11 +150,16 @@ refused in `step-back` at `ExSeq` [ran, third review].
   level and prints `(AgreeHalted _ _ _ $ MkMem (Cons _ (VNum 7) $ Nil _)
   $ Nil _)` [ran, also `--no-extern` and `slc --interpret`]. As 05 F4
   says of this shape, a caller needs a `Runs` derivation from somewhere.
-- `AgreeStuck` is still a possible result. Refuting it needs progress:
-  the helpers return `NthNo`, `SetNo`, `OpNo`, and `PickNo` with no
-  evidence, so nothing connects a failure to the derivation. I did not
-  do this (§3 Q2). So as built, the types of `complete.sl` add only
-  `star-trans`, `runs-star`, `step-det`, and that an `AgreeHalted` result is `mf`.
+- `AgreeStuck` is still a possible result. Refuting it needs `step` to
+  find every step that `Step` allows, not progress: the spec itself has
+  stuck programs, such as `OPred` on a register holding `VNum 0` (no
+  `RPred` applies), on which `run.sl`'s driver prints `stuck`
+  (`proto/review6/06_pred_zero.sl`) [ran, sixth review]. The helpers
+  return `NthNo`, `SetNo`, `OpNo`, and `PickNo` with no evidence, so
+  nothing connects a failure to the derivation. I did not do this
+  (§3 Q2). So as built, the types of `complete.sl` add only
+  `star-trans`, `runs-star`, `step-det`, and that an `AgreeHalted`
+  result is `mf`.
   "If this machine halts, it halts with `mf`" already follows from
   `advance`'s type and `runs-fn`. That `run-total` runs this machine,
   and halts or sticks within the derivation's step count, is read from
@@ -206,7 +215,8 @@ refused in `step-back` at `ExSeq` [ran, third review].
    and `slc --interpret`) [ran, fourth review]; its loop is the same
    fuel-bounded test driver as item 1's. Here the packed level is `L0`,
    minted at the top level before the stepper's `S`, and as I read §18
-   any level with a `Predates` to `S` was minted before `S`, so this is
+   any level with a `Predates` to `S` was introduced (not necessarily
+   minted) before `S`, so this is
    item 1 with the level hidden; item 1's counter makes packing the level
    unnecessary. The trace of F2 is the same closure defunctionalized:
    `step-back` is the code of each closure, and `Trace` is the list of
@@ -246,23 +256,30 @@ pattern binders. The largest single proof is `runop-fn` (47 lines): one
 
 What made it longer than it would be with calls in types (§9: "The
 elaborated form of a type never contains a function call"): each partial
-helper needs its own result type carrying the relation (`NthOut`,
-`SetOut`, `OpOut`, `PickOut`, `StepOut`). I found no generic
-"value with proof" wrapper, since `(Nth A xs i)` cannot be passed
+helper has its own result type carrying the relation (`NthOut`,
+`SetOut`, `OpOut`, `PickOut`, `StepOut`). `(Nth A xs i)` cannot be passed
 unsaturated (§17: "There is no currying, for functions or for
-constructors."). Long positional constructor telescopes (`RWrite` has 15
+constructors."), but a result type indexed by the unapplied relation is
+accepted when the relation's signature is not dependent:
+`proto/review6/06_generic_out.sl` gives `run-op`'s result as
+`(Out2 (Mem) m (Op) o (Mem) RunOp)` [ran, sixth review]. Such a wrapper
+is per input count, and `Nth`, whose `xs` has type `(List A)`, does not
+fit one (`proto/review6/06_generic_out_nth_bad.sl`, refused at the
+relation argument) [ran, sixth review]. So such wrappers could replace
+`OpOut` (compiled) and, I expect, `PickOut` (not compiled), but not
+`NthOut` or `SetOut`. Long positional constructor telescopes (`RWrite` has 15
 fields) are the main readability cost; patterns are counted by hand.
 
 ### F6. Cost of checking and running
 
 [ran, one machine, single runs; ranges are across the author's run and
-the reviews]: the reference takes 0.38–0.44 s on a one-line file,
-0.48–0.53 s on `std/list.sl spec.sl machine.sl complete.sl`;
-`slc --interpret` 0.24–0.27 s and 0.31–0.33 s. The long runs are `run.sl`
+the reviews]: the reference takes 0.29–0.44 s on a one-line file,
+0.36–0.53 s on `std/list.sl spec.sl machine.sl complete.sl`;
+`slc --interpret` 0.18–0.27 s and 0.23–0.33 s. The long runs are `run.sl`
 with both loop bounds `5` replaced by `300` (7821 steps) and by `1000`
-(26021 steps). 7821 steps take 1.3–1.5 s in the reference interpreter,
-0.48–0.58 s under `slc --interpret`, and under 0.01 s compiled
-(`--build`); 26021 steps take 10.8–12.1 s, 3.3–3.6 s, and 0.05–0.07 s. The growth is probably the
+(26021 steps). 7821 steps take 1.0–1.5 s in the reference interpreter,
+0.39–0.58 s under `slc --interpret`, and under 0.01 s compiled
+(`--build`); 26021 steps take 8.5–12.1 s, 3.3–3.6 s, and 0.03–0.07 s. The growth is probably the
 list heap, which every allocation, read, and write walks. Peak memory
 of the interpreters stays 22–41 MB, consistent with the erased trace
 not being built at run time, which erasure (§14, §27) already implies.
@@ -280,8 +297,9 @@ not being built at run time, which erasure (§14, §27) already implies.
 2. **Closure invariant with a packed level.** *Con:* with no packed
    `Predates`, it cannot be applied by the stepper; with one, it cannot
    be extended at a fresh level (F4.2). With the `Predates` proofs and
-   option 5's counter packed, it works, but only at one level minted
-   before the stepper's, so it is option 5 with the level hidden.
+   option 5's counter packed, it works, but, as I read §18 (F4.2), only
+   at one level introduced before the stepper's, so it is option 5 with
+   the level hidden.
 3. **A first-order "derivation under construction"**: an erased context
    of `Runs` frames, filled as commands finish, so the halt reads off the
    derivation with no fold. *Pro:* no trace. *Con:* needs one frame type
@@ -313,11 +331,17 @@ not being built at run time, which erasure (§14, §27) already implies.
    given step: a missing index with a lemma like 07's `nth-nonth`, a value
    of the wrong shape with `nth-fn` and a constructor clash, and the
    other relations with like lemmas. There are 26
-   failure sites (24 `OpNo` in `run-op`, 2 `PickNo` in `pick`). *Cost:* perhaps 60–80 lines.
+   failure sites (24 `OpNo` in `run-op`, 2 `PickNo` in `pick`). This
+   refutes `AgreeStuck` given a `Runs` derivation; it says nothing of a
+   program with none. *Cost:* perhaps 60–80 lines.
 2. **A well-formedness invariant** (register count, pointer validity,
    value shapes) carried in the state, under which failure sites are
-   unreachable. This is type soundness of the object language. *Cost:*
-   larger; it is the shape the full Sleight machine would need anyway.
+   unreachable. This is type soundness of the object language. For this
+   toy I expect it would also need a language change: `OPred` on
+   `VNum 0` has no rule (F3), and which registers hold `0` is known only
+   at run time.
+   *Cost:* larger; it is the shape the full Sleight machine would need
+   anyway.
 3. **Accept "halted with the spec's result, or stuck"** (built).
 
 ### Q3. The implementation's heap
@@ -343,14 +367,20 @@ not being built at run time, which erasure (§14, §27) already implies.
 2. **Should the level rules allow a function to apply a closure whose
    level is packed in its argument?** I do not propose a change. As
    DESIGN.md stands (§17, §18), such a closure can be built but not
-   applied unless a `Predates` from its level to the caller's level is
-   packed with it, and, as I read §18, a closure at a level minted
-   after the caller's can never have one (F4.2). A closure at a fixed level with a
+   applied by a function that receives it unless a `Predates` from its
+   level to the caller's level is packed with it, and, as I read §18, a
+   closure at a level minted after the caller's can never have one
+   (F4.2). Code whose level is minted after a top-level destructure of
+   the value can apply it (07's `Certified`,
+   `proto/review6/07_cert_drive.sl`), which does not help a stepper,
+   whose states arise at run time. A closure at a fixed level with a
    decreasing erased argument works instead (F4.1), so certified
    steppers do not depend on this.
 3. **Is "never stuck" a target for the formal spec's own machine?** If
    yes, Q2.2 (a typing invariant) is the route that also serves type
-   soundness; Q2.1 is cheaper for a toy.
+   soundness; Q2.1 is cheaper for a toy. They answer different
+   questions: Q2.1 refutes "stuck" only when a `Runs` derivation exists,
+   and Q2.2 for every well-formed state.
 4. **Should the next spike use the unique `Array` heap and abstract
    addresses (Q3.2, Q3.3)?** Recommended: yes, before scaling, since 02
    recommends abstract addresses (its A1). Owner statement 6 of the
@@ -717,3 +747,80 @@ Points I am unsure of:
 - The "Proof is about 210 lines" in §1 is F5's determinism, soundness
   glue, result types, and `complete.sl` rows (83 + 41 + 34 + 52);
   `complete.sl` includes `finish` and `run-total`, which are code.
+
+## Round 6 review notes
+
+A sixth adversarial review read DESIGN.md in full, every file in
+`proto/stepper/`, `proto/review3/06_*`, and `proto/review4/06_*`, and
+re-ran at 10bd85d (no code change since d6644d9): `run.sl` and
+`complete.sl total_demo.sl` under the reference, `--no-extern`,
+`--build`, `slc --interpret`, and `slc --build`; `ho_counter.sl` and
+`06_packed_counter.sl` under the reference, `--no-extern`, and
+`slc --interpret` (both `0`); `ho_exist_build.sl`; the three bad files
+(messages and positions as quoted); `06_packed_predates_bad.sl` cut
+after line 13 (accepted); `06_packed_counter.sl` without `(predates pb)`
+(refused at 24:26 as quoted); `06_vacuous.sl`; the three teeth checks
+(refused at `SNext` argument 5, `ExSeq` argument 6, and `ExWhile`
+argument 5); a `step` whose body is `(SStuck _ _)` (`stuck` and
+`(AgreeStuck _ _ _)`); the numeral refusal and its note; the F5 line
+counts, `runop-fn`'s 47 lines, `step-back`'s 15, and the 24 + 2 failure
+sites; the `lib/prelude.sl` and `std/list.sl` citations; the DESIGN.md
+quotes; and the timings (one-line file 0.29–0.31 s, the four files
+0.36–0.41 s, slc 0.18–0.25 s and 0.23–0.36 s; 7821 steps 1.01 s, 0.39 s,
+and 0.00 s built; 26021 steps 8.51 s, 3.42 s, and 0.03 s built; peak
+22–41 MB). All matched except as below. Errors found and changes made:
+
+1. F3 and the summary said refuting `AgreeStuck` "needs progress". With
+   a `Runs` derivation in hand it needs `step` to find every step that
+   `Step` allows; progress would be "every well-formed state steps",
+   which this spec does not have: `OPred` on a register holding `VNum 0`
+   has no `RPred`, and `run.sl`'s driver rightly prints `stuck` on it
+   (`proto/review6/06_pred_zero.sl`, new) [ran]. F3 and the summary now
+   say so; Q2.1 says what it refutes; Q2.2 says that for this toy a
+   typing invariant would also need a language change (my expectation);
+   decision 3 says the two options answer different questions.
+2. F5 said each partial helper "needs" its own result type and that no
+   generic "value with proof" wrapper exists, since `(Nth A xs i)`
+   cannot be passed unsaturated. A result type indexed by the unapplied
+   relation is accepted for a relation with a non-dependent signature:
+   `proto/review6/06_generic_out.sl` (new) wraps `run-op`'s result as
+   `(Out2 (Mem) m (Op) o (Mem) RunOp)` and prints `(Found2 ... )` under
+   the reference, `--no-extern`, and `slc --interpret`.
+   `proto/review6/06_generic_out_nth_bad.sl` (new) shows `Nth`, whose
+   signature is dependent, refused as a three-input wrapper's relation.
+   Rewritten.
+3. F3 said `step-det` makes "the rest of the derivation a subterm". It
+   is a subterm in any case; what `step-det` gives is that it starts
+   from the machine's next state, so the recursive call type-checks.
+   Reworded.
+4. The summary called 210 lines "proof"; they include `complete.sl`'s
+   `finish` and `run-total`, which are code (fifth review's open point).
+   Now says what the 210 lines are.
+5. Decision 2 said a packed-level closure "can be built but not applied"
+   without a packed `Predates`. That holds for a function that receives
+   it; code whose level is minted after a top-level destructure of the
+   value can apply it (`proto/review6/07_cert_drive.sl`, 07's
+   `Certified`, accepted; `07_cert_fn_bad.sl`, a function given the same
+   value, refused with "`L` was not in scope when level ... was
+   minted"). Qualified; this does not help a stepper, whose states arise
+   at run time.
+6. F4.2 and Q1.2 said a level with a `Predates` to `S` is "minted"
+   before `S`; §18 asks that `x` have an earlier introduction order,
+   and a destructured level is introduced, not minted. Q1.2 also stated
+   that reading as fact. Both now say "introduced" and Q1.2 is hedged.
+7. F6 and the summary: today's timings fall below the stated ranges;
+   the ranges now include them. Header names this review's commit.
+
+Also checked: `ho_exist_build.sl`'s closure state can be returned, not
+only built (a scratch variant returning it in a `HNext` is accepted), so
+F4.2's "can def-lvl a fresh `L2` and build `inv2`" holds for a real
+step.
+
+Points I am unsure of:
+
+- Whether `PickOut` fits a four-input wrapper as `OpOut` fits
+  `Out2`; `Pick`'s signature is not dependent, but this was not
+  compiled.
+- That a typing invariant for this toy would need a language change
+  (Q2.2); a semantic invariant tracking register contents might not,
+  but would amount to running the program.

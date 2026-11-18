@@ -44,7 +44,10 @@ statement from the brief; **[A]** this agent's reading or proposal.
   (out of fuel) rejects in both implementations (tested). The first two
   need an owner decision before the spec can be functional
   (deterministic); the third concerns the agreement theorem rather than
-  the spec, whose machine does not crash (§31).
+  the spec, whose machine does not crash (§31). A fourth, when the
+  driver runs a file's `Program` final relative to the files after it,
+  makes the two implementations disagree on acceptance (tested; section
+  5 item 14).
 - [A] Rejection: a positive `Fails` as the `Err` outcome of one total
   relation (mini/'s shape). Malformed syntax becomes a positive error,
   not "no derivation" as in mini/. Exclusivity of accept and reject then
@@ -88,8 +91,10 @@ depends on it.
    the finitely many runs one program makes (finitely many given the
    expansion limit), yields one fuel that suffices (reading; not
    checked). *Not analysed
-   here:* whether statement 2's idea, a fuel-free deriving function run
-   as steps of the driver's `Program` loop (§27, §42), changes this;
+   here:* whether statement 2's idea, a fuel-free self-interpreter run
+   as steps of the driver's `Program` loop (§27, §42), would carry over
+   to the deriving function for elaboration (this file's extension of
+   it) and change this;
    such a loop computes without fuel but by itself proves no
    termination. *Depends on it:* whether the deriving function for
    elaboration takes fuel, and where.
@@ -164,7 +169,9 @@ depends on it.
    `--eval-fuel`, `--no-native`, `--hints`, and `--warn-unused`.
    *Open:* `--warnings-as-errors`. DESIGN.md mentions it (§4), but its
    effect depends also on warnings that WARNINGS.md defines, beyond the
-   few DESIGN.md defines (§4's, and the prelude's warnings in §69).
+   few DESIGN.md defines (§4's, and the prelude's warnings in §69). In
+   the reference it also changes when a `Program` final runs, and so
+   acceptance of a unit with no warning at all (§3.7, section 5 item 14).
    *Recommended:* acceptance ignores warnings, and the flag is a policy
    of the driver that the theorem does not cover.
 9. **What is the prelude to the spec?** *Options:* (a) a fixed elaborated
@@ -288,8 +295,12 @@ is the only reference to a mutable value (§13), has not been checked;
   defines two macros, `unary` and `prove-literal-lt`, bound at
   `lib/prelude.sl:2480` by the only `MkMacro` applications in it, at
   `:2571`, and calls neither after `:2571` (grep), so it seems to expand
-  none.
-  `gensym_order.sl` [C] starts its numbering at 1.
+  none. `proto/review6/01_count_10000.sl` agrees: a macro that recurses
+  until its gensym number reaches 10000, so that the program expands
+  exactly 10000 times, is accepted by both implementations, and the same
+  with 10001 (`01_count_10001.sl`) is refused with "more than 10000
+  macro expansions". `gensym_order.sl` [C] starts its gensym numbering
+  at 1, which shows only that the prelude calls no `gensym`.
 - [O] The owner was in general agreement, not agreement to exact
   statements, with framing compile-time termination as a hypothesis H
   (statement 4). [A] Theorem 3 without H needs (T), "every function activation
@@ -305,7 +316,10 @@ nested pair first, prints `(MkPair _ _ (MkPair _ _ 2 3) 1)`, and
 both implementations: every macro call among an application's
 arguments is expanded, left to right, before any argument is
 elaborated, and only then are the arguments elaborated left to right,
-each nested application in the same way. In the reference this is
+each nested application in the same way. A macro call's output is
+expanded before the arguments after it: in
+`proto/review6/01_splice_output.sl`, `(MkPair _ _ (two) (gs))`, where
+`two` expands to `(gs)`, prints `(MkPair _ _ 1 2)` on both. In the reference this is
 `splicing` (`lib/elab.ml:710-722`), called on a call's arguments before
 its head is checked (`:1380-1383`); a sequence of statements is
 expanded one item at a time instead (`expand_seq`, `:723`). A head
@@ -349,7 +363,8 @@ the items.
   that an error does stop it.
 - [C] `two_errors.sl`: the reference reports only `one`, and slc reports
   `one` and `two`; self/README.md:298-301 says slc records errors and
-  goes on, and slc's `--first-error` (MANUAL.md) stops at the first.
+  goes on, and slc's `--first-error` (MANUAL.md) stops its report, not
+  its elaboration, after the first.
   `error_then_effects.sl`: after the first error, slc still prints a
   later `compile-warn`, but then refuses a later macro call as not
   constant-known. slc gates its run-position runs on there being no
@@ -364,8 +379,9 @@ the items.
   (`proto/review2/after_error_call.sl`, `after_error_call2.sl`) and
   `(Succ (Zero))` (`proto/review4/01_after_error_succ.sl`) give no
   `Settled` result. A macro bound after the error is not dispatched
-  (`after_error_macro.sl`). Otherwise, in the cases 10 traced, the
-  binders are `Settled` but hold the erased token, not a computed value
+  (`after_error_macro.sl`). Otherwise, in the cases 10 traced (a call
+  with a variable argument among them), the binders are
+  `Settled` but hold the erased token, not a computed value
   (`env-set-tokens`,
   `self/elab-main.sl:2209-2216`), and slc's discriminant read takes a
   token as the word 0 (`self/eval.sl:51`). So a nullary `(Zero)` bound
@@ -390,8 +406,17 @@ the items.
   error) or `review5/01_late_error.sl` (a `compile-error`), the
   reference prints `effect` and exits 0, reporting no error, and slc
   reports the second file's error and exits 1 without running the
-  `Program`. So the reference seems to run a file's final value when
-  that file ends, before any error in a later file is reported. [A]
+  `Program`. The reference reads each file on the command line only
+  when it reaches it (`bin/main.ml:11-16`), and its driver ends the
+  process when the `Program` ends (`lib/program.ml:116`), so it never
+  reads the later file. Each implementation treats files made by a
+  `;! file` pragma (§4) as it treats files on the command line (`proto/review6/01_pragma_file_prog.sl`,
+  `01_pragma_file_late.sl`: the reference prints `effect` and exits 0,
+  slc reports the later file's error and exits 1). Under
+  `--warnings-as-errors` the reference holds every final value back
+  until all files are elaborated (`bin/main.ml:97-102`, `:109-110`), and
+  `01_prog_first.sl` then `01_late_error.sl` is refused, with no
+  `effect`, though no warning is given. [A]
   Where reading or elaboration fails only in a
   later file, acceptance then depends on when the driver runs, which
   section 5 item 14 raises; otherwise reading can be a separate total
@@ -588,18 +613,21 @@ before one that only adds rules.
    "is refused". DESIGN.md is silent for the general case.
 4. Numerals: §1 says "Atoms made only of digits … are numeral …
    literals", and §45 says a numeral has "no leading zero". It does not
-   say what `042` is. [C] The reference: "syntax error: 042 has a
-   leading zero" (`leading_zero.sl`).
+   say what `042` is. [C] Both implementations: "syntax error: 042 has
+   a leading zero" (`leading_zero.sl`).
 5. String escapes: "Any other byte, including a newline, stands for
-   itself" (§45) could be read as allowing `\q`. [C] The reference
-   refuses it: "unknown escape \q" (`esc.sl`).
+   itself" (§45) could be read as allowing `\q`. [C] Both
+   implementations refuse it: "unknown escape \q" (`esc.sl`).
 6. `Pos` columns: the unit is not stated (§42 says only "a line and a
    column (`Nat`)"; §4 counts lines "from 1" after `;! file`). [C] In
    both implementations columns are bytes, 1-based, with a tab counting
    1. It is observable by macros.
 7. The expansion limit's scope says "every file on the command line
    included" (§62). It does not say whether the prelude counts. [C] The
-   reference does not reset its counter.
+   reference does not reset its counter, and the shipped prelude expands
+   no macro: a program of exactly 10000 expansions is accepted by both
+   implementations (§3.5, `proto/review6/01_count_10000.sl`). So the
+   question bears only on a prelude that does expand one.
 8. `--warnings-as-errors` is in DESIGN.md (§4), but which warnings exist
    beyond §4's is in WARNINGS.md. So under that flag, acceptance depends
    on text outside the spec. [C] `fuel.sl` draws an implementation
@@ -628,8 +656,8 @@ before one that only adds rules.
     not a resolved contradiction.
 13. A head that is a name: §6 says "The head is elaborated first", but
     both implementations expand the macro calls among the arguments
-    before they elaborate a name head, so an error in that head is
-    reported after an error in an argument's expansion
+    before they elaborate a name head, so an error in an argument's
+    expansion is reported, and the head's error is not
     (`proto/review4/01_head_name_err.sl`, §3.6). DESIGN.md does not say
     which error is reported, so this may be no conflict; but read
     literally, §6 would report the head's error. A question for the
@@ -639,11 +667,15 @@ before one that only adds rules.
     that ends in an expression a final value for the driver, but does
     not say whether a `Program` final runs when its file ends or after
     every file is elaborated, nor whether its `Exit` ends the unit. The
-    reference runs it when its file ends and, in the two units tested,
-    reports no error in the later file; slc elaborates every file first
-    (§3.7,
-    `proto/review5/01_prog_first.sl`). So the two disagree on
-    acceptance for such a unit. A question for the owner.
+    reference runs it when its file ends and then exits, never reading
+    a later file, except under `--warnings-as-errors`, where it
+    elaborates every file first; slc always elaborates every file first
+    (§3.7, `proto/review5/01_prog_first.sl`). So the two disagree on
+    acceptance for such a unit, and the reference's acceptance depends
+    on `--warnings-as-errors` even when nothing warns. §4 makes a
+    `;! file` file mean "what it would as a separate file of the unit",
+    and both implementations treat it so here. A question for the
+    owner.
 
 ## 6. Unverified claims
 

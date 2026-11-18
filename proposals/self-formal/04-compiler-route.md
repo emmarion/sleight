@@ -39,7 +39,8 @@ proposal.
   arguments being atoms, which nothing types. A printer depth budget makes
   `slc --interpret` print a wrong value (`... Cons _ _ _)`) for a list of
   more than about 50,000 elements; the OCaml printer slc emits prints the
-  same list in full. The `-imm` FFI operations, and the stores of a cell
+  same list in full. The `-imm` operations of `lib/ffi_core.ml` and their
+  templates, and the stores of a cell
   invocation or `cell-write` marked `(imm o n)` in emitted code, bypass
   OCaml's write barrier (08 reads them as GC-safe on OCaml 4.14.1 when
   both words are immediates; the reference interpreter's `-imm` blits
@@ -137,8 +138,8 @@ definition whose header is `(erased name :`.
 
 | site | kind | zero case |
 |---|---|---|
-| interpreter `eval`/`apply` (`elab-main.sl:185-187, 424`) | fuel. MANUAL.md:154-162: "bounds how deeply applications nest, a tail call nesting inside the call it replaces"; slc's default 10^9 | error value "out of fuel", reported as an error. MANUAL calls it a §31 crash |
-| `show-at` depth 100000 (`elab.sl:4680-4682`, used by `show-typed` at `elab.sl:4730`, which the `comptime-match` mismatch message uses at `:4784` and `entry-value` at `:4890`, and by `slc --interpret`'s final printer at `interp.sl:15`) | printer fuel | **prints `_` silently**. The budget is spent twice per nested field (`show-at` at `elab.sl:4682` and `shown-field` at `:4717`). [T] `slc --interpret deep.sl` (a 100003-element list, stack unlimited) prints 49,999 `Cons _ 0` and then `Cons _ _ _)`. [P] That is a wrong output under §45 ("Any other value prints by its type", and `_` is listed only for a union with more than one constructor, erased fields, cells, slots, functions, opaque proofs, and values with no readable `Matchable`), not a §31 crash ("A crash produces no value, never a different one"). `self/README.md:254-258` ("running out returns an error value, never a wrong answer silently") is said of "the interpreter and the generated printer", the emitted one ("a generated printer per type for a final function's result", `README:143-146`); `show-at` is what `README:369-370` calls `elab.sl`'s compile-time printer, which that sentence does not cover, so the README is silent on this defect rather than contradicted by it |
+| interpreter `eval`/`apply` (`elab-main.sl:185-187, 424`) | fuel. MANUAL.md:154-163: "bounds how deeply applications nest, a tail call nesting inside the call it replaces"; slc's default 10^9 | error value "out of fuel", reported as an error. MANUAL calls it a §31 crash |
+| `show-at` depth 100000 (`elab.sl:4680-4682`, used by `show-typed` at `elab.sl:4730`, which the `comptime-match` mismatch message uses at `:4784` and `entry-value` at `:4890`, and by `slc --interpret`'s final printer at `interp.sl:15`) | printer fuel | **prints `_` silently**. The budget is spent twice per nested field (`show-at` at `elab.sl:4682` and `shown-field` at `:4717`). [T] `slc --interpret deep.sl` (a 100003-element list, stack unlimited) prints 49,999 `Cons _ 0` and then `Cons _ _ _)`. [P] That is a wrong output under §45 ("Any other value prints by its type", and `_` is listed only for a union with more than one constructor, erased fields, cells, slots, functions, opaque proofs, and values with no readable `Matchable`), not a §31 crash ("A crash produces no value, never a different one"). `self/README.md:254-258` ("running out returns an error value, never a wrong answer silently") is said of "the interpreter and the generated printer", the emitted one ("a generated printer per type for a final function's result", `README:143-146`); `show-at` is what `README:369-370` calls `elab.sl`'s compile-time printer. [P] Whether that sentence covers `show-at` is unclear: its "100000" matches both `show-at`'s depth and `show-fuel`, and the emitted printers take no fuel at all, so the README is either silent on this defect or contradicted by it |
 | `show-fuel` 100000 (`emit.sl:4`, `:1473`, `:1478`) | fuel for *generating* the emitted OCaml printers, one per type, memoized (`emit.sl:1379-1386`) | [C] uses `show_any`, which prints `?` (`self/runtime.ml:18`). [P] It bounds the nesting of types met while generating, not of values, so it seems hard to reach. [T] The generated printer recurses on the value with no bound: `deep.sl` compiled by slc (the 22 MB output built with `ocamlc` under an unlimited stack) and `proto/review2/04-deep-fn.sl` (the same list, built at run time) compiled by `slc --build` both print all 100003 elements, byte for byte as the reference does (`deep.sl` under the reference, unlimited stack, about 7 minutes), where `slc --interpret` cuts them as above |
 | `heap-strs-fuel` 10^6 (`eval.sl:1018-1025`; also passed to `heap-pairs` and `heap-jobs`, `eval.sl:1055, 1146, 1159`) | fuel | truncates the list (returns `Nil`) |
 | `str-split-fuel` (`base.sl:100-109`) | fuel equal to the string's length | unreachable but not refuted |
@@ -224,7 +225,7 @@ definition whose header is `(erased name :`.
 - [T] **A head that is a form runs before the arguments.** In
   `proto/review5/04_head_arg_compiled.sl`, `((pickbig h) (bigbytes k))`
   has a head whose run crashes in `Array.make` and an argument whose run
-  crashes in `Bytes.create`. slc emits
+  crashes in `Bytes.create`. slc emits, with its generated names shortened here,
   `let v1 = (pickbig h) in let v2 = (bigbytes k) in ((of_any v1 : ...) v2)`,
   and the program built by `slc --build` (ocamlopt) and by
   `slc --build --byte` dies with `Invalid_argument("Array.make")`, as the
@@ -236,7 +237,10 @@ definition whose header is `(erased name :`.
   position §6 elaborates the head first ("The head is elaborated
   first") and a head that is a form "runs as soon as it is elaborated";
   inside a body I found no sentence that places a head that is a form
-  relative to the arguments (rough edge 1).
+  relative to the arguments (rough edge 1). §29 lists "the elaborator's
+  own binders for its head, arguments and scrutinee (§15)", which reads
+  as if the head were bound as §15 binds an argument, but neither
+  section orders those binders among themselves.
 - [C] **Refutation is trusted at output.** A match with no default arm, or
   a phantom-index GADT copy that omits refuted constructors, is matched
   after an `of_any` cast. `README:242-244`: "A wrong refutation would
@@ -247,7 +251,7 @@ definition whose header is `(erased name :`.
   (`emit.sl:964-969`). [P] [D] §67 allows `ENone` always, but `ESome`
   "proves that `a` and `b` hold one word". If OCaml or flambda shares two
   structurally equal *immutable* constants (slices, tuples), `==` says
-  `ESome` for two values the spec allocated separately. [T] This
+  `ESome` for two values the program built separately. [T] This
   happens without flambda: `proto/04-compiler-route/share.ml` finds two
   equal `("ab", 0, 2)` tuple constants `==` under ocamlopt 4.14.1 (not
   under ocamlc), and `slot_eq_share.sl`, two run-position
@@ -271,10 +275,13 @@ definition whose header is `(erased name :`.
   `caml_modify`, and the same store on an `Obj.t array` to one with the
   call (`proto/review5/04_barrier.ml`, read from its assembly); the
   comment at `ffi_core.ml:315-317` calls `caml_blit_bytes` "a plain
-  memmove". [P] Skipping `caml_modify` is, I believe, safe only
+  memmove". [P] Skipping `caml_modify` is, I believe, safe
   when both the old and the new words are immediates, as `(imm o n)` and
-  `Imm` require ([D] §37, §44). This is a dependency on OCaml runtime
-  internals (GC barriers). The code comment at `ffi_core.ml:315-316`
+  `Imm` require ([D] §37, §44). That is a sufficient condition, not a
+  necessary one: the 4.14.1 runtime's own comment asks for the barrier
+  unless "the value being overwritten is not a shared block and the
+  value being written is not a young block" (08 §3). This is a dependency on OCaml runtime
+  internals (GC barriers). The code comment at `ffi_core.ml:315-317`
   concerns speed, not safety. 08 gives the safety argument: from the
   4.14.1 runtime sources and stress tests, it reads both kinds of store
   as GC-safe on OCaml 4.14.1, amd64, without flambda, when both words
@@ -340,7 +347,7 @@ definition whose header is `(erased name :`.
   | `Nat`/`U62` arithmetic and bits (pure) | 41 | add, divmod, nat-cmp, u62-*, popcount |
   | strings (pure, slices) | 12 | str-cmp, str-split, append, flatten, nat-str |
   | bytes (mutation at unique) | 24 | bytes-set, bytes-blit, bytes-str |
-  | arrays (mutation at unique, `-imm` barrier-free) | 22 | array-swap, array-pluck, array-blit-imm |
+  | arrays (mutation at unique; `-imm` barrier-free in `ffi_core.ml`, though the table maps `array-swap-imm` and `array-place-imm` to the barriered `swap` and `place`, `ffi.ml:102, 107`) | 22 | array-swap, array-pluck, array-blit-imm |
   | `Slots` (models search with `slot-eq`; the implementation hashes addresses, 2.5) | 4 | slots-find, slots-intern |
 
 - [C] These are *not* in the FFI table but are implemented by the
@@ -351,7 +358,9 @@ definition whose header is `(erased name :`.
   - the handle and macro-world primitives of §64-65;
   - `native-compute`.
 
-  [P] These are specified by DESIGN.md directly, not by models. So they
+  [P] These are specified by DESIGN.md directly, not by models (for
+  `world-do`'s requests through `lib/prelude.sl`, which §42 makes "the
+  reference for the requests and their answers"). So they
   are part of the spec semantics, not agreement axioms. Three of them make
   the semantics depend on more than the program: `world-do` and §65's
   `read-file`, whose answers come from the host and would have to be a
@@ -746,11 +755,14 @@ IR's call and constructor arguments syntactically atomic in either case.
    go before the statement that binds the outer call's argument, and §31
    says "Evaluation is eager". §27's "the forms inside a form run before
    it does" is said of run position, not of evaluation in general. §61
-   does take the statements of a body to run in written order: "The write
+   reads as if a body's statements run in written order, though it shows
+   only one statement before one call: "The write
    stores `h` before the call: left to the invocation, that store would
    follow the call". DESIGN.md does not say whether
-   order is meant to be *unobservable*. [P] It is observable without any
-   divergence. `World` is unique, so world effects are ordered among
+   order is meant to be *unobservable*. [P] A real run can observe it
+   without any divergence, through a crash §31 permits; the spec's own
+   run, with "unlimited stack and heap" (§31), would not crash in the
+   example below, so both orders would give it the same output. `World` is unique, so world effects are ordered among
    themselves, but not against a crash in pure code: in
    `proto/review5/04_effect_vs_crash.sl`, `(both (say w) (big n))` has
    one argument that writes to standard output and one that crashes, and
@@ -767,7 +779,7 @@ IR's call and constructor arguments syntactically atomic in either case.
    cannot represent what is asked of it." §72 makes a crashed native run
    "an error at its argument". DESIGN.md does not say what a crash (or
    fuel exhaustion) in an *evaluator* run of a run-position form is.
-   MANUAL.md:162-164 says both implementations refuse such a form, which
+   MANUAL.md:163-165 says both implementations refuse such a form, which
    describes the implementations, not the language.
 3. **`def-prim` and `def-opaque` are not in §54's registry**, although
    §54 opens "Every special form, as a constructor of `Special`", the
@@ -807,10 +819,12 @@ IR's call and constructor arguments syntactically atomic in either case.
 Not DESIGN.md, but found:
 - `self/README.md:463-465` ("Not modelled: ... macros") is stale
   against `elab-main.sl:509-629` and the reference (2.1).
-- slc's `show-at` depth fuel prints a wrong value (2.3), reproduced in
-  all four reviews. `self/README.md` does not mention it: its "never a
-  wrong answer silently" (`:254-258`) is said of the interpreter and the
-  emitted printer. The emitted OCaml printer does not have the defect.
+- slc's `show-at` depth fuel prints a wrong value (2.3), reproduced in every
+  review that re-ran it. `self/README.md` either does not mention it or
+  contradicts it: its "never a wrong answer silently" (`:254-258`) is
+  said of "the interpreter and the generated printer", and whether that
+  printer is `show-at` is unclear (2.3). The emitted OCaml printer does
+  not have the defect.
   That README sentence also says running out "returns an error value";
   the emitted printers' generation fuel (`show-fuel`, 2.3) instead
   emits `show_any`, which prints `?` (`self/runtime.ml:18`), and its
@@ -1302,3 +1316,80 @@ Points I am unsure of:
    fail them (BUGS.md 26). The summary, 2.5, and section 6 now point to
    08, and section 6 keeps OCaml 5, flambda, arm64, and systhreads as
    unchecked. From 08 §1, §7, and §8.
+
+## Round 6 review notes
+
+A sixth adversarial review read the brief, CLAUDE.md, and all of
+DESIGN.md, opened the cited lines, and re-ran `deep.sl` under
+`slc --interpret` (49,999 `Cons _ 0`, then `Cons _ _ _)`, as stated),
+`04_head_arg_compiled.sl` (native and `--byte`, both
+`Invalid_argument("Array.make")`; with `h` made 1, `Bytes.create`; the
+reference also `Array.make`), `04_effect_vs_crash.sl` (native,
+`--byte`, and the reference all print `effect ran` and then crash),
+`04_barrier.ml` (assembly as stated), `argorder.ml`, and `ord2.sl`'s
+emission. It also checked 2.5's barrier paragraph and the Coordinator
+note against 08 and the OCaml 4.14.1 runtime sources.
+
+1. 2.5 said skipping `caml_modify` is safe "only" when both words are
+   immediates. Both words immediate is sufficient, not necessary: the
+   4.14.1 runtime's comment at `memory.c:606-608` asks for the barrier
+   only unless the old value "is not a shared block and the value being
+   written is not a young block", and `caml_modify` (`:617-658`) does
+   nothing else. Reworded.
+2. 2.3 and section 5 said flatly that `self/README.md:254-258` does not
+   cover `show-at`, so the README is silent on the defect. The
+   sentence's "the generated printer" takes a decreasing `Nat` with a
+   fuel of "100000", which fits `show-at`'s depth and `show-fuel`, and
+   not the emitted printers, which take none; the fifth review left this
+   open. Both places now say the README is either silent or
+   contradicted.
+3. 2.5 said `==` answers `ESome` for two values "the spec allocated
+   separately", while the same paragraph and rough edge 4 say DESIGN.md
+   does not settle whether separately built values may share a word.
+   Now "the program built separately".
+4. Rough edge 1 said evaluation order "is observable without any
+   divergence". The example observes it only through a real run's §31
+   crash; the spec's run, with "unlimited stack and heap", would not
+   crash there, so both orders give it the same output. Qualified. Its
+   "§61 does take the statements of a body to run in written order"
+   generalized from one statement and one call; hedged.
+5. The 2.6 table called the array class "`-imm` barrier-free", but
+   `lib/ffi.ml:102, 107` map `array-swap-imm` and `array-place-imm` to
+   the barriered `swap` and `place`; only `ffi_core.ml`'s functions, the
+   templates, and the reference's blits skip the barrier. Qualified, and
+   the summary now names `lib/ffi_core.ml` and its templates rather than
+   "the `-imm` FFI operations".
+6. 2.6 said `world-do` is specified "by DESIGN.md directly"; §42 makes
+   `lib/prelude.sl` "the reference for the requests and their answers".
+   Added.
+7. Rough edge 2 cited `MANUAL.md:162-164` for the refusal of a crashed
+   run-position form; it is at 163-165. The 2.3 row's `MANUAL.md:154-162`
+   left out the default at 163. The speed comment is
+   `ffi_core.ml:315-317`, which 2.5 cited once as 315-316. Corrected.
+8. 2.5 printed slc's emission for `04_head_arg_compiled.sl` as `v1`,
+   `v2`; the real names are generated (`v42144___42144__`). Marked as
+   shortened. §29's "the elaborator's own binders for its head,
+   arguments and scrutinee (§15)" was added beside the gap on head
+   order, since it binds the head too and orders nothing.
+9. Section 5's "reproduced in all four reviews": the fifth did not
+   re-run it and this one did. Reworded.
+
+Re-checked and found right: the 12 files and 18,652 lines, the
+reference's 6,909 lines, the 827 lines of OCaml runtime, `mini/`'s 6,849
+lines and its `elab.sl`/`elabfn.sl` sizes, the `elab-main.sl` lines for
+`eval`, `apply`, `run-code`, `env-expand`, `splice-go`, `splice-call`,
+and the expansion-limit messages, `elab.sl:4680-4730, 4784, 4890`,
+`interp.sl:15, 95-114`, `main.sl:187-191`, `eval.sl:1018, 1055, 1146,
+1159`, `base.sl:100-109, 157-161, 181-182`, `release.sh:17`,
+`bootstrap.sh:23, 26`, the `ffi_core.ml`, `ffi_templates.txt`, and
+`prelude.sl` lines in 2.5, the self/README lines cited, and the
+quotations from §6, §15, §27, §29, §31, §33, §42, §45, §61, §62, §67,
+and §72.
+
+Points I am unsure of:
+
+- `mini/elab.sl:1241` is cited for `Fails`; the type starts at 1239,
+  and 1241 is its constructor, which names `ElabProgram`.
+- Whether the theorem shapes in 2.6 and decision 5 also need to range
+  over evaluation orders (rough edge 1), as they range over `slot-eq`
+  and world answers; nothing here settles it.

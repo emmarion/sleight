@@ -248,8 +248,8 @@ both.
   `proto/review4/01_head_name_err.sl`). A gensym number can reach the output (`intern-nat`, §65),
   so elaboration order is observable; that is a question about the
   elaboration spec, separate from runtime evaluation order.
-  `native-compute` results are fieldless constructors (§72), so sharing
-  plays no part.
+  `native-compute` results are constructors with no non-erased field
+  (§72), so sharing plays no part.
 - `Measure` (`lib/prelude.sl:1386`) answers wall and CPU time, words
   allocated, and GC counts (`MkUsage`, `lib/prelude.sl:1331-1335`),
   "totals since the Program began", so a program can observe cost, and
@@ -452,8 +452,11 @@ Values as words:
   `slot-eq` oracle. Pros: no confluence proof, a total step function,
   and the compiler theorem is lock-step. Cons: compilers may not reorder
   without proof. The reference's `let ... and` for `values` meets it
-  only through OCaml 4.14.1's observed, unpromised order; slc's emitter
-  would need checking. As stated, O1 puts the hoisted `(h n)` before the
+  only through OCaml 4.14.1's observed, unpromised order. slc's emitter
+  writes `order2.sl`'s `values` as nested `let ... in` in written
+  order, and the head `(pick)` before the hoisted `(h n)`
+  (`proto/review6/02_values_order_slc.sl`, slc's OCaml output read
+  [compiled]). As stated, O1 puts the hoisted `(h n)` before the
   head `(pick)` in `((pick) (h n))`, which is the opposite of what the
   reference emits (2.2) and of the run-position reading of §6 and §27;
   "a form head, then the §15 bindings" is the variant that matches
@@ -544,7 +547,16 @@ Values as words:
   needs owner wording. A depth bound does not bound the heap, so a
   compile-time heap exhaustion stays host-dependent unless C3's heap
   bound is added. `native-compute` (§72) stays host-dependent: its
-  answer is treated as an oracle, or excluded. 01 (decision 7)
+  answer is treated as an oracle, or excluded. Neither implementation
+  is yet such a function of the bound in its message: slc's interpreter
+  does not stop at an exhausted bound, since "out of fuel" is an error
+  value and the code after it still runs (`self/elab-main.sl:185-187`,
+  `CLet` at `:192-197`). Under `--eval-fuel 20`,
+  `proto/review3/head_arg_order.sl`, whose head form alone exhausts the
+  bound (`proto/review6/02_fuel_head_alone.sl`, the same with a small
+  array, gives "out of fuel" on both), is refused by slc with a stack
+  overflow in its argument's run and by the reference with "out of
+  fuel" [compiled]. 01 (decision 7)
   recommends the alternative: a spec machine that never crashes, and a
   third compiler outcome, `Crashed`.
 
@@ -665,8 +677,9 @@ option, with the spec's own store a heap (as 01's Σ is).
    bindings placed before one statement.
 4. **`Nat`'s word under models.** §33's "the word of the `Nat` of its
    position" presupposes that `Nat` k has one word. That holds for an
-   immediate extern `Nat`, not obviously for the model's `Succ` blocks;
-   §33 states the requirement only "With externs on". §35's "with
+   immediate extern `Nat`, not obviously for the model's `Succ` blocks.
+   §33 states the representation itself with no condition, and only the
+   FFI's obligation to meet it "With externs on". §35's "with
    externs too, `(slot-of k)` is tag slot `k`" makes acceptance depend
    on the extern mode (tagslot.sl), apparently by design. So §42's
    "running the models instead of the implementations must give a
@@ -727,7 +740,10 @@ option, with the spec's own store a heap (as 01's Σ is).
   argument form that crashes allocating a huge array: under
   `--eval-fuel 20` the reference reports "out of fuel", and without it
   the array crash, so the head runs first. slc's interpreter overflows
-  its stack on that file either way, so it says nothing there.
+  its stack on that file either way, and since its "out of fuel" does
+  not stop the run (C4), the overflow does not tell the two orders
+  apart; nor does it on `proto/review3/00_arg_head_order.sl`, the same
+  test with head and argument swapped.
 - That GC reuse of addresses is unobservable because a slot word keeps
   its block alive. This is a reading of OCaml's runtime, not checked.
 - CakeML's top-level theorem allowing early termination on resource
