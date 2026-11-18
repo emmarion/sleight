@@ -45,16 +45,14 @@ same exit code, so they are not distinguished further.
   `prove-literal-lt` refuse such a binder as not a constant
   (`10_literal_macros.sl`).
 - A nullary `(Zero)` bound after the error is `Settled`, but it seems
-  not to hold the value `(Zero)`. A run-position
-  `let` whose right-hand side needed no hoisted temporaries gets its
-  binders set to the erased token (`env-set-tokens`), and slc's
-  discriminant read takes a token as the word 0 (`self/eval.sl:51`). So
-  a `Nat` binder reads as 0, a `String` binder as `(SNil)`, and a
-  binder of a tagged enum as the enum's first fieldless constructor,
-  whatever the right-hand side was. `(Zero)` reads as `0` only by
-  coincidence. Other
-  kinds of type were not surveyed; one single-constructor case is in
-  the review notes.
+  not to hold the value `(Zero)`. A run-position `let` whose right-hand
+  side needed no hoisted temporaries gets its binders set to the erased
+  token (`env-set-tokens`), and slc's discriminant read takes a token as
+  the word 0 (`self/eval.sl:51`). So a `Nat` binder reads as 0, a
+  `String` binder as `(SNil)`, and a binder of a tagged enum as the
+  enum's first fieldless constructor, whatever the right-hand side was.
+  `(Zero)` reads as `0` only by coincidence. Other kinds of type were
+  not surveyed; one single-constructor case is in the review notes.
 - That gives false messages: after an error, `(let ((many x)) (BFalse))`
   followed by `(comptime-match many x (BFalse))` reports "expected
   `BFalse`, got `(BTrue)`"; `x` bound to `3`, to `(Succ y)`, to a call,
@@ -68,17 +66,17 @@ same exit code, so they are not distinguished further.
   reports that the scrutinee is not `Settled`, which DESIGN.md §27-§29
   would, in this agent's reading, make it. The string binders tested,
   of a literal and of a `Settled` string variable, are not left
-  `Hypothetical`: they hold the token too (`comptime-match` reads it as
-  `(SNil)`), but the check on the message of `compile-warn` and
-  `compile-error` words
-  any stored value that is not a string as "is `Hypothetical`"
-  (`elab.sl:2585-2587`; `14_string_msg.sl`,
+  `Hypothetical`: they hold the token too, which `comptime-match` reads
+  as `(SNil)`, but the check on the message of `compile-warn` and
+  `compile-error` words any stored value that is not a string as "is
+  `Hypothetical`" (`elab.sl:2585-2587`; `14_string_msg.sl`,
   `proto/review7/10_string_token.sl`).
 - No test changed acceptance: slc exits 1 once its message list holds
   an error (`self/main.sl:139-143`), and every test exits 1 on both
   implementations. The defects, if they are taken as such, seem to be
   in the second and later messages only; §4 says how far that was
-  checked. BUGS.md 25 records them.
+  checked. BUGS.md 25 records the defect, with some of these cases, and
+  points here for the rest.
 
 ## 2. The traced code path
 
@@ -113,7 +111,12 @@ compiling or running anything (`proto/review7/10_native.sl`: a later
 value" and "got `_`"), and a file's final expression is not run by
 `env-run-final` (`:3393`). Read only: `:2537`, `:2560`, and `:2565`
 stop elaborating a `settled-ty-apply` or `settled-val-apply` once
-failed.
+failed. `settled-type`, `settled-erase`, `settled-mult`, and
+`settled-value` are elaborated as primitive calls
+(`elab-main.sl:1075-1081`, `elab-prim-call` at `:2482-2513`), so the
+gate at `:739` keeps them from running in run position: in
+`proto/review7/10_settled_value.sl`, whose handle is bound before the
+error, the binder of a `settled-value` after it holds the token.
 
 Two more places, not among 01's four, make their own `env-failed` test
 before running a binder's code with `env-run-let`, and decide what the
@@ -143,12 +146,21 @@ and a non-erased entry (`mult-is-many` holds for `many` and `unique`,
 `core.sl:187-188`) holds a `BToken`. In
 `proto/review7/10_macro_prims.sl` it answers `RHypothetical` for a
 `let` binder after the error, where the reference without the error
-answers `RSettled`; `tests/macro_resolve_after_error_bad.sl` reaches it
-too, and slc's second message there, the macro's own "not settled", is
-false in the same way. `comptime-match` and `show-typed` have no such
-test, and `message-of` (`elab.sl:2578-2587`) words a token as
-`Hypothetical` without one. This suggests the token is meant as a "not
-run" marker, but that was not confirmed.
+answers `RSettled`; `tests/macro_resolve_after_error_bad.sl`, run
+after `std/macro.sl` as its header asks, reaches it too, and slc's
+second message there, the macro's own "not settled", is false in the
+same way. The prelude's `unary` and `prove-literal-lt` read a name
+through `resolve` (`constant`, `lib/prelude.sl:2494-2499`), so after
+the error they refuse a binder bound after it with their usage message
+("takes two constants of type `Nat` or `Char`" and its `unary` form),
+while a literal or a binder bound before the error still serves
+(`proto/review7/10_literal_macros.sl`). `comptime-match` and
+`show-typed` have no such test, and `message-of` (`elab.sl:2578-2587`)
+words a token as `Hypothetical` without one. This suggests the token is
+meant as a "not run" marker, but that was not confirmed. ASSUMPTIONS.md
+32, a session's choice, has the token stand in only where elaboration
+needs a `Settled` for an erased entry; its use for non-erased binders
+after an error is outside that.
 
 **Forwarding does not repair it.** After `env-set-tokens`,
 `forward-binders` (`elab.sl:999-1004`) calls `forward-binder`
@@ -176,9 +188,16 @@ entry `settled-ref` is `None` and `show-typed` prints `` `?` ``, after
 the separate "needs a Settled scrutinee" error at `:4758`, so such a
 `comptime-match` prints two errors. When the read passes, the pattern
 is then forced onto the scrutinee; in 03 that equates `x`, whose rule
-is `(BFalse)`, with `(BTrue)`, and `elab.sl:4790-4791` drops the
-resulting "internal: the verified value contradicts the facts in
-force" message once failed, so 03 prints nothing (read, not tested).
+is `(BFalse)`, with `(BTrue)`, and once failed `elab.sl:4790-4791`
+records nothing for the contradiction, where it would otherwise record
+an error beginning "internal: the verified value contradicts the facts
+in force", so 03 prints nothing. `proto/review7/10_contra_dropped.sl`
+shows this path on `Maybe`: after the error, a `comptime-match` with
+pattern `(None t1)` on an `x1` whose rule is `(Some (Nat) 4)` prints
+nothing, and a later `dump-context` shows `t1` `Hypothetical` with no
+rule, where the same match on an `x2` that is `(None (Nat))` leaves
+`t2` `Settled` and `is (Nat)`. Its report also gives `x1` as
+`is (Some (Nat) 4)` and `= (None _)`.
 
 **Why `(Zero)` and not `(Succ (Zero))`.** `(Zero)` has no arguments, so
 the constructor application (`elab-main.sl:1141-1158`) hoists nothing,
@@ -211,10 +230,30 @@ functions are `Settled`: `resolve` answers `RSettled` for one
 `Hypothetical` because its argument `(Zero)` is hoisted, as in
 `(Succ (Zero))` above; with a variable argument the binder of a call
 gets the token (`08_call_var.sl`, whose `f` is bound before the
-error). Reading a value that was `Settled` before the
-error is unaffected: `comptime-match` on it, and on the fields that
-binds, reads the real value (`16_pre_error_field.sl`), and `compile-error
-s` with such an `s` prints its text.
+error). A macro bound after the error holds the token too and is
+refused as not constant-known (`proto/review2/after_error_macro.sl`),
+as `m2` is in 15. A direct read of an entry that was `Settled` before
+the error is unaffected: `comptime-match` on it, and on the fields it
+binds, reads the real value (`16_pre_error_field.sl`),
+`(compile-error s)` with such an `s` prints its text, and `resolve`
+answers `RSettled` for it (`10_macro_prims.sl`). Code that would
+compute from such an entry is not run: `x` bound to such a `y` holds
+the token (06).
+
+**What is not reported.** Besides `elab.sl:4791`, some `env-failed`
+tests drop a message once failed. `env-fail` (`core.sl:2802-2806`)
+drops a new error whose text repeats one already recorded or contains
+`<error: ` (read only). `env-with-heap` (`core.sl:2815-2819`) records
+no "compile-time evaluation failed" error, and in
+`proto/review7/10_macro_crash.sl`, under `--eval-fuel 100`, a pre-error
+macro whose run runs out of fuel after the error is reported by
+nothing, where without the error slc reports "compile-time evaluation
+failed: out of fuel". The "unnecessary `(predates _)`" warning
+(`unneeded`, `elab.sl:4344-4354`) and the "`;! suppress warn` ...
+silenced nothing" warning (`end-file`, `elab-main.sl:3280-3285`) are
+skipped (`proto/review7/10_unreported.sl`), and so, read only, are the
+`--warn-unused` warnings (`report-unused`, `:3343-3349`) and the
+closing of the goal (`main.sl:140`).
 
 ## 3. Test matrix
 

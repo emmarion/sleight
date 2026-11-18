@@ -80,8 +80,7 @@ of these compilers and run them; they do not build the compilers.
   `array_place_imm`. Both use `Array.unsafe_set (cast a : int array)`.
   `:315-317` is the speed comment, `:318` is `blit_words` (that is,
   `caml_blit_bytes`), `:319` is `array_blit_imm`, and `:320-321` are its
-  aliases. The brief's ranges `223-241` and `315-320` contain all of
-  these but `:321`.
+  aliases.
 - [C] `lib/ffi_templates.txt:51-52` are the `array-place-imm` and
   `array-swap-imm` templates, also through `int array`.
   `lib/ffi_templates.ml` has no `imm` text.

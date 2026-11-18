@@ -166,9 +166,11 @@ The file behind 3 was not saved. Reproduce each from the text here.
    applied and extended at that packed level when two `Predates` proofs
    and a counter are packed with it too
    (`proto/review4/06_packed_counter.sl`). A closure extended at a newly
-   minted level is accepted, but on 06's reading of §18 the stepper
-   cannot then apply it, and a packed `Predates` cannot reach the new
-   level.
+   minted level is accepted, but the stepper cannot then apply it, and a
+   packed `Predates` cannot reach the new level: both are refused
+   (`proto/stepper/ho_exist_use_bad.sl`,
+   `proto/review3/06_packed_predates_bad.sl`), which 06 reads as
+   following from §18.
 2. **A function cannot iterate `Program` steps.** The function `run-all :
    (subterm unique (Program L) p) (World) -> ...` matches `Continue _ k`,
    calls `(k w)`, and recurses on the result `p2`. It is refused:
