@@ -1,6 +1,7 @@
 (* Appended to slc's output for tests/cell_imm.sl in place of its final line; build_slc_cells.sh fills in
-   SWAP_IN, WRITE_IN and FRESH_IN with the emitted names. Drives the emitted (imm o n) stores on cells kept
-   old, beside pointer-holding blocks, under minor, major and compacting collections. *)
+   SWAP_IN, WRITE_IN and FRESH_IN with the emitted names. Drives the emitted (imm o n) stores on cells,
+   most kept old (a quarter of the operations replace one), beside pointer-holding blocks, under minor,
+   major and compacting collections. *)
 let swap_in = SWAP_IN and write_in = WRITE_IN and fresh_in = FRESH_IN
 let n = 512
 let rng = ref 0x1234567

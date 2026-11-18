@@ -22,18 +22,16 @@ references.
   abstract relation `P` in place of `Prov`, given D2, D3, and the
   diagonal's D1 instance as hypotheses, with G taken to be ¬`P ⌜G⌝`
   itself, the derivation's internal steps compile (`g2_defs.sl` with
-  `g2_step.sl`); reading G
-  that way puts conditions on its code (§2.4 B). Its final step to ⊥
-  is accepted at the top level,
-  but only with consistency postulated by a `def-prim` that gives an
-  element of every type, for a relation that holds of every code
+  `g2_step.sl`); reading G that way puts conditions on its code
+  (§2.4 B). Its final step to ⊥ is accepted at the top level, but only
+  with consistency postulated by a `def-prim` that gives an element of
+  every type, for a relation that holds of every code
   (`review7/09_g2_final.sl`), which shows how the step elaborates and
   nothing more. So 03 and 05 may claim Gödel-based limits only
   conditionally on the missing step (§4 gives the wording they carry,
-  revised there since). §9 does
-  not force the diagonal sentence to be built from a relational `Sub`:
-  a macro in a goal type can splice in the text of its own file
-  (`r_self_goal.sl`, compiled).
+  revised there since). §9 does not force the diagonal sentence to be
+  built from a relational `Sub`: a macro in a goal type can splice in
+  the text of its own file (`r_self_goal.sl`, compiled).
 - **What the cheap diagonal already gives.** 03's `read-file` diagonal
   gives two things without Gödel, under the premises of §3.4 and §2.5:
   no faithful, hypothesis-free, non-erased `compile`; and no uniform H
@@ -632,11 +630,12 @@ the conditions.
   internal steps ((d) in §4) were tried only with D2, D3, and one D1
   instance as hypotheses about an abstract `P`, and with G read as
   ¬`P g`, which needs `g` to be a code of that type, such as the text
-  of the file that states G, and D1 to hold for a code that mixes such
-  a code with structural ones (`g2_step.sl`, §2.4 B); its final step
-  was accepted only with consistency postulated by a `def-prim` that
-  gives an element of every type (`review7/09_g2_final.sl`). For a relational
-  diagonal, the two directions of G ↔ ¬`Prov ⌜G⌝` were not tried.
+  of the file that states G, and D1 and D2 to hold for codes that mix
+  such a code with structural ones (`g2_step.sl`, §2.4 B); its final
+  step was accepted only with consistency postulated by a `def-prim`
+  that gives an element of every type (`review7/09_g2_final.sl`). For a
+  relational diagonal, the two directions of G ↔ ¬`Prov ⌜G⌝` were not
+  tried.
   Whether D2 holds given §71's one goal per unit and the global gensym
   and literal state is open.
 - Route C's two lemmas, and the claim that normalization implies
@@ -927,3 +926,96 @@ Unsure:
   abstract form" and that the last step "is a top-level application",
   which is now compiled only with Con postulated; neither file is this
   reviewer's.
+
+## Round 8 review notes
+
+An eighth reviewer read REVIEW.md, the brief, CLAUDE.md, all of
+DESIGN.md, all of SOUNDNESS.md, README.md's "Logic and strength", 05
+§2.2 and §4.3's Gödel paragraph as they now stand, and 00-summary key
+finding 20. It re-ran, on the reference and `_build/release/slc`:
+`--goal proved` on `g2_defs.sl` with `g2_step.sl` and with
+`g2_fixed.sl` (PASS); `g2_direct_bad.sl` (refused, the quoted message
+first); `review7/09_g2_cycle.sl` (accepted) and round 7's control with
+`(Bot)` for the inner `g` (refused, "not refuted"); `09_g2_final.sl`
+under `--no-prelude` after `09_g2_pre.sl` and `g2_defs.sl` (accepted),
+with round 7's variants that apply its closure to a proof of
+`(Triv (Bot))` and pass a Con for `(Pv (Bot))` (refused, type
+mismatch); `hyp_fixed.sl`, `hyp_packed_bad.sl`, `hyp_factory.sl`, and
+`r_result_closure_bad.sl` (as stated); `--goal proved` on `sys.sl` with
+`sigma1.sl`, `con.sl`, and `top_mp.sl`, on `r_induction_rule.sl`, and
+on `std/macro.sl r_self_goal.sl` (PASS; `r_self_goal.sl` alone,
+"unbound name `str-raw`"); `call_in_type_bad.sl` (refused, citing §9);
+`05_stripped_absurd_final.sl` under `--no-prelude` ("absurd code
+reached", reference and `slc --interpret`) and `--goal proved` with
+`--no-prelude` (FAIL, both); `03_detour.sl` under the reference,
+`--extract` to a scratch path, `--build`, `slc --interpret`, and `slc
+--build` (each `(BFalse)`, exit 0, the layout warning at 37:2, the
+built programs silent on standard error); and the byte comparisons
+(909-byte prefix, 969-byte literal). `con-to-g` was checked again step
+by step: with `p : P g`, `d2` on the D1 instance and `p` gives
+`P (Imp (Pv g) Bot)`, `d3` gives `P (Pv g)`, `d2` on those gives
+`P Bot`, and Con refutes it.
+
+1. §1 said the final step to ⊥ compiles "with consistency
+   postulated", without round 7's caveat, which coordinator note 2
+   added to §2.4 B only: the `def-prim` gives an element of every type,
+   and the relation holds of every code, so Con is false for it. §1
+   and §5 now carry it (also raised by 03 and 05's round-8 reviewer).
+2. §1's "conditionally on that step" now followed the sentence about
+   the final step, which it does not mean; it means the missing
+   internal `Prov` step. Fixed.
+3. §1 ended its third item with "The `Prov` route also needs only
+   first-order implications", against §2.4 B since round 6: ⊢ Con → G
+   has a closure as its antecedent, and `con-to-g` takes and builds
+   closures. Reworded.
+4. §1's Kleene sentence dropped the condition, added to §2.4 in round
+   6, that the halting relation be for a machine whose halting is
+   undecidable. Added.
+5. §1, §2.4 B, and §4's wording for 05 §4.3 and §9 wrote ¬`Prov ⌜G⌝`
+   for the abstract relation `P` (raised by 03 and 05's round-8
+   reviewer). Now ¬`P ⌜G⌝`, with `P` named in place of `Prov`.
+6. §2.4 B said that `g2_step.sl` proves ⊢ Con → G. The proof is
+   `con-to-g` in `g2_defs.sl`; `g2_step.sl` states it as its goal. §1
+   cited `g2_step.sl` alone the same way. Both fixed. §1's "meets D1 to
+   D3 inside Sleight" also now says that D2 and D3 are the ones proved
+   inside Sleight, since D1 is meta-level (§2.4 B; §4's (b)).
+7. (gap) §2.4 B said that reading G as ¬`P g` needs `g` to code ¬`P g`
+   and stopped there. On this reviewer's reading it also takes D1's
+   instance `P (Imp g (Imp (Pv g) Bot))` to code one formula two ways:
+   its antecedent and consequent both stand for ¬`P g`, the first as
+   `g`, which `p : P g` must match, the second as `Imp (Pv g) Bot`,
+   which `d2` splits. A coding with one code per formula and `Imp` for
+   implication would need `g` = `Imp (Pv g) Bot`, which
+   `09_g2_cycle.sl` shows is refuted. So D1, and D2, would have to hold
+   for codes that mix a text code with structural ones; unexamined.
+   Added to §2.4 B and §5, hedged; 05 §4.3 now says the same. Also, "no
+   `g` equals a term that contains `g`" is now "a larger term", since
+   §7 makes `x` = `x` a no-op.
+8. (untested) §2.4 B's "The same step inside a function body is
+   refused by both" rested on a scratch file of round 7's. New
+   `proto/review8/09_g2_body_bad.sl`, run under `--no-prelude` after
+   `09_g2_pre.sl`, `g2_defs.sl`, and `09_g2_final.sl`, is refused by
+   both with "`N2` was not in scope when level `(level-of fin)` was
+   minted". Cited.
+9. §3.3 said that `diagonal.sl` "is accepted"; alone it is refused
+   ("unbound name `macro-fail`"), and it needs `std/macro.sl` first,
+   as `03_detour.sl` does. Fixed.
+
+Checked and unchanged: the DESIGN.md quotes of §9, §18, §20, §27,
+§29, §31, §45, §62, §65, and §71; the SOUNDNESS.md quotes of parts 1,
+3, 5, 6, and 7 and its lines 45, 115, 195, and 289; the README.md
+quote; the prelude lines of §2.1 and §2.3; `diagonal.sl:8-15` and
+`std/macro.sl:5-36`; MANUAL.md's refusal of `--no-prelude` with `--goal
+proved`, its `--eval-fuel` defaults, and 05 §2.2's list; 03 F6's two
+quoted sentences.
+
+Unsure:
+
+- Whether a `Prov` defined through a decoding of codes, so that
+  `Prov c` depends only on the formula `c` decodes to, would meet D1
+  for mixed codes was not examined; decoding a `Txt` would mean
+  elaborating its text, macros and `read-file` included, inside the
+  formalization.
+- 00-summary key finding 20 says a text code "might be" a code of
+  ¬`P g`, which item 7 leaves standing but narrows; its §6 already
+  names D2 for mixed codes, not D1. Not this reviewer's file.
