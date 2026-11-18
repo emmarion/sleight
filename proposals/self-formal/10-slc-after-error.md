@@ -62,10 +62,11 @@ same exit code, so they are not distinguished further.
   `(comptime-match many x (Zero))` on `x` bound to `3`, pass silently,
   and some messages are dropped once an error is recorded, among them
   the error for a pre-error macro whose run crashes after the error
-  (§2, "What is not reported"). Where the binder is left `Hypothetical` (a right-hand
-  side that needed temporaries, or the fields of a `let-match`), slc
-  reports that the scrutinee is not `Settled`, which DESIGN.md §27-§29
-  would, in this agent's reading, make it. The string binders tested,
+  (§2, "What is not reported"). Where the binder is left
+  `Hypothetical` (a right-hand side that needed temporaries, or the
+  fields of a `let-match`), slc reports that the scrutinee is not
+  `Settled`, which DESIGN.md §27-§29 would, in this agent's reading,
+  make it. The string binders tested,
   of a literal and of a `Settled` string variable, are not left
   `Hypothetical`: they hold the token too, which `comptime-match` reads
   as `(SNil)`, but the check on the message of `compile-warn` and
@@ -244,12 +245,13 @@ the token (06).
 **What is not reported.** Besides `elab.sl:4791`, some `env-failed`
 tests drop a message once failed. `env-fail` (`core.sl:2802-2806`)
 drops a new error whose text repeats one already recorded or contains
-`<error: ` (read only). `env-with-heap` (`core.sl:2815-2819`) records
-no "compile-time evaluation failed" error, and in
-`proto/review7/10_macro_crash.sl`, under `--eval-fuel 100`, a pre-error
-macro whose run runs out of fuel after the error is reported by
-nothing, where without the error slc reports "compile-time evaluation
-failed: out of fuel". The "unnecessary `(predates _)`" warning
+`<error: ` (read only). `env-with-heap` (`core.sl:2815-2819`), the
+only place that builds a "compile-time evaluation failed" error,
+records none. So in `proto/review7/10_macro_crash.sl`, under
+`--eval-fuel 100`, a pre-error macro that runs out of fuel when
+expanded after the error is reported by nothing; without the error,
+that message is the only one slc gives for the crash. The "unnecessary
+`(predates _)`" warning
 (`unneeded`, `elab.sl:4344-4354`) and the "`;! suppress warn` ...
 silenced nothing" warning (`end-file`, `elab-main.sl:3280-3285`) are
 skipped (`proto/review7/10_unreported.sl`), and so, read only, are the
