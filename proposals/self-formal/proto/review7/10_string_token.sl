@@ -1,0 +1,7 @@
+(let ((many s0)) "abc")
+(compile-error "first")
+(let ((many s)) "abc")
+(comptime-match many s (SCons c r))
+(let ((many t)) s0)
+(comptime-match many t (SCons c2 r2))
+(compile-warn t)
