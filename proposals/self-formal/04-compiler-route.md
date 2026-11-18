@@ -890,7 +890,8 @@ Evidence files: `proposals/self-formal/proto/04-compiler-route/`
 and `proto/review2/04-tc-direct.ml` from the second review, and
 `proto/review5/04_head_arg_compiled.sl`, `04_effect_vs_crash.sl`, and
 `04_barrier.ml` from the fifth, and, from 02, `proto/dyn/head_crash_arg_write.sl`,
-`head_write_arg_crash.sl`, and `proto/review7/02_deep_runpos.sl`. Compile them with
+`head_write_arg_crash.sl`, and `crash_probe.sl`, `proto/review7/02_deep_runpos.sl`
+and `02_fuel_runpos.sl`, and `proto/review8/02_append_share.sl`. Compile them with
 an slc built by `self/release.sh` and with `ocamlfind ocamlopt` (4.14.1).
 
 ## Review notes
