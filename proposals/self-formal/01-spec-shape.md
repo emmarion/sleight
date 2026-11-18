@@ -1239,9 +1239,10 @@ Unsure, not changed:
 2. §1 said an out-of-fuel crash at compile time rejects in both
    implementations, as tested. On a host stack overflow both die
    instead (`proto/review7/02_deep_runpos.sl`; 02 r7.3, r7.4; BUGS.md
-   27), and slc's interpreter can reach one after running out
+   27), and slc's interpreter seems to reach one after running out
    (`proto/review7/02_fuel_runpos.sl` under `--eval-fuel 20`, which the
-   reference refuses with "out of fuel" and slc dies on). Narrowed.
+   reference refuses with "out of fuel" and slc dies on; the order
+   inside that run was not observed, r8.3). Narrowed.
    Raised by the round-7 carry-over check of 00-summary; this note's
    first wording said both die on `02_fuel_runpos.sl`, which round 8
    corrected (r8).
