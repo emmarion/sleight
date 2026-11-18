@@ -115,7 +115,7 @@ Each item is the tracks' recommendation, not a decision.
    `(str-append x "")` and `(str-append "" x)`, is `ESome` in native and `--byte` builds of both,
    since the FFI's `append` returns the non-empty argument itself (`lib/ffi_core.ml:146-147`), and
    `ENone` interpreted; the prelude's model rebuilds the string, so a spec running it gives `ESome`
-   under no oracle (02 N1, decision 4, r8.1; 04 r8).
+   under no oracle (02 N1, decision 4, r8.1; 04 r8.2).
 6. **Evaluation order.** DESIGN.md fixes eagerness (§31), inner forms first in run position (§27),
    there, with §6, a head that is a form before the arguments (a reading), and, as 02 reads it,
    world effects through the unique `World`; in general it does not fix body statements, sibling
