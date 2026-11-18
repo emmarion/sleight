@@ -1,15 +1,18 @@
-# Round-7 review brief
+# Round-8 review brief
 
 You are a fresh, independent adversarial reviewer. The files under review
 have already been through several review passes, recorded in sections at
 their ends ("Review notes", "Second" to "Fifth review notes", "Round 6
-review notes", and "Coordinator notes"). Per-file error counts per round
-fell roughly 9–27, 8–22, 6–13, 4–9, 3–9, and then 3–14 in round 6, the
-first full pass on 08–10: more errors very likely remain. Your job is to
-find what all earlier reviewers missed, AND errors introduced by later
-edits (edits create new mistakes, break sentences, leave a body
-contradicting its notes or a Coordinator note, or leave a note claiming a
-fix the body doesn't reflect).
+review notes", "Round 7 review notes", and "Coordinator notes" and "Round
+7 coordinator notes"). Per-file error counts per round fell roughly 9–27,
+8–22, 6–13, 4–9, 3–9, then 3–14 in round 6 and 4–13 in round 7, which
+also added new results: more errors very likely remain, and they cluster
+in text written or rewritten most recently. Your job is to find what all
+earlier reviewers missed, AND errors introduced by later edits (edits
+create new mistakes, break sentences, leave a body contradicting its notes
+or a coordinator note, or leave a note claiming a fix the body doesn't
+reflect). Check every change that the round-7 notes and coordinator notes
+list first, then the rest.
 
 Before anything: read the original brief
 proposals/self-formal/agent-briefs/BRIEF.md
@@ -41,18 +44,21 @@ For every claim, ask "where exactly does this come from?":
 Error clusters seen so far: inferences built on correct test results;
 hedges drifting stronger or weaker during edits; false "DESIGN.md does not
 say X"; untested claims presented as tested; condensations losing a
-condition.
+condition; general "cannot" or "only" claims drawn from one refusal test;
+counts of implementations or modes that are off; run-to-run counts given
+as fixed.
 
-FIX each error in place. Append a section "## Round 7 review notes"
+FIX each error in place. Append a section "## Round 8 review notes"
 (numbered: what was wrong, evidence, what changed; then points you are
 unsure of). Edit only your assigned files plus new small source tests under
-/home/user/sleight/proposals/self-formal/proto/review7/, named with your
+/home/user/sleight/proposals/self-formal/proto/review8/, named with your
 files' numbers as a prefix. Scratch outputs and binaries go in
-/tmp/claude-0/-home-user-sleight/dca6105d-73d0-5c03-b5b8-1c0e2e358cac/scratchpad/r7-<your-files>/,
-never under proposals/. Other agents work in the same checkout at the same
-time: do not commit, and run no git command that changes state (checkout,
-reset, stash, restore, add). Install nothing and write nothing outside
-your assigned files, `proto/review7/`, and your scratch directory: no
-`make install`, `opam`, `ocamlfind install`, or `apt`. Reply with a
-≤12-line summary: error count per file, the most serious ones, and your
-view of trustworthiness.
+/tmp/claude-0/-home-user-sleight/dca6105d-73d0-5c03-b5b8-1c0e2e358cac/scratchpad/r8-<your-files>/,
+never under proposals/, and never anywhere else (no stray files at `/` or
+in the repository root; check your redirections). Other agents work in the
+same checkout at the same time: do not commit, and run no git command that
+changes state (checkout, reset, stash, restore, add). Install nothing and
+write nothing outside your assigned files, `proto/review8/`, and your
+scratch directory: no `make install`, `opam`, `ocamlfind install`, `apt`,
+or configure scripts. Reply with a ≤12-line summary: error count per file,
+the most serious ones, and your view of trustworthiness.
