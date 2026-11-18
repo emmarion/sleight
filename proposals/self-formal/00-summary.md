@@ -114,7 +114,7 @@ Each item is the tracks' recommendation, not a decision.
    output before the next argument, then a head that is a name, then the arguments left to right
    (`proto/review3/gensym_*.sl`, `review4/01_head_name_err.sl`, `review6/01_splice_output.sl`;
    special forms' operands unchecked; 01 §3.6, r3.1, r4.2), and a gensym number can decide
-   acceptance (`proto/review7/01_order_accept.sl`, `01_order_refuse.sl`; 01 r7). At runtime, the
+   acceptance (`proto/review7/01_order_accept.sl`, `01_order_refuse.sl`; 01 §3.6). At runtime, the
    reference (interpreted, with and without externs, and built natively and with `--byte`),
    `slc --interpret`, and slc's native and `--byte` builds all run a head form before an argument
    form in a body in two tests, one call shape each, that set a world write against a stack
