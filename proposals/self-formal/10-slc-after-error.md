@@ -56,19 +56,26 @@ same exit code, so they are not distinguished further.
   `(comptime-match many x (BTrue))` on that `BFalse` binder, and
   `(comptime-match many x (Zero))` on `x` bound to `3`, pass silently.
   Where the binder is left `Hypothetical` (a right-hand side that needed
-  temporaries; also a string literal, for a reason not traced), slc
-  reports that the scrutinee or message is not `Settled`, which
-  DESIGN.md §27-§29 would, in this agent's reading, make it.
-- No test changed acceptance: the first error already makes slc exit 1
-  (`self/main.sl:139-143`), and every test exits 1 on both
-  implementations. The defects, if they are taken as such, are in the
-  second and later messages only. BUGS.md 25 records them.
+  temporaries, or the fields of a `let-match`), slc reports that the
+  scrutinee is not `Settled`, which DESIGN.md §27-§29 would, in this
+  agent's reading, make it. A string binder is not left `Hypothetical`:
+  it holds the token too (`comptime-match` reads it as `(SNil)`), but
+  the check on the message of `compile-warn` and `compile-error` words
+  any stored value that is not a string as "is `Hypothetical`"
+  (`elab.sl:2585-2587`; `14_string_msg.sl`,
+  `proto/review7/10_string_token.sl`).
+- No test changed acceptance: slc exits 1 once its message list holds
+  an error (`self/main.sl:139-143`), and every test exits 1 on both
+  implementations. The defects, if they are taken as such, seem to be
+  in the second and later messages only; §4 says how far that was
+  checked. BUGS.md 25 records them.
 
 ## 2. The traced code path
 
 All under `self/`. "Failed" means `env-failed` (`core.sl:2533`), which
-is true once any `SaidError` is in the environment's message list; the
-list only grows, so once failed, always failed.
+is true once any `SaidError` is in the environment's message list. No
+writer of the list was seen to drop a `SaidError` (§4 says which were
+read), so once failed, always failed, as far as was checked.
 
 **The gates.** Four places test `(env-run-pos …)` together with
 `(not $ env-failed …)` before running code at compile time, as 01
@@ -81,15 +88,26 @@ says:
 - `elab-main.sl:545`, `run-form`: the end of `elab-expr-demand`
   (called at `:1168`) runs a whole run-position expression and turns
   its code into constants. When failed, it returns the code unrun.
-- `elab-main.sl:739`, in `call-returns`: a call, primitive or `world-do`
-  in run position is run and its results set `Settled`. When failed,
-  the call code is returned unrun.
+- `elab-main.sl:739`, in `call-returns`: a call, a primitive, or a
+  `world-do` in run position is run and its results set `Settled`. When
+  failed, the call code is returned unrun.
 - `elab-main.sl:2152`, `let-match`: the `run` flag; when false the
   statement takes the hypothetical path (`:2168` on), so its fields are
-  `Hypothetical`.
+  `Hypothetical` (`proto/review7/10_letmatch.sl`: a later
+  `comptime-match` on a field says it needs a `Settled` scrutinee).
 
-Two more places, not listed in 01, decide what a binder holds when the
-gates have refused to run:
+Two tests of `env-failed` alone also keep code from running at compile
+time: `native-compute` (`elab-main.sl:869`) gives error results without
+compiling or running anything (`proto/review7/10_native.sl`: a later
+`comptime-match` on its binder reports "scrutinee is not a datatype
+value" and "got `_`"), and a file's final expression is not run by
+`env-run-final` (`:3393`). Read only: `:2537`, `:2560`, and `:2565`
+stop elaborating a `settled-ty-apply` or `settled-val-apply` once
+failed.
+
+Two more places, not among 01's four, make their own `env-failed` test
+before running a binder's code with `env-run-let`, and decide what the
+binder holds when they do not run it:
 
 - `elab-main.sl:2209-2216`, `elab-let`. If the right-hand side's
   context `ctx3` is non-empty (some temporary was left unrun by
@@ -98,18 +116,29 @@ gates have refused to run:
   environment is failed, the binders are set by `env-set-tokens`
   (`eval.sl:1640-1643`), which gives each a `Settled` state holding a
   fresh `BToken` block (`set-state-closed`, `core.sl:2439`;
-  `heap-set-closed`, `core.sl:2433-2437`).
+  `heap-set-closed`, `core.sl:2433-2437`). The same branch (`:2216`)
+  is taken, failed or not, by a `let` with no non-erased binder
+  (`pos-mult expect` is then `Erased`), whose results DESIGN.md §27
+  makes "`Settled` with the token of §5".
 - `elab-main.sl:672-678`, `open-bind`, does much the same for the
-  anonymous entry of an `open`, with one difference read but not
-  tested: there a non-empty context (`:675`) also gives the token,
-  failed or not, where `elab-let` leaves the binder `Hypothetical`.
+  anonymous entry of an `open-adt` or `open-absurd`, with one difference
+  read but not tested: there a non-empty context (`:675`) also gives
+  the token, failed or not, where `elab-let` leaves the binder
+  `Hypothetical`. An erased open (`:673`) gets the token too.
 
 slc already treats this token as a stand-in in one place:
 `resolve-answer` (`eval.sl:1335`, using `stand-in`, `eval.sl:1321-1324`)
 answers as for a `Hypothetical` entry when the environment is failed
-and a `many` entry holds a `BToken`. `comptime-match` and
-`show-typed` have no such test. This suggests the token is meant as a
-"not run" marker, but that was not confirmed.
+and a non-erased entry (`mult-is-many` holds for `many` and `unique`,
+`core.sl:187-188`) holds a `BToken`. In
+`proto/review7/10_macro_prims.sl` it answers `RHypothetical` for a
+`let` binder after the error, where the reference without the error
+answers `RSettled`; `tests/macro_resolve_after_error_bad.sl` reaches it
+too, and slc's second message there, the macro's own "not settled", is
+false in the same way. `comptime-match` and `show-typed` have no such
+test, and `message-of` (`elab.sl:2578-2587`) words a token as
+`Hypothetical` without one. This suggests the token is meant as a "not
+run" marker, but that was not confirmed.
 
 **Forwarding does not repair it.** After `env-set-tokens`,
 `forward-binders` (`elab.sl:999-1004`) calls `forward-binder`
@@ -125,17 +154,21 @@ the destination (the token) and only `m` from the source. So
 `env-destruct` (`eval.sl:1627-1631`) → `destruct` (`eval.sl:433-439`)
 → `dispatch` (`eval.sl:398-410`), which first asks `word-of-block`
 (`eval.sl:44-52`). That has the case `((BToken _) (Some _ 0))`. For an
-`extern`-backed type such as `Nat` the word 0 is decoded by
-`ext-destruct` as `Zero`; for a fieldless-tagged enum, `fieldless-index`
-maps it to the first fieldless constructor (`BTrue` in `Bool`, `None`
-in `Maybe`). `headed-by` (`eval.sl:441-442`) then compares indices, and
-the mismatch message (`elab.sl:4784`) prints the value with
-`show-typed` (`elab.sl:4727-4731`), which renders the token through the
-same reading: `0` for `Nat`, `(BTrue)` for `Bool`, `(None _)` for
-`Maybe`. For a `Hypothetical` entry `settled-ref` is `None` and
-`show-typed` prints `` `?` ``, after the separate "needs a Settled
-scrutinee" error at `:4758`, so such a `comptime-match` prints two
-errors.
+`extern`-backed type the word 0 is decoded by `ext-destruct`, as `Zero`
+for `Nat` and as `SNil` for `String`; for a tagged enum,
+`fieldless-index` maps it to the first fieldless constructor (`BTrue`
+in `Bool`, `None` in `Maybe`). `headed-by` (`eval.sl:441-442`) then
+compares indices, and the mismatch message (`elab.sl:4784`) prints the
+value with `show-typed` (`elab.sl:4727-4731`), which renders the token
+through the same reading: `0` for `Nat`, `(SNil)` for `String`,
+`(BTrue)` for `Bool`, `(None _)` for `Maybe`. For a `Hypothetical`
+entry `settled-ref` is `None` and `show-typed` prints `` `?` ``, after
+the separate "needs a Settled scrutinee" error at `:4758`, so such a
+`comptime-match` prints two errors. When the read passes, the pattern
+is then forced onto the scrutinee; in 03 that equates `x`, whose rule
+is `(BFalse)`, with `(BTrue)`, and `elab.sl:4790-4791` drops the
+resulting "internal: the verified value contradicts the facts in
+force" message once failed, so 03 prints nothing (read, not tested).
 
 **Why `(Zero)` and not `(Succ (Zero))`.** `(Zero)` has no arguments, so
 the constructor application (`elab-main.sl:1141-1158`) hoists nothing,
@@ -146,35 +179,41 @@ and leaves a frame, so `ctx3` is non-empty and the binder is
 `Hypothetical` (`proto/review4/01_after_error_succ.sl`). `(Succ y)`,
 with `y` already a variable, hoists nothing and gets the token
 (`07_succ_var.sl`), as does a call `(f y)` (`08_call_var.sl`). A
-literal `3` also gets the token (`04_lit.sl`); a string literal `"abc"`
-leaves the binder `Hypothetical` (`14_string_msg.sl`), presumably
-because the literal is bound through a temporary, and `(let ((many t))
-s)` with `s` a `Settled` string also left `t` `Hypothetical` in an
-ad-hoc run. Neither of those two was traced.
+literal `3` also gets the token (`04_lit.sl`), and so do a string
+literal `"abc"` and a `Settled` string variable
+(`proto/review7/10_string_token.sl`: `comptime-match` reads both as
+`(SNil)`). `14_string_msg.sl`'s "`s` is `Hypothetical`" is
+`message-of`'s wording for that token (`elab.sl:2585-2587`), not the
+binder's state.
 
 **What still runs.** `expand` (`elab-main.sl:555`) and the macro call
 it makes have no `env-failed` test, so a macro bound before the error
 is still expanded after it (`11_macro_rhs.sl`, `15_macro_alias.sl`; a
 self-expanding macro bound before the error still hits "more than 10000
-macro expansions"). A `def-fns` after the error still closes its group
-(`elab-main.sl:2267-2272`, `env-close-group`), so its functions are
-`Settled` (read, not tested); only calls of them do not run. In
+macro expansions"). Of the macro-world primitives (`macro-prim`,
+`eval.sl:1540` on) only `resolve` tests `env-failed`; `gensym` and
+`read-file` answered after the error as without it
+(`proto/review7/10_macro_prims.sl`). A `def-fns` after the error still
+closes its group (`elab-main.sl:2267-2272`, `env-close-group`), so its
+functions are `Settled`: `resolve` answers `RSettled` for one
+(`10_macro_prims.sl`); only calls of them do not run. In
 `proto/review2/after_error_call.sl` the binder of such a call is
 `Hypothetical` because its argument `(Zero)` is hoisted, as in
-`(Succ (Zero))` above; with a variable argument it gets the token
-(`08_call_var.sl`). Reading a value that was `Settled` before the
+`(Succ (Zero))` above; with a variable argument the binder of a call
+gets the token (`08_call_var.sl`, whose `f` is bound before the
+error). Reading a value that was `Settled` before the
 error is unaffected: `comptime-match` on it, and on the fields that
 binds, reads the real value (`16_pre_error_field.sl`), and `compile-error
 s` with such an `s` prints its text.
 
 ## 3. Test matrix
 
-Sources are under `proto/aftererr/`. "ref" is the reference's full
-output; every one exits 1 on every implementation. The slc column is
-what slc prints after the first message, which is `first` and agrees
-with the reference except in test 17. "False?" judges the message
-against what DESIGN.md §27-§29 would make the value had the
-run-position form run.
+Sources are under `proto/aftererr/`. The reference prints only its
+first message on every test, and every test exits 1 on every
+implementation. The slc column is what slc prints after the first
+message, which is `first` and agrees with the reference except in test
+17. "False?" judges the message against what DESIGN.md §27-§29 would
+make the value had the run-position form run.
 
 | Test | After the error | slc's later messages | False? |
 |---|---|---|---|
@@ -191,15 +230,17 @@ run-position form run.
 | 11_macro_rhs | `x` = `(m)`, `m` expands to `(BFalse)` | expected `BFalse`, got `(BTrue)`; then the `compile-warn` | yes |
 | 12_succ_hoisted | `x` = `(Succ (Zero))`; `Succ` | needs a Settled scrutinee; expected `Succ`, got `?` | yes (both) |
 | 13_inline | `comptime-match many (Succ (Zero)) (Succ _)` | the same two | yes (both) |
-| 14_string_msg | `s` = `"abc"`; `compile-warn s`, `compile-error s` | `s` is `Hypothetical` (twice) | yes (both): by §27-§29 `s` would be `Settled` |
+| 14_string_msg | `s` = `"abc"`; `compile-warn s`, `compile-error s` | `s` is `Hypothetical` (twice) | yes (both): by §27-§29 `s` would be `Settled`, and in slc it is `Settled` too, holding the token, which `message-of` words as `Hypothetical` |
 | 15_macro_alias | `m` bound before; `m2` = `m` after; `(m)`, `(m2)` | `Zero` is not a statement (from `(m)`); `m2` is a macro, expanded only where its head is constant-known | first no; second yes: `m2` is `Settled` in slc too but holds the token, while by §29 site 3 it would forward `m`'s value and §6 would expand it |
 | 16_pre_error_field | `y` = 2 before; `comptime-match y (Succ p)`, `p` `Zero` | expected `Zero`, got 1 | no |
 | 17_type_error_first | first error is a refuted branch, not `compile-error` | expected `BFalse`, got `(BTrue)`; `end` | the second, probably: it asks what an ill-formed `let` would have computed (`BFalse`, as `y` is `(Succ (Zero))`) |
 
 Notes on the table:
 
-- 01 and 03 together show that `(Zero)` and `(BTrue)` are not computed:
-  the token reads as constructor 0 whatever was written.
+- 01 and 03 together show that what the binder reads as is not
+  computed: 01 reads `(Zero)` where `(Zero)` was written, and 03 reads
+  `(BTrue)` where `(BFalse)` was. The token reads as the first fieldless
+  constructor whatever was written.
 - In 13 there is no `let`: `comptime-scrutinee` (`elab-main.sl:1185-
   1195`) elaborates the form, `run-form` refuses, and `settled-from`
   (`elab.sl:2879-2884`) finds no variable code to copy, so the entry is
@@ -210,7 +251,8 @@ Notes on the table:
   message is the reference's on every error test (of the test suite)
   and already allows the column to differ; the wording difference is
   not covered by that, so it may be worth a look.
-- With `--first-error`, slc prints only `first` and its trailer
+- With `--first-error`, slc prints only its first message (`first`, or
+  17's refuted branch) and the trailer
   (`slc: stopped at the first error (--first-error)`) on every test that
   has a second message, so none of the false messages is shown.
 
