@@ -1151,3 +1151,83 @@ Unsure, not changed:
    and slc's native and `--byte` builds; their controls, with the
    overflow made harmless, print the write and exit 0. Added to 2.2
    and section 6.
+
+## Round 7 review notes
+
+Added by a seventh, independent review. Re-run: `proto/dyn/head_crash_arg_write.sl`,
+`head_write_arg_crash.sl`, and `crash_probe.sl`, with their depth-10
+controls, under the reference (interpreted, `--no-extern`, built
+natively and with `--byte`, and `--no-extern --build`), `slc --interpret`,
+and slc's native and `--byte` builds; `imm_eq.sl` in the six modes 2.4
+names; `tagslot.sl`; `machine.sl` (also with an all-false tape) and
+`review2/machine_fn_oracle.sl`; `review2/const_share.sl` and
+`review4/02_share_pair.sl`, interpreted and built by both;
+`review5/02_big_nat_slot_eq.sl` and a copy with small `Nat`s;
+`order1.sl` and `order2.sl` under `--extract`; slc's output for
+`review6/02_values_order_slc.sl`; `review3/head_arg_order.sl`,
+`review3/00_arg_head_order.sl`, and `review6/02_fuel_head_alone.sl`,
+with and without `--eval-fuel 20`; and the OCaml order test on 4.14.1.
+The outputs quoted reproduce, and the code citations hold. New tests
+are `proto/review7/02_fuel_runpos.sl` and `02_deep_runpos.sl`.
+
+1. 2.2 said the world-write tests show the head form first in "every
+   implementation and mode", and section 6 repeated it; five modes were
+   run. Re-run in those five, the reference's `--byte` build, and its
+   `--no-extern` interpreter: the same outputs, and in each
+   `crash_probe.sl` prints "before" and not "after", which the
+   inference needs (a write before an overflow is shown, and nothing
+   runs after the overflow). The reference's `--no-extern --build`
+   overflows while extracting the 10^8 files; their controls build and
+   print their writes. The conclusion follows for these two call
+   shapes. 2.2 now names the modes tried, "one call shape each", and
+   what `crash_probe.sl` shows; section 6 says "tried".
+2. The Round 7 coordinator note's "which a stack overflow in slc's
+   interpreter does not survive" did not parse. Reworded to what its
+   evidence shows: unlike "out of fuel", a stack overflow ends a run of
+   slc's interpreter.
+3. C4 said `head_arg_order.sl` under `--eval-fuel 20` "is refused by
+   slc ... and by the reference". Its run is the final `main`'s, after
+   elaboration, and slc does not refuse it: it dies of an uncaught
+   "Stack overflow" (exit 2), while the reference exits 1 with "runtime
+   error: out of fuel". The same call in run position
+   (`02_fuel_runpos.sl`) is refused by the reference with "out of
+   fuel", and slc again dies, with no message naming the form.
+   Reworded.
+4. C4 said "Neither implementation" is such a function of the bound
+   but gave a reason for slc only. `02_deep_runpos.sl`, a run-position
+   recursion 10^8 calls deep, dies of "Stack overflow" in both under
+   `--eval-fuel 1000000000`, before the bound is spent. Added.
+5. C4 made acceptance a function of the source "once the order and the
+   `slot-eq` answers are fixed (Q3, Q4)". Q3 is the runtime order; 2.3
+   and rough edge 12 keep the elaboration order separate, and 01's
+   `proto/review7/01_order_accept.sl` shows that it can decide
+   acceptance. Added.
+6. N1 and decision 4 said "there is an oracle" covers every
+   implementation seen, given E2 and Q8. 04 §2.5's
+   `slot_eq_share.sl`, two run-position `(str-append "a" "b")`, answers
+   `ESome` when built natively by slc or (re-run here) by the
+   reference, since ocamlopt shares the two equal immutable constants;
+   a spec with A1's never-reused addresses answers `ENone` there under
+   every oracle. The second review's unsure point ("no such sharing was
+   seen") tested only `MkBox` blocks, which were not shared. Added
+   to N1; decision 4 now names the choice, as reading: the spec lets
+   equal immutable constants share a word, or native builds stop
+   sharing them.
+7. 2.3 said "Slot words are pointers"; §38: "the value of a slot is a
+   word, either a pointer or an immediate". Fixed.
+8. O1's cons, decision 3, and rough edge 10 rested head-first order on
+   the reference's emission of `order2.sl` alone; the world-write tests
+   show it at runtime in both implementations. Added.
+
+Unsure, not changed:
+- MANUAL.md:162-164 says a run-position form whose evaluation crashes
+  is refused, the reference naming the file and slc the form; on a
+  host stack overflow both die instead (`02_deep_runpos.sl`). That is
+  a question about MANUAL.md, outside this file.
+- `--no-extern` cannot run the tests of `review3/` and `review5/04_*`
+  that use 2^60: under it the reference crashes with
+  `Invalid_argument("Array.make")` on a file whose only large thing is
+  that literal, before running anything, and its `--no-extern`
+  extraction overflows on a literal of 10^5 (and of 10^8). Not looked
+  up in BUGS.md.
+- The summary is still longer than the brief's 15 lines.

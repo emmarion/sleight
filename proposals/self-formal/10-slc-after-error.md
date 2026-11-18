@@ -66,13 +66,12 @@ same exit code, so they are not distinguished further.
   `Hypothetical` (a right-hand side that needed temporaries, or the
   fields of a `let-match`), slc reports that the scrutinee is not
   `Settled`, which DESIGN.md §27-§29 would, in this agent's reading,
-  make it. The string binders tested,
-  of a literal and of a `Settled` string variable, are not left
-  `Hypothetical`: they hold the token too, which `comptime-match` reads
-  as `(SNil)`, but the check on the message of `compile-warn` and
-  `compile-error` words any stored value that is not a string as "is
-  `Hypothetical`" (`elab.sl:2585-2587`; `14_string_msg.sl`,
-  `proto/review7/10_string_token.sl`).
+  make it. The string binders tested, of a literal and of a `Settled`
+  string variable, are not left `Hypothetical`: they hold the token
+  too, which `comptime-match` reads as `(SNil)`, but the check on the
+  message of `compile-warn` and `compile-error` words any stored value
+  that is not a string as "is `Hypothetical`" (`elab.sl:2585-2587`;
+  `14_string_msg.sl`, `proto/review7/10_string_token.sl`).
 - No test changed acceptance: slc exits 1 once its message list holds
   an error (`self/main.sl:139-143`), and every test exits 1 on both
   implementations. The defects, if they are taken as such, seem to be
@@ -237,13 +236,13 @@ refused as not constant-known (`proto/review2/after_error_macro.sl`),
 as `m2` is in 15: in `proto/review7/10_macro_after.sl` the refusal is
 the plain one, so the entry is `Settled` (`elab.sl:2800-2806`), and
 `resolve` answers `RHypothetical` for it, which for a `Settled` entry
-only the token test gives. A direct read of an entry that was `Settled` before
-the error is unaffected: `comptime-match` on it, and on the fields it
-binds, reads the real value (`16_pre_error_field.sl`),
-`(compile-error s)` with such an `s` prints its text, and `resolve`
-answers `RSettled` for it (`10_macro_prims.sl`). Code that would
-compute from such an entry is not run: `x` bound to such a `y` holds
-the token (06).
+only the token test gives. A direct read of an entry that was
+`Settled` before the error is unaffected: `comptime-match` on it, and
+on the fields it binds, reads the real value
+(`16_pre_error_field.sl`), `(compile-error s)` with such an `s` prints
+its text, and `resolve` answers `RSettled` for it
+(`10_macro_prims.sl`). Code that would compute from such an entry is
+not run: `x` bound to such a `y` holds the token (06).
 
 **What is not reported.** Besides `elab.sl:4791`, some `env-failed`
 tests drop a message once failed. `env-fail` (`core.sl:2802-2806`)
@@ -315,9 +314,10 @@ Notes on the table:
   both tables that has a second message, so none of the false messages
   is shown.
 
-Review tests under `proto/review7/`, each with a `(compile-error
-"first")` before the forms shown, in the same columns (10_macro_crash
-is run with `--eval-fuel 100` on both implementations):
+Review tests under `proto/review7/`, each with a
+`(compile-error "first")` before the forms shown, in the same columns
+(10_macro_crash is run with `--eval-fuel 100` on both
+implementations):
 
 | Test | After the error | slc's later messages | False? |
 |---|---|---|---|
@@ -410,8 +410,9 @@ These are options for the owner, not recommendations to adopt.
    run" state, and have `comptime-match`, head dispatch, `dump-context`,
    and the `compile-error` message check say nothing about such an
    entry. That would remove every "yes" row whose message comes from
-   one of those checks, but not the rows that rest on `resolve`'s
-   answer (10_macro_prims, 10_literal_macros), and it would not bring
+   one of those checks, but not the items that rest on `resolve`'s
+   answer (10_macro_prims, 10_literal_macros, and 10_macro_after's
+   `RHypothetical`), and it would not bring
    back the messages that are dropped (§2, "What is not reported"). A
    `let` with no non-erased binder takes the same branch
    (`elab-main.sl:2216`), and its token is what §27 gives it, so the
@@ -547,3 +548,164 @@ Unsure:
   `elab-main.sl:3356`, `:3358`, `elab.sl:935`). Each read here prepends
   to the existing list, but none was traced further, and an `Env`
   rebuilt from an older one was still not looked for.
+
+## Round 7 review notes
+
+Two passes of a seventh review. The first was interrupted after
+editing the body and adding `proto/review7/10_coerce.sl`,
+`10_letmatch.sl`, `10_macro_prims.sl`, `10_native.sl`,
+`10_settled_value.sl`, and `10_string_token.sl`, before writing notes;
+items 1 to 7 record its changes, and items marked "(interrupted pass)"
+its errors. The second pass treated those changes as unreviewed. It
+re-ran every `proto/aftererr/` test, the after-error tests of
+`proto/review2/` and `proto/review4/`, and every `proto/review7/10_*`
+test on the reference and on slc under `--interpret`, with no flag,
+and with `--build` (the three slc modes byte-identical, exit 1
+everywhere); the no-first-error variants of §4; `--first-error` on
+each; `tests/dump_context.sl`; `tests/macro_resolve_after_error_bad.sl`;
+and `proto/review2/03_untaken_ce.sl`. It confirmed that `self/` is
+unchanged from `5fba336` to HEAD and to `origin/main`, and opened every
+cited line. Every message in both tables reproduces. New tests:
+`10_contra_dropped.sl`, `10_literal_macros.sl`, `10_macro_after.sl`,
+`10_macro_crash.sl` (run with `--eval-fuel 100`), and
+`10_unreported.sl`; `10_settled_value.sl` now binds its handle before
+the error.
+
+The interrupted pass's changes, checked and kept unless an error item
+below says otherwise:
+
+1. The header now separates observed messages from behaviours marked
+   as read, and `--build` is a third slc mode. The three modes agree
+   on every test cited.
+2. §1 names §54's "stops elaboration with a report of the context" as
+   a second text near the question. Re-run: on `tests/dump_context.sl`
+   the reference prints the report alone and slc adds two errors (one
+   with a note) and a warning.
+3. `coerce`, `let-match`, and `native-compute` are not run after the
+   error (`10_coerce`, `10_letmatch`, `10_native`;
+   `elab-main.sl:869`), nor is a file's final expression (`:3393`;
+   `env-run-final` runs code, `elab-main.sl:448-451`), and
+   `settled-ty-apply` and `settled-val-apply` stop elaborating
+   (`:2537`, `:2560`, `:2565`).
+4. Of the macro-world primitives only `resolve` tests `env-failed`;
+   `gensym` and `read-file` answer as before, `resolve` answers
+   `RHypothetical` for a token-holding binder, and a `def-fns` after
+   the error is `Settled` (`10_macro_prims`). The claim about
+   `tests/macro_resolve_after_error_bad.sl` holds only with
+   `std/macro.sl` first, as its header asks (alone it fails at
+   `def-macro`); that is now said.
+5. String binders hold the token: `10_string_token`'s
+   `comptime-match` reads each as `(SNil)` with no "needs a Settled
+   scrutinee", and "is `Hypothetical`" is `message-of`'s wording for a
+   token (`elab.sl:2585-2587`). This supersedes the first review notes'
+   item 3, their "Confirmed and left as is" entry on
+   `(let ((many t)) s)`, and their unsure point on string binders, and
+   the sixth review's re-run of "a forwarded `Settled` string" ("all as
+   stated"); the interrupted pass had not marked them.
+6. The `elab-let` token branch (`:2216`) also serves a `let` with no
+   non-erased binder (`pos-mult`, `core.sl:207-210`), which §27 gives
+   the token; `open-bind` serves `open-adt` and `open-absurd` (callers
+   at `elab-main.sl:682` and `:2089`).
+7. §4's basis for the "False?" column, its no-first-error runs, the
+   "seems" on the first message and on acceptance, and the monotonicity
+   paragraph.
+
+Errors found, and changes:
+
+8. (interrupted pass) "None of the eight writers of the list" missed
+   `env-warn` (`core.sl:2549-2550`), which prepends a warning through
+   `MkEnv` rather than `env-set-said`; a scan of every `MkEnv` built in
+   `self/` found no other writer. Fixed.
+9. (interrupted pass) Follow-up 1 claimed its change would remove
+   every "yes" row, but 10_macro_prims's `RHypothetical` rests on
+   `resolve`'s answer, which none of the named checks gives; and "when
+   the gate refuses" took in the erased `let` of item 6. Narrowed to a
+   failed environment, with both cases named.
+10. (interrupted pass) The header said every quoted message was
+    observed, beside a quoted "internal: ..." text that is never
+    printed. Now "as printed", and §2 calls that text what the code
+    would otherwise record.
+11. (interrupted pass) §1's "except where a message slc prints is
+    false" left out `resolve`'s answer, which §4 counts as false.
+    Extended.
+12. (earlier rounds) Row 17's "the second, probably" could be read as
+    slc's second later message, `end`, a genuine error; the false one
+    is the first. Fixed.
+13. (earlier rounds) "Reading a value that was `Settled` before the
+    error is unaffected" was too broad: 06, 07, 08, `10_coerce`, and
+    `10_settled_value` read such values through code that is not run
+    and get the token. Narrowed to direct reads.
+14. (earlier rounds) Follow-up 2 set running code "at compile time
+    after a known error" against the present behaviour, though macro
+    expansions already run then, and its "would make the later messages
+    true" overlooked code whose own check failed (17's `let`). Follow-up
+    3's "discards" is "reverses the default", since the option keeps the
+    behaviour behind a flag. Follow-up 4 claimed a search ("found it
+    reachable only after an error") that was not made. Reworded.
+15. (earlier rounds) The note on 01 and 03 said the token reads as the
+    first fieldless constructor "whatever was written", for any type;
+    the first review notes' `MkPair` case differs. Scoped to those
+    types. Row 15 cited §6 for macro expansion, which is §19's (with
+    §6 and §62). "BUGS.md 25 records them": it records some cases and
+    points here. Also a code span split across lines, and "the fields
+    that binds". Fixed.
+16. (earlier rounds, gap) After the first error slc also drops
+    messages. A crash in a later expansion is reported by nothing,
+    since `core.sl:2819`, the only builder of "compile-time evaluation
+    failed", records nothing once failed (`10_macro_crash`); the
+    "unnecessary `(predates _)`" and "silenced nothing" warnings are
+    skipped (`10_unreported`); and, read only, `env-fail` drops repeated
+    texts and those containing `<error: `, and `--warn-unused` and the
+    goal's closing are skipped. Added as "What is not reported", rows,
+    and §4. Without the error the two implementations word that crash
+    differently; §3's notes record it beside 17's wording.
+17. (earlier rounds, gap) The prelude's `unary` and `prove-literal-lt`
+    read names through `resolve` (`lib/prelude.sl:2494-2499`), so after
+    the error they refuse a binder bound after it with a false usage
+    message (`10_literal_macros`; without the error both pass on both
+    implementations). Added, with §45 and §49.
+18. (earlier rounds, gap) `proto/review2/after_error_macro.sl`, which
+    01 §3.7 cites, was not used here. A macro bound after the error is
+    `Settled` and holds the token (`10_macro_after`: the plain refusal,
+    and `RHypothetical` from `resolve`). Added.
+19. Strengthened: §4's "not looked for" speculative `Env` now names
+    `apply-answer` (`elab-main.sl:467-507`), which checks quietly on a
+    copy and goes on from the `Env` it was given; `10_settled_value`
+    now isolates `settled-value`, which the gate at `:739` covers as a
+    primitive call (`elab-main.sl:1075-1081`, `:2482-2513`); and the
+    "read, not tested" contradiction path is tested by
+    `10_contra_dropped`, whose report also shows `dump-context` reading
+    the token (`= (None _)`), so follow-up 1 lists `dump-context`.
+    ASSUMPTIONS.md 32, a session's choice, is cited beside the "not run"
+    marker reading.
+20. From a coordinator's note relaying another reviewer:
+    `proto/review2/03_untaken_ce.sl` reproduces (slc adds "the
+    enclosing `match` expects 1 return value, got 0"; the reference
+    prints `untaken` alone; `--first-error` hides it). Added to §4 as a
+    third kind of difference, with whether it is false left open:
+    DESIGN.md mentions `compile-error` only in §4, §27, and §54, and
+    none gives its size as an expression.
+
+Elsewhere, not edited, as read during this review: 01 §3.7 says a
+string literal or a `Settled` string variable leaves the binder
+`Hypothetical`; 00-summary.md item 22 ("string binders aside,
+untraced"), item 20 (§4 only), and its unverified entry on string
+binders and on `coerce`, `gensym`, `read-file`, and the `settled-*`
+forms are stale against this file; and BUGS.md 25 reads the token as
+"its type's first fieldless constructor" for every type, calls 17's
+message "the same false message" without this file's "probably", and
+does not mention §54.
+
+Unsure:
+- 03 itself was not seen taking the contradiction path;
+  `10_contra_dropped` shows it on `Maybe`, and 03 prints nothing either
+  way.
+- Places other than `apply-answer` that go back to an earlier `Env`
+  were not searched for, so the monotonicity argument is still not a
+  proof.
+- Whether `dump-context`'s `= (None _)` in `10_contra_dropped` is false
+  by the column's standard: without the first error the report is
+  never reached, since the `(None t1)` match fails first.
+- `open-bind`'s token for a non-empty context, failed or not (`:675`),
+  is still read only.
+- No timing claim is made here, and none was re-run.

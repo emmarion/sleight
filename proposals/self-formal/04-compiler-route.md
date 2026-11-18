@@ -1403,3 +1403,72 @@ Points I am unsure of:
 - Whether the theorem shapes in 2.6 and decision 5 also need to range
   over evaluation orders (rough edge 1), as they range over `slot-eq`
   and world answers; nothing here settles it.
+
+## Round 7 review notes
+
+A seventh adversarial review read the brief, CLAUDE.md, all of
+DESIGN.md, and SOUNDNESS.md, opened the cited lines, and re-ran slc's
+output for `order.sl` and `ord2.sl`, `deep.sl` under `slc --interpret`
+(49,999 `Cons _ 0`, then `Cons _ _ _)`), `04-deep-fn.sl` built by slc
+(all 100003 elements, 8 MB stack), `slot_eq_share.sl` (slc native,
+`--byte`, and `--interpret`, and the reference interpreted and built
+natively), `share.ml`, `argorder.ml`, `tc3.ml`, `tc4.ml`, and
+`04-tc-direct.ml` (1 MB stack), `04_barrier.ml` (assembly), the five
+`imm` stores of `tests/cell_imm.sl`, and `04_head_arg_compiled.sl`
+(also with a small `h`) and `04_effect_vs_crash.sl` under the
+reference (interpreted, `--no-extern`, and built natively and with
+`--byte`), `slc --interpret`, and slc's native and `--byte` builds. All
+[T] results held; item 4 qualifies one.
+
+1. Reported by 01's reviewer through the coordinator, and confirmed:
+   the 2.3 row on macro expansions gave the zero case as "refusal, as
+   §62 requires". §62 says only "At most 10000 expansions run in one
+   run, every file on the command line included", and a grep of
+   DESIGN.md finds nothing on what happens past the limit. Now:
+   refusal ("more than 10000 macro expansions"), with §62 stating the
+   limit but not what happens past it.
+2. 2.5 said of head-before-argument order "Only this one test, inside
+   a function body, was run", under a bold lead that stated the order
+   in general, and section 6 said "one test". 02 §2.2's two world-write
+   tests, added in round 7 and re-run here, show the same order under
+   the reference, `slc --interpret`, and slc's native and `--byte`
+   builds; slc's OCaml for both binds the head first. 2.5, section 6,
+   rough edge 1, and the evidence list now include them, and the lead
+   is scoped to the tests run.
+3. Rough edge 2 cited `MANUAL.md:163-165` for the refusal of a crashed
+   run-position form; the sentence is at 162-164. MANUAL.md is
+   unchanged since Nov 5, so the round 6 note that moved the cite from
+   162-164, and its "default at 163" (which is at 162), were off by
+   one. Fixed. Added that on a host stack overflow in run position
+   both implementations die instead, with no message naming the file
+   or the form (`proto/review7/02_deep_runpos.sl`).
+4. The summary and 2.5 said `slot_eq_share.sl` answers `ENone` under
+   "the reference". The reference's interpreter does; its native build
+   prints `(BTrue)`, as slc's does. Qualified.
+5. The 2.3 row gave `run-toplevel`'s checks as `:3375, 3382` right
+   after `main.sl:29`, which reads as `main.sl` (191 lines); they are
+   `elab-main.sl:3375, 3382`. Fixed.
+
+Re-checked and found right: the 12 files and 18,652 lines, the per-file
+counts, the 20 `"internal:` sites, 827 lines of OCaml runtime, the
+reference's 6,909 lines, `mini/`'s 6,849 lines and its `elab.sl` and
+`elabfn.sl` sizes, `Code` at `core.sl:604-622`, `core.sl:337, 3614`,
+`main.sl:27-30, 187-191`, `elab-main.sl:38, 40-60, 119-131, 158-445,
+185-187, 509-629, 752, 3375-3391`, `elab.sl:4680-4682, 4717, 4730,
+4784, 4890`, `interp.sl:15`, `eval.sl:1018-1025, 1055, 1146, 1159`,
+`base.sl:157-161, 181-182`, the `emit.sl` lines of 2.3 and 2.5, the
+`ffi_core.ml`, `ffi.ml`, and `ffi_templates.txt` lines, `release.sh:17`,
+`bootstrap.sh:23, 26`, the self/README lines cited, the `mini/` lines
+of 2.4, and the quotations from §6, §15, §27, §29, §31, §42, §45, §62,
+§67, and §72.
+
+Points I am unsure of:
+
+- `slc --interpret` on `04_head_arg_compiled.sl`, under a 6 GB memory
+  cap, dies with "Stack overflow" whatever `h` is, so that test still
+  does not show the interpreter's order (the fifth review's unsure
+  point); 02's world-write tests do.
+- Under `--no-extern` the reference crashes on the 2^60 literal of
+  `04_head_arg_compiled.sl` and `04_effect_vs_crash.sl` before running
+  anything (02, Round 7 review notes), so those runs say nothing about
+  order.
