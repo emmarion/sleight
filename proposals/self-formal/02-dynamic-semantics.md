@@ -218,18 +218,23 @@ n))`, A and the reference agree (head first), and a timing reading of
 arguments (`self/elab-main.sl:178-182`), threading its world through
 both.
 
-[compiled] Two `Program` steps observe a head form against an argument
-form inside a body, with a world write on one side and a stack
-overflow on the other. In `proto/dyn/head_crash_arg_write.sl`, the head
+[compiled] Two programs, each one `Program` step, observe a head form
+against an argument form inside a body, with a world write on one side
+and a stack overflow on the other. In `proto/dyn/head_crash_arg_write.sl`, the head
 form overflows and the argument writes "argument ran"; in
 `proto/dyn/head_write_arg_crash.sl`, the head form writes "head ran"
 and returns a `UniqueFn` that closes over the world, and the argument
-overflows. Under the reference (interpreted and `--build`),
-`slc --interpret`, and slc's native and `--byte` builds, the first
-prints nothing before "Stack overflow" and the second prints "head
-ran" before it. With the overflow made harmless (depth 10 in place of
-10^8), each prints its write and exits 0. So in these two tests every
-implementation and mode runs the head form before the argument form.
+overflows. Under the reference (interpreted, and built natively and
+with `--byte`), its `--no-extern` interpreter, `slc --interpret`, and
+slc's native and `--byte` builds, the first prints nothing before
+"Stack overflow" and the second prints "head ran" before it. In each,
+`proto/dyn/crash_probe.sl` prints "before" and not "after": a write
+before an overflow is shown, and nothing runs after the overflow. With
+the overflow made harmless (depth 10 in place of 10^8), each prints its
+write and exits 0. So in these two tests, one call shape each, every
+implementation and mode tried runs the head form before the argument
+form. The reference's `--no-extern --build` was not tried: it
+overflows while extracting these files.
 
 ### 2.3 Is order observable in the abstract machine?
 
@@ -471,9 +476,10 @@ Values as words:
   (`proto/review6/02_values_order_slc.sl`, slc's OCaml output read
   [compiled]). As stated, O1 puts the hoisted `(h n)` before the
   head `(pick)` in `((pick) (h n))`, which is the opposite of what the
-  reference emits (2.2) and of the run-position reading of §6 and §27;
-  "a form head, then the §15 bindings" is the variant that matches
-  both. Needs DESIGN.md wording
+  reference emits, of what every implementation tried does in the
+  world-write tests (2.2), and of the run-position reading of §6 and
+  §27; "a form head, then the §15 bindings" is the variant that matches
+  all three. Needs DESIGN.md wording
   (rules 11, 12). Cost: low.
 - **O2: fix only what DESIGN.md fixes; the spec is a relation over
   orders.** Pros: freedom for compilers. Cons: the compiler theorem
@@ -561,15 +567,22 @@ Values as words:
   compile-time heap exhaustion stays host-dependent unless C3's heap
   bound is added. `native-compute` (§72) stays host-dependent: its
   answer is treated as an oracle, or excluded. Neither implementation
-  is yet such a function of the bound in its message: slc's interpreter
-  does not stop at an exhausted bound, since "out of fuel" is an error
-  value and the code after it still runs (`self/elab-main.sl:185-187`,
-  `CLet` at `:192-197`). Under `--eval-fuel 20`,
-  `proto/review3/head_arg_order.sl`, whose head form alone exhausts the
-  bound (`proto/review6/02_fuel_head_alone.sl`, the same with a small
-  array, gives "out of fuel" on both), is refused by slc with a stack
-  overflow in its argument's run and by the reference with "out of
-  fuel" [compiled]. 01 (decision 7)
+  is yet such a function of the bound in its message. Both can die of
+  a host stack overflow before a large bound is spent: a run-position
+  recursion 10^8 calls deep does so in both under
+  `--eval-fuel 1000000000` (`proto/review7/02_deep_runpos.sl`). And
+  slc's interpreter does not stop at an exhausted bound, since "out of
+  fuel" is an error value and the code after it still runs
+  (`self/elab-main.sl:185-187`, `CLet` at `:192-197`). Under
+  `--eval-fuel 20`, `proto/review3/head_arg_order.sl`, whose head form
+  alone exhausts the bound (`proto/review6/02_fuel_head_alone.sl`, the
+  same with a small array, gives "out of fuel" on both), makes slc die
+  of a stack overflow in its argument's run, where the reference stops
+  with "out of fuel" [compiled]. That run is the final `main`'s, after
+  elaboration. With the call in run position
+  (`proto/review7/02_fuel_runpos.sl`), the reference refuses the file
+  with "out of fuel", and slc again dies of the overflow, with no
+  message naming the form [compiled]. 01 (decision 7)
   recommends the alternative: a spec machine that never crashes, and a
   third compiler outcome, `Crashed`.
 
@@ -648,8 +661,8 @@ option, with the spec's own store a heap (as 01's Σ is).
 3. **Fix the evaluation order (O1/O3)?** Recommended: fix it in the
    spec. Sub-question: does §15's "behaves as if ... placed just before"
    fix timing? If so, it orders argument forms before a form head, which
-   the reference does not do and which conflicts with a run-position
-   reading of §6 and §27 (rough edge 10). Proposal A, applied after
+   neither implementation does in the tests of 2.2 and which conflicts
+   with a run-position reading of §6 and §27 (rough edge 10). Proposal A, applied after
    hoisting, is one candidate.
    This needs DESIGN.md wording. Leave order-independence as an
    optional later theorem. Depends on it: whether the compiler theorem
@@ -723,7 +736,8 @@ option, with the spec's own store a heap (as 01's Σ is).
    call `((pick) (h n))` runs `(h n)` before the head `(pick)`. In run
    position, §6 ("The head is elaborated first") and §27 (a form "runs
    as soon as it has been elaborated") run `(pick)` first. The reference
-   emits `(pick)` first (2.2).
+   emits `(pick)` first, and both implementations run a head form first
+   in the world-write tests (2.2).
 11. **§61 presumes statement order.** §61's "The write stores `h` before
    the call" relies on a body statement running before a later one with
    no dataflow between them, which no general rule states (2.2 item 6).
@@ -758,8 +772,8 @@ option, with the spec's own store a heap (as 01's Σ is).
   apart; nor does it on `proto/review3/00_arg_head_order.sl`, the same
   test with head and argument swapped. The world-write tests of 2.2 do
   tell them apart, and show the head form first in every
-  implementation and mode; they cover one call shape each, not every
-  call.
+  implementation and mode tried; they cover one call shape each, not
+  every call.
 - That GC reuse of addresses is unobservable because a slot word keeps
   its block alive. This is a reading of OCaml's runtime, not checked.
 - CakeML's top-level theorem allowing early termination on resource

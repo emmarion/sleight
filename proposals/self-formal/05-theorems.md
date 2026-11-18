@@ -281,7 +281,8 @@ different oracles, T3 is false (§2.2).
 
 T3 matters for more than tidiness. If the spec's `Fails` held of every
 source, a compiler that rejects everything would satisfy T1 and T2; T3
-rules such a spec out. T3 plus T4 give a weak completeness: if
+rules such a spec out, provided its `Elab` holds of some source. A spec
+whose `Elab` holds of too few sources satisfies T3 all the same. T3 plus T4 give a weak completeness: if
 `Elab o src c` holds and `compile` halts, it cannot reject *under `o`*.
 It can still reject under another oracle it chose. If the oracle
 records crash points, as §4.2 option 1 proposes, and a crash at
@@ -546,7 +547,7 @@ Options:
 4. **Resource budget in the language.** The spec rejects any compile
    whose compile-time runs exceed a bound. §62 already bounds expansions
    ("At most 10000 expansions run in one run"), though it does not say
-   that reaching the bound is a rejection (03 decision 5). *Pro:* T4
+   that going past the bound is a rejection (03 decision 5). *Pro:* T4
    becomes an unconditional Sleight function, and [owner 3] holds
    literally. *Con:* a language change with an arbitrary constant; a
    Q whose run exceeds the budget is rejected. Owner's call.
@@ -584,7 +585,7 @@ Options:
 | Extern implementations agree with their models, except `slot-eq` (§42) | §42; SOUNDNESS.md 11 | Yes, for programs checked and compiled with models only (`--no-extern`). Not for primitives without a model (`slot-eq`, `world-do`, the `def-prim`s at `lib/prelude.sl:1401–2250`). |
 | Prelude `def-prim`/`def-opaque` signatures and extern models | SOUNDNESS.md 1 | No: they are part of the spec. |
 | The elaborator implementation (`lib/elab.ml`, `self/elab*.sl`) and slc's interpreter | `self/README.md` "What it does not do" | Yes. This is the point of the project. |
-| The spec's faithfulness to DESIGN.md prose | — | No. It is irreducible, but T3 plus completeness guard against a vacuous spec. |
+| The spec's faithfulness to DESIGN.md prose | — | No. It is irreducible. T3 plus completeness guard against a vacuous compiler and against a spec whose `Fails` overlaps its `Elab`, but not against a spec that accepts too little; in my reading that needs `Elab` derived for programs DESIGN.md presents as valid, such as its worked examples (§55 to §61). |
 | The OCaml compiler, the runtime, zarith (`lib/ffi_core.ml` `small`), and the host | SOUNDNESS.md 11 | No, unless T6 is extended below OCaml (out of scope). |
 
 ## 6. `unique` as sole reference

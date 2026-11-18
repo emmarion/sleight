@@ -610,8 +610,11 @@ source whose compile-time run diverges has no derivation.
    10000 expansions run in one run") and §49 states "at most 1024", so
    both are language rules a formal spec must model. They are not fuel,
    and that part is not a question. Open: §62 does not say whether
-   reaching the cap is an error. Both implementations make it one (§5
-   below).
+   going past the cap, a 10001st expansion, is an error. Both
+   implementations make it one and accept exactly 10000
+   (`proto/review6/01_count_10000.sl` is accepted and
+   `01_count_10001.sl` is refused with "more than 10000 macro
+   expansions"; §5 below).
 
 ## 5. Rough edges in DESIGN.md (questions, not resolved)
 
