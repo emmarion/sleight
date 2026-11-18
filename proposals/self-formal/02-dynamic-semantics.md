@@ -1051,3 +1051,50 @@ Unsure, not changed:
   intended by the abstract machine, but it means the bound says nothing
   about host time.
 - The summary is still longer than the brief's 15 lines.
+
+## Round 6 review notes
+
+Added by a sixth, independent review. All five files under `proto/dyn/`
+were rerun on the reference (with and without `--no-extern`) and on
+`_build/release/slc --interpret`; `imm_eq.sl`,
+`review5/02_big_nat_slot_eq.sl` (and a copy with small `Nat`s), and
+`review4/02_share_pair.sl` built by both; `order1.sl` and `order2.sl`
+under `--extract`; `review2/machine_fn_oracle.sl`,
+`review2/const_share.sl`, and `review3/head_arg_order.sl`; the OCaml
+order test on 4.14.1; and the two OCaml manual sentences against
+ocaml.org/manual/4.14/expr.html. The outputs and quotes reproduce, and
+the code citations hold. New tests are `proto/review6/02_*.sl`.
+
+1. Rough edge 4 said "§33 states the requirement only 'With externs
+   on'". §33 states the representation (a fieldless value is "the word
+   of the `Nat` of its position", `vacant-slot`'s word "that of `Nat`
+   0") unconditionally; only the FFI's obligation is "With externs on".
+   Fixed.
+2. 2.3 called `native-compute` results "fieldless constructors". §72
+   requires only that no non-phantom constructor has a non-erased
+   field, and says "its erased fields take the tokens of §5". Fixed.
+3. O1 said slc's emitter "would need checking". It was checked:
+   `02_values_order_slc.sl` (`order2.sl` with a final function) makes
+   slc emit the `values` as nested `let ... in` in written order, and
+   the head `(pick)` before the hoisted `(h n)`. Fixed.
+4. C4 recommends compile-time exhaustion as a deterministic function of
+   a bound without noting that slc's interpreter does not stop at an
+   exhausted bound: "out of fuel" is an error value and the code after
+   it runs (`self/elab-main.sl:185-187`, `:192-197`). On
+   `head_arg_order.sl` under `--eval-fuel 20`, whose head alone
+   exhausts the bound (`02_fuel_head_alone.sl`), slc reports a stack
+   overflow from the argument and the reference "out of fuel". Added.
+5. Section 6 said slc's overflow on `head_arg_order.sl` "says nothing"
+   without saying why; item 4 is the reason, and it applies equally to
+   `review3/00_arg_head_order.sl`. Added. For the coordinator:
+   00-summary (finding on runtime order) cites
+   `00_arg_head_order.sl` for slc's interpreter running a head form
+   first, which for this reason that test cannot show; this review's
+   attempts to show it through `--eval-fuel` failed the same way.
+
+Unsure, not changed:
+- Whether slc's out-of-fuel-as-value is a bug against MANUAL.md's
+  "crashes with `out of fuel`" or intended; not raised in BUGS.md here.
+- slc's interpreter's order of a head form against an argument form
+  remains unobserved.
+- The summary is still longer than the brief's 15 lines.

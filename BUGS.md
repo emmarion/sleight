@@ -52,8 +52,9 @@ is a design decision. Remove an entry when it is fixed.
       fixed `heap-strs-fuel` of 1000000 (`self/eval.sl:1018`) and answer
       running out with `Nil`, so a longer list seems to be cut short
       with no report. Reproduced for `ConfinePaths`, on the tree at
-      `5fba336`, under `ulimit -s unlimited` (both compilers overflow
-      the default 8 MB stack on it), with
+      `5fba336`, under `ulimit -s unlimited` (at the default 8 MB
+      stack the reference, `slc --interpret`, and the binary `slc
+      --build` makes all crash on it), with
       `proposals/self-formal/proto/bugs/heap_strs_cut.sl` (a `reads`
       list of 1000000 entries `"absent-dir"` then `"."`, then a
       `Stat "."`): under `slc --interpret` it prints
@@ -172,9 +173,10 @@ is a design decision. Remove an entry when it is fixed.
     compilers.
 
 23. **`slc`'s compile-time printer cuts a deep value short with `_`.**
-    `show-at` (`self/elab.sl:4680-4725`) starts at a depth of 100000
-    and spends it twice per nested field, once in `show-at` and once
-    in `shown-field`, and prints `_` when it runs out, with no report.
+    `show-at` (`self/elab.sl:4680-4725`) is started at a depth of
+    100000 (`self/elab.sl:4730`, `self/interp.sl:15`) and spends it
+    twice per nested field, once in `show-at` and once in
+    `shown-field`, and prints `_` when it runs out, with no report.
     So a list of more than about 50,000 elements prints wrongly.
     Reproduced on the tree at `5fba336`, with
     `ulimit -s unlimited`, by three files under
@@ -209,7 +211,7 @@ is a design decision. Remove an entry when it is fixed.
       `show_any` when it runs out (`self/emit.sl:1380`), which prints
       `?` (`self/runtime.ml:18`) rather than returning an error value;
       that case was not reached in a run. `show-at`'s 100000, which
-      prints `_` silently (entry 23), is not mentioned there.
+      prints `_` silently (entry 23), seems not to be mentioned there.
     - `README:385-386` puts the sugar budget "as its first `subterm`
       parameter, ahead of the raw". In `elab-expr-demand`
       (`self/elab-main.sl:752`) it is `sugar`, after the `subterm`
@@ -229,7 +231,7 @@ is a design decision. Remove an entry when it is fixed.
     word 0 (`self/eval.sl:51`), so the binder seems to read as its
     type's first fieldless constructor, or as the `Nat` 0, whatever
     was written. Reproduced on the tree at `5fba336`, compiled and
-    (for the first) under `--interpret`, with files under
+    under `--interpret`, with files under
     `proposals/self-formal/proto/aftererr/` that each start with
     `(compile-error "first")`: in `02_bfalse.sl`, `x` bound to
     `(BFalse)` is reported as "expected `BFalse`, got `(BTrue)`"; in
@@ -240,7 +242,9 @@ is a design decision. Remove an entry when it is fixed.
     `proposals/self-formal/10-slc-after-error.md` reports more such
     cases, including ones where a binder is called `Hypothetical`, and
     that macro expansion has no such gate; those were not re-run here.
-    The reference stops at the first error and prints only that one.
+    The reference stops at the first error and prints only that one;
+    `self/README.md:301-302` says only that `slc` "may report a few
+    more that follow from it".
     Acceptance seems unaffected, since the first error already makes
     `slc` exit 1, and `--first-error` hides the later messages.
     DESIGN.md seems not to say whether more than one error is reported;
@@ -249,13 +253,14 @@ is a design decision. Remove an entry when it is fixed.
     the expected constructor and the actual value". Which answer is
     wanted is not decided here.
 
-26. **The reference interpreter's `-imm` blits corrupt its heap.** `lib/ffi.ml:89`
-    maps `array-blit-imm`, `array-blit-many-imm` and `array-move-imm` to
-    `Ffi_core.array_blit_imm` (`lib/ffi.ml:117-119`), a raw word copy
+26. **The reference interpreter's `-imm` blits corrupt its heap.** `lib/ffi.ml:117-119`
+    maps `array-blit-imm`, `array-blit-many-imm`, and `array-move-imm` to
+    `blit_imm` (`:89`), which calls `Ffi_core.array_blit_imm`, a raw word copy
     with no write barrier (`lib/ffi_core.ml:319-321`). In compiled code
     the elements of such an array are immediates, which is what the
-    `Imm` evidence of §44 is for, but in the interpreter every element
-    is a heap-allocated `VWord` (`lib/value.ml:22`), so the copy moves
+    `Imm` evidence of §44 is for, but in the interpreter such an element,
+    a `U62` in the reproduction below, is a heap-allocated `VWord`
+    (`lib/value.ml:22`), so the copy moves
     pointers behind the garbage collector's back. Reproduced with
     `_build/default/bin/main.exe std/immediate.sl
     proposals/self-formal/proto/bugs/blit_imm_interp.sl`, which blits
@@ -265,9 +270,14 @@ is a design decision. Remove an entry when it is fixed.
     an extern integer: _". The same program with `array-blit` prints
     `0`. `--build` crashes too, since the reference runs the top-level
     call at compile time. `slc --interpret` prints `0`: `self/core.sl:482`
-    maps the three `-imm` blits to the ordinary blit. Only
-    `array-blit-imm` was run from Sleight; the other two share its
-    implementation. §31 lets a run crash only "where the host cannot
-    represent what is asked of it". The analysis, and the reasoning that
+    maps the three `-imm` blits to the ordinary blit.
+    `proposals/self-formal/proto/review6/08_blit_many_imm_interp.sl`
+    does the same with `array-blit-many-imm`: a segmentation fault in
+    both runs tried, the same message under `OCAMLRUNPARAM=s=4k`, and
+    `0` under `slc --interpret`;
+    `array-move-imm`, which shares their implementation, was not run.
+    §31 says a real run "may crash where the host cannot represent
+    what is asked of it", which this small program seems not to
+    approach. The analysis, and the reasoning that
     compiled `-imm` stores are safe when both words are immediates, are
     in `proposals/self-formal/08-gc-imm-stores.md`.

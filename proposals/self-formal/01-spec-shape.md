@@ -1010,3 +1010,62 @@ Unsure, not changed:
    expansion is not gated and that a call with a variable argument gets
    the token too, and points to BUGS.md 25; the section 6 item is
    removed. From 10 §1, §2, and §4.
+
+## Round 6 review notes
+
+Added by a sixth, independent review. Every test under
+`proto/spec-shape/` and the `proto/review2/` to `proto/review5/` tests
+this file cites were rerun on the reference and on `_build/release/slc
+--interpret` (`fuel.sl` and a `--no-prelude` program under
+`--eval-fuel 5`, the `slot_eq` pair under the reference's
+`--no-extern`); the outputs quoted reproduce. The code citations in
+`lib/`, `self/`, `mini/`, `bin/`, SOUNDNESS.md, and MINIMAL.md were
+reopened and hold. New tests are `proto/review6/01_*.sl`.
+
+1. §3.7 said slc's `--first-error` "stops at the first". MANUAL.md says
+   it "stops its report after the first error"; elaboration goes on (10
+   §1, `self/main.sl:45`). Fixed.
+2. Decision 2 described owner statement 2 as "a fuel-free deriving
+   function run as steps of the driver's `Program` loop". The brief's
+   statement 2 is about a fuel-free self-interpreter; applying it to
+   elaboration is this file's extension. Reworded.
+3. The coordinator note says §3.7 gives 10's account "that a call with
+   a variable argument gets the token too"; the body did not say so.
+   Added.
+4. §3.5 put "`gensym_order.sl` starts its numbering at 1" next to the
+   expansion count, which a gensym number does not measure. New tests
+   `01_count_10000.sl` (exactly 10000 expansions, accepted by both) and
+   `01_count_10001.sl` (refused, "more than 10000 macro expansions")
+   show the shipped prelude adds nothing to the count. §3.5 and section
+   5 item 7 updated; the gensym sentence now says what it shows.
+5. Section 5 item 14 and §3.7 said the reference "reports no error in
+   the later file". It never reads it: it reads each command-line file
+   when the fold reaches it (`bin/main.ml:11-16`), and a `Program` final
+   ends the process (`lib/program.ml:116`), which answers the fifth
+   review's open point. Missed: under `--warnings-as-errors` the
+   reference holds finals back until every file is elaborated
+   (`bin/main.ml:97-102`, `:109-110`), so `01_prog_first.sl` then
+   `01_late_error.sl` is refused though nothing warns. Also tested:
+   `;! file` files behave as command-line files in both
+   (`01_pragma_file_prog.sl`, `01_pragma_file_late.sl`), as §4 says.
+   §3.7, section 5 item 14, and decision 8 updated.
+6. Section 5 item 13 said the head's error "is reported after" the
+   argument's expansion error; the reference stops at the first error,
+   so it is not reported at all. Fixed.
+7. The summary listed three acceptance-affecting gaps but not the
+   driver-timing one (section 5 item 14), the only one already shown to
+   split the two implementations. Added.
+8. Section 5 items 4 and 5 credited only the reference; slc gives the
+   same messages. Fixed.
+
+Also added: `01_splice_output.sl` shows that a macro call's output is
+expanded before the arguments after it, on both implementations, which
+decision 5 stated from code alone (§3.6).
+
+Unsure, not changed:
+- Whether "A fourth" in the summary should instead renumber the list;
+  left as an addition.
+- slc's out-of-fuel is an error value and evaluation goes on (02 C4);
+  whether that changes which first message slc gives for `fuel.sl`
+  under `--eval-fuel 5` was not traced.
+- The summary is still far beyond the brief's 15 lines.

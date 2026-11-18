@@ -806,3 +806,62 @@ Points I am unsure of:
   term and needs no determinism lemma, having no state.
 - Whether full Sleight's levels rule out a diverging run-position form
   (first review's open point); not examined here.
+
+## Round 6 review notes
+
+A sixth adversarial review read DESIGN.md in full, every file in
+`proto/roundtrip/`, `proto/review2/07_*`, and `proto/review4/07_*`, and
+re-ran at 10bd85d (no code change since 669b328): programs 0 to 5 in
+both variants under the reference and `slc --interpret` (outputs, exit
+codes, and step counts as in F2, identical between the two); program 6
+(22 MB at 4 s and at 12 s, both variants); the three
+`--goal proved: PASS` sets and the replay set without `impl.sl`
+("unbound name `vals`") under both checkers; `spec.sl det.sl` alone
+(accepted); the four refusals under both checkers, with the quoted
+messages; `07_loop_step_bad.sl` (refused, then `--goal proved: FAIL`);
+both bare-`ne` refusals (`(CNe c2 c2)` at `det.sl:107`, `(CNe c c)` at
+`:120`); the three `predates` variants of `drive.sl` (the `Predates M P`
+one refused with "value mismatch: expected `PA`, got `P`", the other two
+accepted with the quoted warning); `07_nondet_both.sl` under both
+checkers (`(MkBoth _ _ _)`) and `det.sl` against `07_nondet_spec.sl`
+(refused at `det.sl:48`, missing `SNumUp`); that the current files run
+with no warnings; the line and rule counts; the `goal.sl` and `Waiting`
+excerpts; the DESIGN.md quotes in F1 and §5; and `self/elab-main.sl:159`
+and `443-462`. All matched except as below. Errors found and changes
+made:
+
+1. Decision 3 said 05's `t1_toy.sl` exclusivity is "the same
+   induction" as the toy's (the fifth review's open point). It is not:
+   `t1_toy.sl`'s `exclusive` recurses with `subterm` on the source term
+   and uses no determinism lemma; the toy's recurses on `Fails` and
+   needs one per shared premise (`det.sl:90-123`). Both are plain
+   inductions, which is all the decision needs. Reworded.
+2. F7 did not say whether a `Certified` value can be driven at all. A
+   function given one cannot call its `init` or `step`, since their
+   level is the packed `L`: `proto/review6/07_cert_fn_bad.sl` (new) is
+   refused with "`L` was not in scope when level `(level-of first-turn)`
+   was minted". Destructured at the top level, before the driver's
+   levels are minted, the same value drives program 0 to "accepted after
+   26 Program steps" (`proto/review6/07_cert_drive.sl`, new; reference,
+   `--no-extern`, and `slc --interpret`). Added to F7, since it bears on
+   how the statement can be used.
+3. Header: names this review's commit.
+
+The theorem's type was checked against the claims again: `MkCertified`
+packs `S`, `L`, an unconstrained `init`, a `step` that sees `p` only
+erased and whose `Fin` must carry a `Verdict p` for that `p`, and an
+`excl` that mentions only `spec.sl` relations (`det.sl` is accepted
+against `spec.sl` alone). Vacuous implementations that pass: a `step`
+answering `More` on some or all states, with any `init`, and any reason
+string. I found no third.
+
+Points I am unsure of:
+
+- Whether 05's claim that T3 "needs the spec to be deterministic",
+  which F4 cites, is meant generally; `t1_toy.sl`'s exclusivity needs no
+  determinism lemma, its spec having no evaluation. F4's own claim, that
+  this toy's proof uses determinism and fails for one nondeterministic
+  variant, is compiled.
+- Whether the top-level destructure of item 2 is how a certified checker
+  in full Sleight would be packaged for its driver; that is a design
+  question, not settled by this test.

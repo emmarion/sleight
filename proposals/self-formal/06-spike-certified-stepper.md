@@ -352,7 +352,9 @@ not being built at run time, which erasure (§14, §27) already implies.
    so the proofs could carry over. The machine state becomes unique and
    each `def-unique` continuation captures it. *Untested.*
 3. **Abstract addresses** as 02 recommends (A1). Here an address is a
-   position, which a spec of Sleight would not want. *Untested.*
+   position, which 02 recommends a spec of Sleight avoid (02's A2 cons:
+   a spec exposing order or arithmetic "would need a theorem that
+   nothing uses it"). *Untested.*
 
 ## 4. Decisions for the owner
 
@@ -810,6 +812,9 @@ and 0.00 s built; 26021 steps 8.51 s, 3.42 s, and 0.03 s built; peak
    that reading as fact. Both now say "introduced" and Q1.2 is hedged.
 7. F6 and the summary: today's timings fall below the stated ranges;
    the ranges now include them. Header names this review's commit.
+8. Q3.3 said, unhedged, that a spec of Sleight "would not want"
+   position addresses; that is 02's recommendation (its A1, with A2's
+   cons quoted), not established. Now attributed.
 
 Also checked: `ho_exist_build.sl`'s closure state can be returned, not
 only built (a scratch variant returning it in a `HNext` is accepted), so
