@@ -1139,3 +1139,91 @@ Unsure:
 - Whether condition (d) is better read as part of "Sleight proves D2
   and D3"; stated separately here because the usual statement of the
   conditions assumes a theory closed under logic.
+
+## Round 7 review notes
+
+A seventh adversarial reviewer read the review brief, the brief,
+CLAUDE.md, DESIGN.md in full, SOUNDNESS.md in full, OPEN.md 1 to 4,
+README.md's "Logic and strength", and 09 §1 to §4 with its Round 7
+coordinator notes. It re-ran every `proto/theorems/` file under the
+reference and slc (with `bove.sl`, `fuel.sl`, and `fuel_run.sl` first
+where needed, and `halts_reflect.sl` with fuel 2 on a scratch copy,
+refused at the `comptime-match`); `--goal proved spec.sl proof.sl` and
+the two `review2` level files; `review3/05_halts_uniform.sl` (`7`);
+`review3/05_det_param_bad.sl`; `review2/05_generic_match.sl`;
+`review2/05_erased_to_many_false.sl`; `review4/05_stripped_absurd.sl`
+(`--extract` fails); `review5/05_stripped_absurd_final.sl` (`--extract`
+and `--build` succeed, and the reference, the built program, and `slc
+--interpret` stop with "absurd code reached"); `drive.sl` with the
+step's level minted after `P` on a scratch copy (refused); and every
+`proto/godel/` file under both implementations. Each behaves as stated.
+
+Errors found and changed:
+
+1. §1, §4.3, T7, §5, and §9 said that condition (d) had not been tried.
+   `proto/godel/g2_defs.sl` with `g2_step.sl` now tries it for an
+   abstract relation (09 §2.4 B and its Round 7 coordinator notes).
+   Re-run here: `--goal proved g2_defs.sl g2_step.sl` passes on both
+   implementations, `g2_direct_bad.sl` is refused by both ("`K` was not
+   in scope when level `(level-of g2-direct)` was minted"), and
+   `g2_fixed.sl` passes on both. Each place now says that (d) was tried
+   only for a relation `P` that formalizes nothing, with D2, D3, and the
+   diagonal's D1 instance as hypotheses, and that nothing builds a
+   `Prov` formalizing acceptance. §4.3 adds that `g2_step.sl` takes G to
+   be ¬`(P ⌜G⌝)` itself, as a macro-built G would be, so a relationally
+   built G adds untried steps, and that 09 puts the last step at the
+   top level.
+2. §4.3, the diagonal applied to an intrinsic `compile`, "needs T1 to T4
+   and the spec's determinism on Q". By §3 T3, if the oracle may crash
+   and a compile-time crash counts as a rejection, a `compile` may
+   reject under an oracle that crashes at once and still meet T1 to T3.
+   On Q it then meets T1 to T4: `Fails` holds under that oracle, Q's
+   crash-free run accepts, and no contradiction follows. The crash
+   condition is now stated there, in §1's "faithful (T1 to T3 ...)",
+   and in §9.
+3. §1 gave the diagonal's premises as (T), (C), and (E) without saying
+   that they are read as §4.3 and 03 F6 read them (03's summary gained
+   that in round 6), or that the macro form rests on the further
+   premises of 09 §3.4. Added, and likewise in §4.3's macro form, its
+   quine conclusion (which now also names the reading and the spec's
+   determinism on Q), its "rules out uniform H", and §9.
+4. §2.3, "So H is *claimed and argued* by SOUNDNESS.md". SOUNDNESS.md
+   does not mention H; H follows from what it claims only on the
+   readings that paragraph lists. Reworded.
+5. §3 T4(a) derived the meta-theorem from "(T) and (C)", dropping (E)
+   and §2.3's reading of the claims as covering every source. Fixed.
+6. §3 T3, "T3 rules such a spec out": exclusivity holds vacuously for a
+   spec whose `Elab` holds of no source. The §5 table's "T3 plus
+   completeness guard against a vacuous spec" had the same gap. Both
+   now say what these guard against and what they do not.
+7. §4.3 option 4, "as §62 already does for expansions". §62 states the
+   cap but not that going past it is a rejection (03 decision 5).
+   Reworded.
+8. §1, "The workable form is *intrinsic*". F1 gives two forms, the
+   intrinsic one and a graph relation (option 4.1.2). Now both, with the
+   intrinsic one recommended.
+9. §1's last bullet and decision 7 stated as fact what §6 and T7 give
+   as opinion ("I do not think it is needed"; "I expect T7 for the
+   stripped run to stay a meta-theorem"). Hedged.
+10. §6: SOUNDNESS.md part 3 "assumes" the immutable reading only beyond
+    the cells of `lean/`'s fragment, for which "`machine_main` appears
+    to prove it". Added.
+11. §5 table, the axioms row: "Their truth ... are safety invariants"
+    (number), and the justification covered `predates-trans`,
+    `subterm-trans`, `predates-subterm`, and `gensym-unique` but not
+    `placed-slot` and `placed-eq`. Fixed, hedged.
+12. §9, "SOUNDNESS.md's (T), (C), and (E) themselves, on which H rests".
+    §2.3 derives H from (T) and (E); (C) enters through T4(a).
+    Reworded.
+
+Unsure:
+- Item 1's remark that a relationally built G adds untried internal
+  steps (¬`(Prov ⌜G⌝)` → G through `Sub`, and its converse for the D1
+  instance) is my reading of 09 §2.4 B, not compiled.
+- The last step of the abstract derivation, from ⊢ Con to ⊢ ⊥, is
+  09's description; I did not compile it in the `g2_defs.sl` setting.
+  09's round-7 reviewer's `proto/review7/09_g2_final.sl` appears to:
+  under `--no-prelude`, after `09_g2_pre.sl` and `g2_defs.sl`, both
+  implementations accept it here, with `con` taken from an axiom.
+- Item 6's remedy (deriving `Elab` for the worked examples) is my
+  suggestion, not something the spec tracks propose.

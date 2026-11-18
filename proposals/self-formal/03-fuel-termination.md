@@ -171,17 +171,17 @@ The file behind 3 was not saved. Reproduce each from the text here.
    (`proto/stepper/ho_exist_use_bad.sl`,
    `proto/review3/06_packed_predates_bad.sl`), which 06 reads as
    following from §18.
-2. **A function cannot iterate `Program` steps.** The function `run-all :
+2. **A function cannot iterate `Program` steps without fuel.** The function `run-all :
    (subterm unique (Program L) p) (World) -> ...` matches `Continue _ k`,
    calls `(k w)`, and recurses on the result `p2`. It is refused:
    "`p2` is not a strict subterm of `(Continue L k)`". This matches
    SOUNDNESS.md's point 3, "A stored function is a leaf". Only the driver
    iterates, or a function that is given fuel. The second is checked by
    `proto/review7/03_fuel_iterate.sl`: called from a driver step with its
-   world, a function at a level minted after the `Program`'s steps a
-   five-step `Program` under a `subterm` fuel, and prints `out of fuel`
-   with fuel 3 and `finished` with fuel 10, under the reference,
-   `--no-extern`, and `slc --interpret`.
+   world, a function whose level is minted after the `Program`'s level
+   runs the steps of a five-step `Program` under a `subterm` fuel, and
+   prints `out of fuel` with fuel 3 and `finished` with fuel 10, under
+   the reference, `--no-extern`, and `slc --interpret`.
 3. **The `Program` knot is accepted, as in `interp.sl`.** `drive` at PA
    returns `Continue P again`. `again` is a `def-unique` at P, defined in
    `drive`'s body and closing over `many` state, and it calls `drive`.
@@ -1093,3 +1093,86 @@ Unsure:
 - Whether further premises of 09 §3.4 should reach the summary; it now
   points to F6 for them.
 - The compiled timing rows were not re-run in this round.
+
+## Round 7 review notes
+
+A seventh adversarial reviewer read the review brief, the brief,
+CLAUDE.md, DESIGN.md in full, SOUNDNESS.md in full, and 09 §1 to §4
+with its Round 7 coordinator notes, and re-ran `diagonal.sl` (969
+bytes, accepted) and the 970-byte copy (refused, "toy-compile accepts
+this source") under the reference and `slc --interpret`;
+`03_detour.sl` under the reference (`(BFalse)`), `--extract` to a
+scratch path, and `slc --interpret`, with the 909-byte prefix and the
+969-byte literal compared again; `review2/03_untaken_ce.sl` (refused by
+both); `fr/a.sl` to `fr/d.sl` under both (`fr/d.sl` also under
+`--no-extern`, each printing `13`); `suspend.sl` 0/1/2 under both and
+built by both, and 3 under a timeout; and the `--eval-fuel 1000` pair
+under both. All behave as the body says. The compiled timing rows were
+not re-run: the one-minute load average was 2.7.
+
+Errors found and changed:
+
+1. Summary, "erased termination measures". F3 row 3 says, since review
+   note 10, that `expand` takes `xf` at `many` (`elab-main.sl:555`) and
+   that `Steps`'s `SS` field is `many`. Now "termination measures (most
+   of them erased)".
+2. Summary, "A function also cannot iterate `Program` steps itself". The
+   condensation dropped F4.2's "or a function that is given fuel", which
+   nothing had compiled. `proto/review7/03_fuel_iterate.sl` (new): called
+   from a driver step with its world, a function whose level is minted
+   after the `Program`'s level runs the steps of a five-step `Program`
+   under a `subterm` fuel, and prints `out of fuel` with fuel 3 and `finished` with fuel 10,
+   under the reference, `--no-extern`, and `slc --interpret`. The
+   summary now says "unless it is given fuel", and F4.2 cites the file.
+3. The places that rest on F6 stated its conclusion with termination as
+   the only premise, dropping the others 09 §3.4 lists (P accepted by
+   the spec, a deterministic run of `compile`, one semantics for the
+   macro's run and the driver's, no crash, a fixed file system, and
+   so on): the summary's diagonal bullet, F6's "So, if Sleight's
+   functions do terminate", F6's "H for all sources", F7's "By F6's
+   inference (... assuming Sleight is sound)", which also dropped the
+   stepper's faithfulness, and Q1(d)'s "F6 rules it out". Each now
+   says that it rests on F6's premises, and section 6's item on the
+   detour names the rest of 09 §3.4's.
+4. F6 omitted 09 §3.4 premise 5: the macro's reads must return Q's own
+   files, so "agrees with the spec" is relative to a fixed file system.
+   Added.
+5. F6 argued the termination of the macro's other code for
+   `diagonal.sl` only. For a real `compile` the macro must also read
+   every file of its unit and build `Src` (09 §3.4 premise 4). Added.
+6. F6 read (E)'s "follows" as "a step-by-step correspondence" with a
+   finite full run, citing 09 §3.2, which says "an order-preserving
+   correspondence"; the stripped run skips erased steps, so it does not
+   follow the full run step by step. Now 09's wording.
+7. F7 derived H from (T) and (C). By F7's own definition H concerns
+   evaluation only, part 6 gets the evaluation part of (C) from (T),
+   and 05 §2.3 derives H from (T) and (E) alone. Now (T) and (E), with
+   (C) said not to be needed for H.
+8. F7, "macro functions (§62), at most 10000 of them per run". §62 caps
+   expansions, not macro functions. Reworded.
+9. F4.1 said that, "on 06's reading of §18", the stepper cannot apply a
+   closure extended at a fresh level and a packed `Predates` cannot
+   reach that level. 06 F4.2 reports both as compiled refusals
+   (`proto/stepper/ho_exist_use_bad.sl`,
+   `proto/review3/06_packed_predates_bad.sl`; re-run here after
+   `std/list.sl`, `spec.sl`, and `machine.sl`, refused as 06 quotes).
+   Now said so.
+10. Decision 5, raised by 01's round-7 reviewer through the coordinator:
+    "whether reaching the cap is an error". Reaching it is not:
+    `proto/review6/01_count_10000.sl` is accepted and
+    `01_count_10001.sl` is refused with "more than 10000 macro
+    expansions", under the reference and `slc --interpret` (re-run
+    here). Now "going past the cap, a 10001st expansion". The fourth
+    review notes' "Confirmed" paragraph uses the same phrase; left as
+    written.
+
+Unsure:
+- F6 keeps its first route, "(C) for the rest", beside the detour that
+  replaces it, and the summary still lists (C); as the fifth review
+  says, that only weakens the stated result.
+- The summary's "Every function in it is checked total" means accepted
+  by the checker's termination check; totality from that rests on
+  SOUNDNESS.md's (T).
+- Item 5's "which non-recursive code can do" follows 09 §3.4 premise 4
+  and assumes that `Src` is built from a fixed list of files by
+  constructor applications; no such macro was written.
