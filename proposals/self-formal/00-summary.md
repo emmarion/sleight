@@ -26,11 +26,11 @@ Each item is the tracks' recommendation, not a decision.
 - **The run.** A small-step heap machine over post-erasure code (§27): `Imm n | Ptr a` words,
   abstract never-reused addresses compared only for equality, mutable blocks, a total step, one
   fixed order, `Nat` primitive, `slot-eq` from an oracle (02 §3; decisions 4, 5, 7, 8, 9).
-- **Fuel.** If Sleight's functions terminate (SOUNDNESS.md's (T) and (E), argued, not proved), no
-  hypothesis-free non-erased Sleight `compile` on source text is faithful on every source (key
-  finding 2; partly untested). Fuel either stays internal, never showing in a result, or the
-  unbounded part moves into the driver's `Program` loop, fuel-free in prototypes; mechanisms differ
-  by track (decisions 18, 18a).
+- **Fuel.** If Sleight's functions terminate (SOUNDNESS.md's (T) and (E), argued, not proved, and
+  read as 03 F6 reads them), no hypothesis-free non-erased Sleight `compile` on source text is
+  faithful on every source (key finding 2; partly untested). Fuel either stays internal, never
+  showing in a result, or the unbounded part moves into the driver's `Program` loop, fuel-free in
+  prototypes; mechanisms differ by track (decisions 18, 18a).
 - **Theorems.** Intrinsic, since a type holds no call (§9): T1/T2 accepted ⇒ `Elab`, rejected ⇒
   `Fails`; T3 never both, per oracle; T4 every source accepted or rejected (owner statement 3),
   relative to a halting hypothesis H; T5 compile-time values match the spec run; T6 output refines
@@ -68,13 +68,14 @@ Each item is the tracks' recommendation, not a decision.
    "faithful" means every run §67 permits agrees (r2.3, r3.4). It does **not** refute owner
    statement 4(ii) as mathematics, nor a `compile` taking erased evidence of H for its one source,
    though, if Sleight is sound, no Q can produce that evidence for itself; code outside Q may
-   (r3.5). It suggests (untested, assuming soundness) that H for all sources, in a form a function
-   can recurse on such as erased step counts, is not provable inside Sleight (03 F6, F7, r4.2). slc
-   does not escape: its compile is one `Program` step, total through its fuel (03 F2, F3), its
-   `World` blocking only the literal construction (03's reading, r2.1). 05 §4.3's version, through
-   `read-file` in a macro, needs T1 to T4 (determinism through T3, per oracle, so the `ENone` copy
-   too), not T5, and, T1 to T3 being erased derivations, soundness of the logic (05 §1, r4.2, r4.3);
-   its quine form, its call in Q's final value, needs an unwritten quine (05 r2.1, r5.2).
+   (r3.5). It suggests (untested, assuming soundness and a faithful stepper) that H for all sources,
+   in a form a function can recurse on such as erased step counts, is not provable inside Sleight
+   (03 F6, F7, r4.2). slc does not escape: its compile is one `Program` step, total through its fuel
+   (03 F2, F3), its `World` blocking only the literal construction (03's reading, r2.1). 05 §4.3's
+   version, through `read-file` in a macro, needs T1 to T4 (determinism through T3, per oracle, so
+   the `ENone` copy too), not T5, and, T1 to T3 being erased derivations, soundness of the logic (05
+   §1, r4.2, r4.3); its quine form, its call in Q's final value, needs an unwritten quine (05 r2.1,
+   r5.2).
 3. **Theorems must be intrinsic.** §9: "The elaborated form of a type never contains a function
    call" (tested). A toy checker returning its verdict with an erased `Elab` or `Fails` and an
    erased exclusivity lemma passes `--goal proved` (05 F1 to F3).
@@ -108,30 +109,30 @@ Each item is the tracks' recommendation, not a decision.
    output before the next argument, then a head that is a name, then the arguments left to right
    (`proto/review3/gensym_*.sl`, `review4/01_head_name_err.sl`, `review6/01_splice_output.sl`;
    special forms' operands unchecked; 01 §3.6, r3.1, r4.2). At runtime the reference, and slc's
-   compiled code in one test only, run a head form before an argument form in a body
-   (`proto/review3/head_arg_order.sl`, `proto/review5/04_head_arg_compiled.sl`; 02 §6; 04 r5.2), and
-   slc's emitter writes the head before the hoisted argument and a `values` as nested `let`s in
-   written order (`proto/review6/02_values_order_slc.sl`; 02 r6.3). `slc --interpret`'s order is
-   unobserved: its out of fuel is an error value after which the run goes on, so it overflows on
-   `head_arg_order.sl` and the swapped `proto/review3/00_arg_head_order.sl` alike (02 §6, r6.4,
-   r6.5). A real run observes order without divergence through a §31 crash: an argument's write
-   precedes another's crash under slc's native build and the reference, §15 allowing either order,
-   though the spec's run ("unlimited stack and heap") would not crash
-   (`proto/review5/04_effect_vs_crash.sl`; 04 §5.1, r5.3, r6.4). Stuck states and divergence can
-   too; that nothing else does, `Measure` once world answers are inputs aside, is a conjecture (02
-   §2.3, r3.3).
+   compiled code (native and `--byte`) in one test only, run a head form before an argument form in
+   a body (`proto/review3/head_arg_order.sl`, `proto/review5/04_head_arg_compiled.sl`; 02 §6; 04
+   r5.2), and slc's emitter writes the head before the hoisted argument and a `values` as nested
+   `let`s in written order (`proto/review6/02_values_order_slc.sl`; 02 r6.3). `slc --interpret`'s
+   order is unobserved: it overflows its stack on `head_arg_order.sl` and on the swapped
+   `proto/review3/00_arg_head_order.sl`, and `--eval-fuel` cannot separate the orders, since its out
+   of fuel is an error value after which the run goes on (02 §6, r6.4, r6.5). A real run observes
+   order without divergence through a §31 crash: an argument's write precedes another's crash under
+   slc's native build and the reference, §15 allowing either order, though the spec's run
+   ("unlimited stack and heap") would not crash (`proto/review5/04_effect_vs_crash.sl`; 04 §5.1,
+   r5.3, r6.4). Stuck states and divergence can too; that nothing else does, `Measure`'s cost
+   readings being absorbed once world answers are inputs, is a conjecture (02 §2.3, r3.3).
 7. **Extern mode changes acceptance by DESIGN.md's text.** §35: "with externs too, `(slot-of k)` is
    tag slot `k`"; `proto/dyn/tagslot.sl` is refused under `--no-extern` (02 §2.5, Q6).
 8. **Compile-time fuel and crashes.** DESIGN.md does not mention fuel (03 F1). Both implementations
    refuse a run-position form whose run crashes (01 decision 7). slc's only fuel known to change a
    verdict is its depth bound (default 1000000000, fresh per form, macro run, and `Program` step);
    `merge-opens` would accept early if its bound were short, which 03 believes, unproved, it is not
-   (03 §1, F3, r2.5), and its interpreter runs on after out of fuel, a defect against MANUAL.md's
-   "crashes with `out of fuel`" or not (02 C4, r6.4). The reference has no default bound. §62's cap
-   stops a self-calling macro; 10000 expansions are accepted and 10001 refused by both, so the
-   shipped prelude adds none (01 §3.5, r6.4). slc also has a per-form expansion bound (about twenty
-   zero-case sites) and `run-toplevel`'s, 10000 per file, besides §62's count (03 F3, r5.5; 04 §2.3,
-   r5.5).
+   (03 §1, F3, r2.5), and its interpreter runs on after out of fuel; whether that is a defect
+   against MANUAL.md's "crashes with `out of fuel`" is open (02 C4, r6.4). The reference has no
+   default bound. §62's cap stops a self-calling macro; 10000 expansions are accepted and 10001
+   refused by both, so the shipped prelude adds none (01 §3.5, r6.4). slc also has a per-form
+   expansion bound (about twenty zero-case sites) and `run-toplevel`'s, 10000 per file, besides
+   §62's count (03 F3, r5.5; 04 §2.3, r5.5).
 9. **slc has no spec relation to retrofit against.** About 6% of ~18,650 lines are erased lemmas,
    mostly in libraries; the elaborator, interpreter, and emitter are trusted plain code, with 20
    `"internal:` sites, and the emitter trusts refutation (04 §2.2, §2.5).
@@ -148,11 +149,11 @@ Each item is the tracks' recommendation, not a decision.
     templates, and the `(imm o n)` stores slc emits as `Array.unsafe_set` (`emit.sl:863-868`; five
     for `tests/cell_imm.sl`), bypass OCaml's write barrier (no `caml_modify` under ocamlopt 4.14.1,
     `proto/review5/04_barrier.ml`; 04 r3.1, r5.7, r6.5), safe on 4.14.1 when both words are
-    immediates on 08's reading, a sufficient condition, not a necessary one (04 r6.1; key finding
-    19); the `Slots` implementation hashes raw addresses rather than searching with `slot-eq` as
-    §69's models do, and its detection of GC moves is checked only by tests;
-    `Bytes.unsafe_to_string` in `bytes-str` relies on uniqueness; 20-argument tail calls were
-    checked only on amd64, OCaml 4.14.1, no flambda (04 §2.5, r2.5, r2.11, r2.12, r2.22).
+    immediates, among 08's other conditions, on 08's reading; both words immediate is sufficient,
+    not necessary (04 r6.1; key finding 19); the `Slots` implementation hashes raw addresses rather
+    than searching with `slot-eq` as §69's models do, and its detection of GC moves is checked only
+    by tests; `Bytes.unsafe_to_string` in `bytes-str` relies on uniqueness; 20-argument tail calls
+    were checked only on amd64, OCaml 4.14.1, no flambda (04 §2.5, r2.5, r2.11, r2.12, r2.22).
 12. **`mini/` gaps.** Malformed shapes have no derivation and `elab-program` can answer
     `ProgramStuck`; keywords are reserved though §19 lets special forms be shadowed; `Sexp` has no
     `Pos`; by MINIMAL.md, `mini/`'s language lacks multiplicities, `Matchable`, slots, macros, run
@@ -206,9 +207,10 @@ Each item is the tracks' recommendation, not a decision.
     sources and stress tests (over 5,000 debug heap checks); OCaml 5 (one domain read, not run),
     flambda, arm64, and systhreads are untested (08 §1, §3, §6 to §8, r6.1, r6.8). The reference
     interpreter's `-imm` blits copy boxed `VWord`s raw: `array-blit-imm` and `array-blit-many-imm`
-    segfault it, under `--build` too (`array-move-imm` untried), while `slc --interpret` maps all
-    three to the ordinary blit (`proto/bugs/blit_imm_interp.sl`,
-    `proto/review6/08_blit_many_imm_interp.sl`; 08 r1, r6.4; BUGS.md 26).
+    segfault it, under `--build` too (for `array-blit-many-imm`, this summary's own check;
+    `array-move-imm` untried), while `slc --interpret` maps all three to the ordinary blit
+    (`proto/bugs/blit_imm_interp.sl`, `proto/review6/08_blit_many_imm_interp.sl`; 08 r1, r6.4;
+    BUGS.md 26).
 20. **Gödel II: possibly, not established** (09's reading). Goals passing `--goal proved` (§71)
     appear r.e., and Σ₁ facts and a coded system's consistency can be goals (09 §2.2, §2.3;
     `proto/godel/`, both). Missing, unattempted: a Sleight `Prov` formalizing acceptance, with D1 to
@@ -218,12 +220,13 @@ Each item is the tracks' recommendation, not a decision.
     §4.3, r6.1). A macro in a goal type can splice in its own file's text (`r_self_goal.sl`, with
     `std/macro.sl`, both; 09 r6.1); D2 and D3 for such codes are open (§45). Level stratification
     blocks the obvious translation of nested implications, not obviously a PRA-style one (09 §2.3,
-    §2.4 A). Without Gödel, 03's diagonal rules out a faithful hypothesis-free non-erased `compile`
-    and uniform H in a recursable form (key finding 21); a separate, Kleene-style argument would
-    give an unprovable true non-halting statement, given r.e., consistency, and Σ₁-completeness for
-    an undecidable halting relation (09 §2.4, r6.2, r6.3). Gödel II would add, from consistency
-    rather than soundness but only given the missing pieces, that uniform stripped-run safety, and
-    (T) with safety in any form, are unprovable (09 §2.5; 05 §4.3).
+    §2.4 A). Without Gödel, 03's diagonal rules out, under its premises, a faithful hypothesis-free
+    non-erased `compile` and, assuming soundness and a faithful stepper, uniform H in a recursable
+    form (key findings 2, 21); a separate, Kleene-style argument would give an unprovable true
+    non-halting statement, given r.e., consistency, and Σ₁-completeness for an undecidable halting
+    relation (09 §2.4, r6.2, r6.3). Gödel II would add, from consistency rather than soundness but
+    only given the missing pieces, that uniform stripped-run safety, and (T) with full-semantics
+    safety in any form, are unprovable (09 §2.5; 05 §4.3).
 21. **SOUNDNESS.md part 5 and 03's detour.** SOUNDNESS.md never mentions the driver's call of a
     final `Fn`; part 5's measure argument asks no decrease of a root activation, so 09 reads the
     call as covered, a reading only, since part 5's last sentence, while calling each `Program` step
@@ -236,12 +239,13 @@ Each item is the tracks' recommendation, not a decision.
     `diagonal.sl`; no P can hold it, as it needs a `MacroWorld`, §65); `read-file` returns Q's text;
     the expansion, with what follows the call, decides Q's verdict (09 §3.4; 03 F6, r6.1 to r6.4).
 22. **slc after its first error** goes on, but no longer runs run-position `let`s, calls, or
-    matches, though macros still expand and run; a `let` whose right-hand side hoists no temporary
-    gets the erased token (string binders aside, untraced), read as the word 0, so later messages
-    can be false (a `(BFalse)` binder "got `(BTrue)`", `3` "got 0"), and some errors are missed
-    (`proto/aftererr/`; 10 §1 to §3). Acceptance seems unchanged, the first error already making slc
-    exit 1 (10 §4; BUGS.md 25). If §4's "Warnings ... do not stop elaboration" is read as implying
-    that an error does, slc's going on also differs from DESIGN.md (10 §1, r6.1).
+    matches, though macros bound before the error still expand and run; a `let` whose right-hand
+    side hoists no temporary gets the erased token (string binders aside, untraced), read as the
+    word 0, so later messages can be false (a `(BFalse)` binder "got `(BTrue)`", `3` "got 0"), and
+    some errors are missed (`proto/aftererr/`; 10 §1 to §3). Acceptance seems unchanged, the first
+    error already making slc exit 1 (10 §4; BUGS.md 25). If §4's "Warnings ... do not stop
+    elaboration" is read as implying that an error does, slc's going on also differs from DESIGN.md
+    (10 §1, r6.1).
 
 ## 3. Decisions for the owner
 
@@ -425,14 +429,14 @@ Malformed syntax must be a positive error (01 §3.7). *Deps:* every pass's archi
   compile-time resource budget in the language, making statement 3 literal (a language change).
 - 07: include completeness relative to per-source evidence (unwritten), else a never-answering
   stepper passes.
-
-Sub-questions: H as 4(ii)'s "every accepted compile-time form's spec run halts" or the broader
+ Sub-questions: H as 4(ii)'s "every accepted compile-time form's spec run halts" or the broader
 "every compile-time run" (cross-file 5); H from (T) reads (T) form by form, as part 6 does, part 1
-covering only accepted programs (03 F7, r6.6; 05 §2.3, r6.5); H over evaluation only, `read-file`
-and `native-compute` axiomatized (03: yes); whether literals are an evaluation site, §45 leaving
-open whether their entries come from "elaborating statements" (03 F7, r5.6). *Deps:* 6, 18, whether
-elaboration takes fuel. *Wording:* only the budget alternative. (01 decision 2; 03 decisions 2, 4,
-F7; 05 decision 5, §4.3; 07 decision 4.)
+covering only accepted programs, with (E) read as giving termination of the stripped run (03 F7,
+r6.6; 05 §2.3, r6.5); H over evaluation only, `read-file` and `native-compute` axiomatized (03:
+yes); whether literals are an evaluation site, §45 leaving open whether their entries come from
+"elaborating statements" (03 F7, r5.6). *Deps:* 6, 18, whether elaboration takes fuel. *Wording:*
+only the budget alternative. (01 decision 2; 03 decisions 2, 4, F7; 05 decision 5, §4.3; 07 decision
+4.)
 
 **15. Which flags are spec parameters; is the expansion limit one?** 01 in: prelude and extern
 on/off, `--fn-same`, `--goal`, `--comptime-unconfine` names, and FFI names and arities; out:
@@ -640,8 +644,8 @@ Open ones; numbers follow the review log, gaps being resolved items.
   `05_stripped_absurd_final.sl` shows only route C's program shape, its `p` a `def-prim`, which
   SOUNDNESS.md excludes (05 r5.1).
 - **SOUNDNESS.md's (T), (C), (E)** are argued, not proved; they "do not cover" `--no-prelude`
-  programs with own models or `def-prim`; H also needs well-behaved host I/O and (T) read form by
-  form (03 F7, r2.6, r6.6; 05 §2.3, r2.8, r6.5).
+  programs with own models or `def-prim`; H also needs well-behaved host I/O, (T) read form by form,
+  and (E) read as giving termination of the stripped run (03 F7, r2.6, r6.6; 05 §2.3, r2.8, r6.5).
 - **Erased derivations being "real"** rests on no closed proof of `False`, unshown given `Type :
   Type` and no positivity (06, 07 second reviews).
 - **Conditional or proposed**: 02's N1 (cross-file 1); 04's output-theorem shape (04 second review).
@@ -688,12 +692,13 @@ that it halts or sticks within the count is read from its code; swapped or inver
 refused (06 F2, F3, r4.3; key finding 16). Not proved: that `step` finds every step `Step` allows,
 or anything about the driver (key finding 17). Invariant: an erased trace folded by a 15-line
 `step-back`; a counter closure, at a fixed or a packed level, also works (06 F4.1, F4.2, r4.1).
-Effort: ~210 lines of proofs and `complete.sl`'s code against 90 stepper and 67 spec; 7821 and 26021
-steps take 1.0–1.5 s and 8.5–12.1 s in the reference interpreter, 0.39–0.58 s and 3.3–3.6 s in
-slc's, and at most 0.07 s compiled (single runs per review; 06 F5, F6, r6.4, r6.7). Costs: one
-evidence type per partial helper over a dependent relation (§9; "There is no currying", §17; a
-generic wrapper serves others, `proto/review6/06_generic_out.sl`), long telescopes, and opaque
-numerals (§45) (06 F4.3, F5, r6.2).
+Effort: ~210 lines of determinism, soundness glue, result types, and `complete.sl` (whose `finish`
+and `run-total` are code) against 90 stepper and 67 spec; 7821 and 26021 steps take 1.0–1.5 s and
+8.5–12.1 s in the reference interpreter, 0.39–0.58 s and 3.3–3.6 s in slc's, and at most 0.07 s
+compiled (single runs per review; 06 F5, F6, r6.4, r6.7). Costs: one evidence type per partial
+helper over a dependent relation (§9; "There is no currying", §17; a generic wrapper, one per input
+count, serves `run-op`'s, `proto/review6/06_generic_out.sl`, and, 06 expects, `pick`'s), long
+telescopes, and opaque numerals (§45) (06 F4.3, F5, r6.2).
 
 **07, the §29 round trip with a suspendable checker** (`proto/roundtrip/`). Top-level `Let` (run at
 check time), `Assert` (a `comptime-match`), and `Need` (facts only); inductive `Elab` with
@@ -707,8 +712,8 @@ premises (07's reading), and `Reach`; replay: direct style, ~50 of 127 lines for
 not quite 03's (e) (07 F3, F6, r4). Effort: spec 178, determinism 123, zipper 151 (suspension ~45),
 replay 127, and driver and tests 61; the evaluator side was trivial only because `Step` is the
 implementation's machine (07 F4). A function given a `Certified` value cannot call its packed-level
-`step` (`proto/review6/07_cert_fn_bad.sl`); destructured at the top level, it drives program 0
-(`07_cert_drive.sl`; 07 F7, r6.2).
+`step` (`proto/review6/07_cert_fn_bad.sl`); destructured at the top level before the driver's levels
+are minted, it drives program 0 (`07_cert_drive.sl`; 07 F7, r6.2).
 
 As a reading, the shape 03, 05, and the brief's proposal C describe is writable and checkable at toy
 scale; completeness and scale remain open.

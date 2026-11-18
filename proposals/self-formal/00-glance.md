@@ -17,13 +17,14 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
 
 ## Five things worth knowing first
 
-- **Diagonal.** If Sleight's functions terminate (SOUNDNESS.md's (T) and (E), argued, not proved), no non-erased
-  `compile : Src -> Verdict` with no further evidence can be faithful on every source; only the mechanism is tested.
-  It does not refute owner statement 4(ii) as mathematics, nor a `compile` taking erased evidence of H for its one
-  source, though, if Sleight is sound, the diagonal source cannot produce that evidence for itself (03's reasoning).
-  03 carries (T) and (E) to that source through an accepted detour that calls `compile` in a final value (compiled
-  with a toy), reading part 5, which never mentions that call, as covering it, under six premises 09 lists; (C) is not
-  used. slc does not escape it (03's reading). 05's version also needs logic soundness (00-summary §2 items 2, 21).
+- **Diagonal.** If Sleight's functions terminate (SOUNDNESS.md's (T) and (E), argued, not proved, and read as 03 reads
+  them), no non-erased `compile : Src -> Verdict` with no further evidence can be faithful on every source; only the
+  mechanism is tested. It does not refute owner statement 4(ii) as mathematics, nor a `compile` taking erased evidence
+  of H for its one source, though, if Sleight is sound, the diagonal source cannot produce that evidence for itself
+  (03's reasoning). 03 carries (T) and (E) to that source through an accepted detour that calls `compile` in a final
+  value (compiled with a toy), reading part 5, which never mentions that call, as covering it, under six premises 09
+  lists; (C) is not used. slc does not escape it (03's reading). 05's version also needs logic soundness (00-summary
+  §2 items 2, 21).
 - **Spikes.** The intrinsic-derivation plus `Program`-driver pattern compiles and runs at toy scale, fuel-free, on
   both implementations, but proves partial correctness only: an always-"stuck" `step`, `advance`, or `run-total` (06)
   or a never-answering `step` (07) passes, and 07's `Rejected` reason text is unconstrained. For one variant with a
@@ -35,10 +36,11 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
   04 makes `slot-eq` an oracle beside the host's answers to `world-do` and `read-file` (00-summary §2 items 5, 18).
 - **Evaluation order.** DESIGN.md fixes eagerness and some run-position order, but not body statements, sibling
   arguments, `values` entries, or several §15 bindings in general. Elaboration order is visible through gensyms; both
-  implementations elaborate a head that is a form, then expand an application's argument macro calls, then elaborate a
-  head that is a name, then the arguments, left to right. At runtime the reference and, in one test, slc's compiled
-  code run a head form before an argument; `slc --interpret`'s order is unobserved. A real run observes order via a
-  §31 crash: an argument's write precedes another's crash, §15 allowing either order (00-summary §2 item 6).
+  implementations elaborate a head that is a form (inferred), then expand an application's argument macro calls, then
+  elaborate a head that is a name, then the arguments, left to right. At runtime the reference and, in one test, slc's
+  compiled code run a head form before an argument; `slc --interpret`'s order is unobserved. A real run observes order
+  via a §31 crash, which the spec's run would not have: an argument's write precedes another's crash, §15 allowing
+  either order (00-summary §2 item 6).
 - **slc printer defect.** `slc --interpret` on a 100003-element list prints 49,999 `Cons _ 0` then `Cons _ _ _)`: a
   wrong value, not a §31 crash, from `show-at`, which also feeds `comptime-match` messages and `dump-context` reports;
   compiled slc output and the reference print all elements. `heap-strs-fuel` likewise cuts a request's string list
@@ -52,7 +54,8 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
 - **Gödel II** may apply; nothing establishes it. Missing: a formalized `Prov` with D1 to D3, a diagonal sentence (a
   macro in a goal type can build one from its own file's text), the derivation's internal steps (such as ⊢ Con → G)
   despite level stratification, and lemmas tying `Prov` to the stripped run. 03's diagonal already rules out a
-  faithful hypothesis-free `compile`; Gödel II, if those hold, would make uniform stripped-run safety unprovable (09).
+  faithful hypothesis-free `compile`, under its premises; Gödel II, if those hold and Sleight is consistent, would
+  make uniform stripped-run safety unprovable (09).
 - **slc after its first error** can print false later messages; acceptance seems unchanged (10; BUGS.md 25). Defects
   found are in BUGS.md 13, 18, 19, and 23 to 26.
 

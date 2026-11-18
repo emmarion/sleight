@@ -2225,3 +2225,62 @@ Checked and unchanged: 02 r6.2 (§72's erased fields; neither summary file calls
 fieldless); 03 r6.5 (not carried by either summary file); 07 r6.1 (decision 13 already says only
 "a plain induction either way"); BUGS.md 13, 18, 19, 23, 24, and 25 as revised, which change
 nothing the summary files cite.
+
+## Propagation check (round 6)
+
+An independent check of the round 6 propagation against 01 to 10 and BUGS.md as they stand, after
+reading the brief, CLAUDE.md, and all of DESIGN.md. Re-run on the reference and `slc --interpret`:
+`proto/review6/01_count_10000.sl` (accepted by both) and `01_count_10001.sl` ("more than 10000
+macro expansions", exit 1, both); `01_splice_output.sl` (`(MkPair _ _ 1 2)`, both);
+`01_pragma_file_prog.sl` and `01_pragma_file_late.sl` (the reference prints `effect` and exits 0,
+slc reports the later file's error and exits 1); `review5/01_prog_first.sl 01_late_error.sl` with
+and without `--warnings-as-errors` (refused, no `effect`; `effect`, exit 0); `07_cert_drive.sl`
+("accepted after 26 Program steps", both) and `07_cert_fn_bad.sl` (the quoted `L` message, both);
+`06_pred_zero.sl` (`stuck`, both), `06_generic_out.sl` (`(Found2 ...)`, both), and
+`06_generic_out_nth_bad.sl` (refused, both); `08_blit_many_imm_interp.sl` after `std/immediate.sl`
+(exit 139 twice; "not an extern integer: _" under `s=4k`; `0` under slc), and with `--build` (exit
+139); `02_values_order_slc.sl` through slc's emitter (head `pick` let-bound before the hoisted
+`(h n)`, the `values` as nested `let ... in` in written order); `review3/head_arg_order.sl` under
+`--eval-fuel 20` (reference "out of fuel", slc a stack overflow). All match the text.
+
+1. Key finding 2 said H for all sources in a recursable form is unprovable "assuming soundness";
+   03 F6 and 09 §2.5 also assume a faithful stepper. Added.
+2. Key finding 20 said 03's diagonal "rules out" a faithful `compile` and uniform H with no
+   premises; added "under its premises" and, for H, soundness and a faithful stepper (09 §2.5). Its
+   "(T) with safety" is now "(T) with full-semantics safety", as in 05 §4.3 and 09 §2.5.
+3. Key finding 6 said `slc --interpret` overflows on both order tests "so" because its out of fuel
+   is a value. It overflows either way; the value is why `--eval-fuel` cannot separate the orders
+   (02 §6, r6.4). Reworded. The `Measure` clause, "once world answers are inputs aside", read as if
+   `Measure` were an exception; it is absorbed by quantifying over answers (02 §2.3). Reworded.
+   Restored "native and `--byte`" for slc's compiled head-first test (04 §2.5, r5.2).
+4. Key finding 8's "a defect against MANUAL.md ... or not" is now an open question, as 02 r6's
+   unsure point has it.
+5. Key finding 11 stated GC safety on both words immediate alone; 08 §7 adds other conditions, as
+   key finding 19 lists. Added "among 08's other conditions".
+6. Key finding 19 put `array-blit-many-imm` under `--build` too, which 08 and BUGS.md 26 state only
+   for `array-blit-imm`. Run here (exit 139); marked as this summary's own check.
+7. Key finding 22 said macros still expand and run after slc's first error; only macros bound
+   before the error do (01 §3.7, `after_error_macro.sl`; 10 §1). Added the condition.
+8. Decision 14's sub-question and §6's SOUNDNESS.md bullet named only (T) read form by form; 03 F7
+   and 05 §2.3 (r6.5) also need (E) read as giving termination of the stripped run. Added.
+9. §1's fuel bullet and the glance's diagonal bullet lost key finding 2's "read as 03 F6 reads them"
+   (03 r6.7). Added.
+10. §7, 06: "~210 lines of proofs and `complete.sl`'s code" counted result types as proofs; now
+    names 06 §1's parts. "A generic wrapper serves others" overstated 06 F5, which compiled it for
+    `run-op` only, one wrapper per input count, and expects `pick`; hedged.
+11. §7, 07: the top-level destructure drives program 0 "before the driver's levels are minted"
+    (07 r6.2); the condition had been dropped. Added.
+12. Glance: the form-head elaboration order lacked key finding 6's "(inferred)"; the §31-crash
+    observation lacked "which the spec's run would not have" (04 r6.4); the Gödel bullet's "if
+    those hold" lacked consistency (09 §2.4 C, condition (a)), and its diagonal sentence lacked
+    "under its premises". Added.
+
+Checked and unchanged: the four conditions of the Gödel conditional (09 §4, 05 §4.3) against key
+finding 20 and §6, consistency (a) being stated there as "from consistency"; key finding 21's six
+premises against 09 §3.4 and 03 F6; the vacuity lists of key finding 17 against 06 F3, r6.1 and 07
+r6; key finding 15 and rough edge 31 against 01 §3.7 and section 5 item 14 (decision 15's "delays
+`Program` finals" matches 01 decision 8, though 01 §3.7 says every final value is held back);
+the glance's decision table row by row against §3; Oxford commas; tense.
+
+Unsure: 00-summary.md is now 727 lines, further over the ~710 aimed at. 09 §4's last line points
+to "00-summary's Gödel item (§3 item 20)", which is §2 item 20; not this check's file.
