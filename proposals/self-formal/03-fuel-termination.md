@@ -37,7 +37,8 @@ decisions, which is an earlier session's paraphrase, not the owner's words.
 - A diagonal argument (F6; its mechanism is compiled in
   `proto/fuel/diagonal.sl`, the rest is my reasoning) says that, if
   Sleight's functions terminate and its checking ends (SOUNDNESS.md's
-  (T), (C), and (E), argued there, not proved), no non-erased Sleight function `compile : Src -> Verdict` that
+  (T), (C), and (E), argued there, not proved, and read as F6 reads
+  them), no non-erased Sleight function `compile : Src -> Verdict` that
   takes no further evidence can agree with the spec on every source. A source's
   macro can `read-file` its own text, call `compile` on it, and expand to
   a `compile-error` exactly when the answer is "accept". So "every source
@@ -283,20 +284,27 @@ if Q's text before the macro call is. `proto/review5/03_detour.sl` is
 that P for `toy-compile`: `--extract` accepts it, and run, it prints
 `(BFalse)`. (T) and (E) for P then say that this call of `compile`
 returns, reading part 5 as counting the driver's call as one of the
-activations it covers. SOUNDNESS.md does not mention the driver's call
+activations it covers, and reading (E)'s "follows" as a step-by-step
+correspondence with a finite full run, which part 7 suggests without
+saying it (09 §3.2). SOUNDNESS.md does not mention the driver's call
 of a final `Fn` value. Part 5's measure argument asks no decrease of a
 root activation, and its last sentence calls each `Program` step "a
 total call", though the same sentence puts the driver's loop "outside
 the claim". So this is a reading, not a quotation. Q's text before the
-macro call elaborates as in P, and the macro's call of `compile` is the
-same call on the same text, so it returns too, if its result is
-determined by its code and argument (below). The macro's other code
+macro call elaborates as in P, provided it makes no compile-time use of
+its own file's name or text, in which P and Q differ (true of
+`diagonal.sl`, whose text before the call calls no macro). The macro's
+call of `compile` is the same call on the same text, so it returns too,
+if its result is determined by its code and argument (below), and
+setting aside crashes, which §31 and §42 allow in one run and not in
+another (09 §3.4). The macro's other code
 cannot be given a P, since it needs a `MacroWorld` (§65). In
 `diagonal.sl` it is non-recursive apart from that call, and its
 termination is by inspection, given that `read-file` and
 `intern-string` return (09 §3.4). The rest of Q is the
-elaboration of the macro's output, one `compile-error` or nothing, so
-Q's spec run ends without (C) being applied to Q (my reasoning). With
+elaboration of the macro's output, one `compile-error` or nothing, and
+of what follows the call, in `diagonal.sl` one string literal, so Q's
+spec run ends without (C) being applied to Q (my reasoning). With
 the call in run position instead, the detour would be circular: that
 program is accepted only if the call ends.
 
@@ -324,8 +332,10 @@ to every typed representation of programs: Brown and Palsberg (POPL
 that applies here.
 
 **What it does not refute.**
-- Owner item 4(ii), read as mathematics. Under H the spec relation is
-  total, and with determinism it is a function. F6 says only that the
+- Owner item 4(ii), read as mathematics. Under H, and given that
+  checking apart from evaluation ends (SOUNDNESS.md part 6 argues
+  this), the spec relation is total, and with determinism it is a
+  function. F6 says only that the
   language's own termination checker cannot witness this for a
   hypothesis-free Sleight `compile`.
 - A Sleight function `compile : (many Src s) (erased (H s) h) -> Verdict`.
@@ -398,7 +408,11 @@ happens at these places:
 The top level cannot loop (§3, §20), apart from macro re-expansion,
 which §62 caps. So H would follow from two things:
 - SOUNDNESS.md's claims (T), totality, and (C), checking terminates,
-  applied to the code that is run, and (E) as well, since §27 runs a
+  applied to the code that is run, form by form, as part 6 applies (T)
+  to run-position forms; part 1 states the claims only "about any
+  program the checker accepts", and H concerns rejected sources too
+  (F6). (E) is needed as well, read as giving termination of the
+  stripped run (F6), since §27 runs a
   form with "its erased positions are stripped" (unless a formal spec
   runs unstripped code). SOUNDNESS.md part 1 makes these claims
   relative to the shipped prelude and says they "do not cover" a
@@ -616,8 +630,10 @@ source whose compile-time run diverges has no derivation.
   to a compiler, and H not provable) are untested.
 - That the detour through the accepted program P carries (T) and (E)
   over to the run of the possibly rejected Q (F6). It assumes that the
-  spec accepts P as the checker does and that part 5 covers the
-  driver's call. Only P's shape is compiled, with `toy-compile`.
+  spec accepts P as the checker does, that part 5 covers the driver's
+  call, that (E) gives termination of the stripped run, and that Q's
+  text before the macro call does not depend on its file. Only P's
+  shape is compiled, with `toy-compile`.
 - That the per-item and per-file expansion parameters (F3 row 2) never
   bind before the global count.
 - Whether the store can hold cycles (F3 row 5).
@@ -1013,3 +1029,49 @@ Unsure:
   unchanged.
 - The macro's other code than `compile` is covered in item 1 by
   "the same way"; no P for it was written.
+
+## Round 6 review notes
+
+A sixth adversarial reviewer read the brief, CLAUDE.md, DESIGN.md in
+full, SOUNDNESS.md parts 0 to 7, and 09 as it now stands, checked the
+coordinator's edits from 09 §4 against 09, and re-ran `diagonal.sl`
+and the 970-byte copy (reference and `slc --interpret`),
+`03_detour.sl` (reference, `--extract` to a scratch path, `slc
+--interpret`; each prints `(BFalse)` or exits 0),
+`review2/03_untaken_ce.sl`, `fr/a.sl` to `fr/d.sl` (`fr/d.sl` also
+under `--no-extern` and `slc --interpret`, each printing `13`),
+`suspend.sl` 0/1/2, and the `--eval-fuel 1000` pair. All behave as the
+body says. The coordinator's two edits match 09 §4's wording.
+
+Errors found and changed:
+
+1. F6, the detour used (E) for termination of P's stripped run without
+   saying that this needs (E)'s "follows" read as a step-by-step
+   correspondence with a finite full run, which 09 §3.2 and 09 §3.4
+   premise 1 make explicit. Added; section 6 updated.
+2. F6, "Q's text before the macro call elaborates as in P" had lost 09
+   §3.4 premise 2's condition. P and Q are different files, so a
+   prefix that used its own file's text or name at compile time (a
+   macro can read both, as `diag-fn` does) could elaborate differently.
+   Added the condition, and that it holds for `diagonal.sl`; section 6
+   updated.
+3. F6, "so it returns too" set no crash aside, though (T) is "apart
+   from a crash" and §31 and §42 allow one run to crash where another
+   does not (09 §3.4 premise 3). Added.
+4. F6, "The rest of Q is the elaboration of the macro's output" left out
+   what follows the macro call (09 §3.4 premise 6). Added.
+5. F6, "What it does not refute": "Under H the spec relation is total"
+   needs checking apart from evaluation to end as well, which H does
+   not cover (SOUNDNESS.md part 6 argues it). Added.
+6. F7, H from (T) and (C): part 1 states those claims "about any
+   program the checker accepts", while H concerns every source, the
+   rejected ones included. The step reads them form by form, as part 6
+   applies (T). Said so, with (E) read as in item 1.
+7. Summary, the diagonal bullet named (T), (C), and (E) as its
+   premises but not that F6 reads them beyond what SOUNDNESS.md says.
+   Added "read as F6 reads them".
+
+Unsure:
+- Whether further premises of 09 §3.4 should reach the summary; it now
+  points to F6 for them.
+- The compiled timing rows were not re-run in this round.
