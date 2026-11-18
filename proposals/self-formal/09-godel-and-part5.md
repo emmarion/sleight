@@ -302,7 +302,9 @@ so far only in an abstract form:
   `review7/09_g2_final.sl`, run under `--no-prelude` after
   `review7/09_g2_pre.sl` and `g2_defs.sl`, takes that step at the top
   level and is accepted by both. It postulates ⊢ Con with a `def-prim`
-  axiom, which SOUNDNESS.md part 1 excludes, and proves the other
+  axiom, which SOUNDNESS.md part 1 excludes and which, as declared in
+  `09_g2_pre.sl`, gives an element of every type, so the file shows how
+  the step elaborates, not anything about Con; it proves the other
   hypotheses for a `P` that holds of every code. The same step inside a
   function body is refused by both, as `g2_direct_bad.sl` is.
 - Reading G as ¬`P g` needs `g` to be a code of the type ¬`P g`
@@ -805,6 +807,10 @@ Unsure:
    implementations, the direct application of packed hypotheses is
    refused, and the fixed-level form passes. Added to §1, §2.4 B, §4's
    wording for 05, and §5.
+2. After this round's review: §2.4 B said `09_g2_final.sl` postulates
+   ⊢ Con. Its `def-prim`, as declared in `09_g2_pre.sl`, gives an
+   element of every type, so the file shows only how the last step
+   elaborates; said so.
 
 ## Round 7 review notes
 

@@ -134,7 +134,7 @@ Each item is the tracks' recommendation, not a decision.
 8. **Compile-time fuel and crashes.** DESIGN.md does not mention fuel (03 F1). Both implementations
    refuse a run-position form whose run fails with a runtime error (01 decision 7); on a host stack
    overflow both die instead (exit 2), naming no form, though MANUAL.md:162-164 says such a form is
-   refused (`proto/review7/02_deep_runpos.sl`; 02 r7.3, r7.4; 04 r7.3). slc's only fuel known to change a
+   refused (`proto/review7/02_deep_runpos.sl`; 02 r7.3, r7.4; 04 r7.3; BUGS.md 27). slc's only fuel known to change a
    verdict is its depth bound (default 1000000000, fresh per form, macro run, and `Program` step);
    `merge-opens` would accept early if its bound were short, which 03 believes, unproved, it is not
    (03 §1, F3, r2.5), and its interpreter runs on after out of fuel; whether that is a defect
@@ -214,14 +214,15 @@ Each item is the tracks' recommendation, not a decision.
     n)` stores, which skip `caml_modify`, as GC-safe when both the overwritten and the stored word
     are immediates (for a blit, every word of both ranges), every read of such a field is a mutable
     load (in a match too, by `-dcmm`), and the target is not a flat float array, from runtime
-    sources and stress tests (over 5,000 debug heap checks). The stress tests and negative controls
-    behave the same on 4.14.1 with flambda and on 5.4.1 with and without flambda, with systhreads and
-    (on 5.4.1) domain variants and debug heap verification, and, for the stress test without Zarith,
-    on arm64 under qemu's user mode; 5.4.1's runtime sources read the same way. Real arm64 hardware
+    sources and stress tests (over 5,000 debug heap checks). The stress tests behave the same, with
+    systhreads and (on 5.4.1) domain variants and debug heap verification, on 4.14.1 with flambda and
+    on 5.4.1 with and without flambda, and, for the stress test without Zarith, on arm64 under qemu's
+    user mode; the young-pointer negative control keeps its teeth on each, and the mark-phase one ran
+    on the 4.14.1 builds only (08 r7.3); 5.4.1's runtime sources read the same way. Real arm64 hardware
     and the multi-domain memory model are unchecked (08 §1, §3 to §8, r6.1, r6.8, round-7
     coordinator note 1). The reference interpreter's `-imm` blits copy boxed `VWord`s raw:
     `array-blit-imm`, `array-blit-many-imm`, and `array-move-imm` segfault it, under `--build` too
-    (for the last two, this summary's own check), while `slc --interpret` maps all three to the
+    (for `array-blit-many-imm`, this summary's own check; 08 r7.8), while `slc --interpret` maps all three to the
     ordinary blit (`proto/bugs/blit_imm_interp.sl`, `proto/review6/08_blit_many_imm_interp.sl`,
     `proto/bugs/move_imm_interp.sl`; 08 r1, r6.4; BUGS.md 26).
 20. **Gödel II: possibly, not established** (09's reading). Goals passing `--goal proved` (§71)
@@ -230,12 +231,16 @@ Each item is the tracks' recommendation, not a decision.
     D3 and a diagonal sentence; and, for the safety limits, lemmas that `(Prov ⌜False⌝)` yields an
     accepted program whose stripped run reaches absurd code (09 §2.4 B, C, §4, r6.13; 05 §4.3,
     r6.1). Condition (d), the usual derivation's internal steps going through despite level
-    stratification, holds in one abstract form: for any relation given D2, D3, and the diagonal's
-    D1 instance as packed hypotheses, a packed ⊢ Con → G passes `--goal proved` on both
-    implementations, applying those hypotheses directly in a body is refused, and the last step to
-    ⊥ is a top-level application (`proto/godel/g2_*.sl`; 09 §2.4 B, round-7 coordinator note 1; 05
-    §4.3, r7.1). G there is taken to be ¬`(P ⌜G⌝)` itself, as a macro-built G would be; a relationally
-    built G adds steps not tried (05 r7.1). A macro in a goal type can splice in its own file's text (`r_self_goal.sl`, with
+    stratification, compiles in one abstract form: for any relation `P` given D2, D3, and the
+    diagonal's D1 instance as packed hypotheses, a packed ⊢ Con → ¬`P g` passes `--goal proved` on
+    both implementations, and applying those hypotheses directly in a body is refused
+    (`proto/godel/g2_*.sl`; 09 §2.4 B, round-7 coordinator note 1; 05 §4.3, r7.1). Reading ¬`P g` as
+    G needs `g` to be a code of that type itself, which no code built from the formula's structure
+    can be (the occurs check refutes it, `proto/review7/09_g2_cycle.sl`) and a unit's text, as the
+    macro-built diagonal splices in, might be; a relationally built G adds steps not tried (09 r7.2;
+    05 r7.1). The last step to ⊥ elaborates as a top-level application, so far only with consistency
+    postulated by a `def-prim` that gives an element of every type (`proto/review7/09_g2_final.sl`,
+    `--no-prelude`; 09 r7.1, round-7 coordinator note 2). A macro in a goal type can splice in its own file's text (`r_self_goal.sl`, with
     `std/macro.sl`, both; 09 r6.1); D2 and D3 for such codes are open (§45). Level stratification
     blocks the obvious translation of nested implications, not obviously a PRA-style one (09 §2.3,
     §2.4 A). Without Gödel, 03's diagonal rules out, under its premises, a faithful hypothesis-free
@@ -638,6 +643,10 @@ need anyway" (11). *Wording:* none; 02 asks what §13's "the only reference" mea
     does a `Program`'s `Exit` end the unit? The implementations differ on acceptance, and the
     reference's acceptance depends on `--warnings-as-errors` even when nothing warns (key finding
     15), a known divergence (BUGS.md 19). (01 §5.14, r5.1, r6.5.)
+32. **The size of `compile-error` as an expression**: §4 lets it "stand anywhere a form may", §54
+    makes it "also usable as an expression", and §27 lists it among the statements, which produce no
+    values; whether slc's "expects 1 return value, got 0" after one in a branch is a false message
+    turns on it. (10 §4, r7.20.)
 
 ## 5. Cross-file inconsistencies
 
@@ -673,7 +682,7 @@ Open ones; numbers follow the review log, gaps being resolved items.
   (03 §6, r2.3, r3.4, r5.1); all rests on (T) and (E), and 05's version also on logic soundness and
   on crashes kept out of the oracle, all unproved; 05's quine form assumes unwritten quines (05 §9, r5.2).
 - **Gödel II** (key finding 20): `Prov`, D1 to D3, the diagonal sentence, condition (d) beyond an
-  abstract relation with hypothetical D2, D3, and D1 instance, route C's lemmas, any interpretation of HA, IΣ₁, or PRA, and the r.e. readings are unattempted or unchecked;
+  abstract relation with hypothetical D2, D3, and D1 instance and a G coded by text, route C's lemmas, any interpretation of HA, IΣ₁, or PRA, and the r.e. readings are unattempted or unchecked;
   the named results are from memory (09 §5); README.md's IΣ₂ / ω^ω^ω claim is unchecked (05 §9).
   `05_stripped_absurd_final.sl` shows only route C's program shape, its `p` a `def-prim`, which
   SOUNDNESS.md excludes (05 r5.1).
@@ -760,6 +769,6 @@ scale; completeness and scale remain open.
 
 BUGS.md holds the defects found, each with its reproducer: 13 (refusal wording), 18
 (`heap-strs-fuel`), 19 (rough edge 31), 23 (`show-at`; key finding 10), 24 (`self/README.md`
-claims), 25 (key finding 22), and 26 (key finding 19).
+claims), 25 (key finding 22), 26 (key finding 19), and 27 (key finding 8).
 
 Review history, corrections, and re-runs: 00-summary-review-log.md.

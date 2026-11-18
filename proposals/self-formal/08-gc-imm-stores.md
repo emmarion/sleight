@@ -474,7 +474,8 @@ Unsure:
    since GitHub archives were not reachable from the session. On
    4.14.1 with flambda, 5.4.1, and 5.4.1 with flambda, the two stress
    tests pass in all six configurations, with systhreads and (5.4.1)
-   domains variants, and the negative controls keep their teeth;
+   domains variants, and `neg_young.ml` keeps its teeth (`neg_mark.ml`,
+   which reads 4.14's header colours, ran on the 4.14.1 builds only);
    `kinds.ml`, `08_match_loads.ml`, and `zarith_small.ml` give the
    same results as on 4.14.1. On arm64, under qemu's user mode, the
    stress test without Zarith and `neg_young.ml` behave the same.

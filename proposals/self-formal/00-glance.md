@@ -56,12 +56,13 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
   unchecked. The reference interpreter's `-imm` blits corrupt its heap (all three tried; BUGS.md 26).
 - **Gödel II** may apply; nothing establishes it. Missing: a formalized `Prov` with D1 to D3, a diagonal sentence (a
   macro in a goal type can build one from its own file's text), and lemmas tying `Prov` to the stripped run. The
-  derivation's internal steps (⊢ Con → G) go through despite level stratification for an abstract relation given D2,
-  D3, and the diagonal's D1 instance as hypotheses (`g2_step.sl`). 03's diagonal already rules out a
+  derivation's internal steps (⊢ Con → ¬`P g`) go through despite level stratification for an abstract relation given
+  D2, D3, and the diagonal's D1 instance as hypotheses (`g2_step.sl`); reading that as ⊢ Con → G needs `g` to be a code
+  of ¬`P g` itself, which no structural formula code can be and a unit's text might (`09_g2_cycle.sl`). 03's diagonal already rules out a
   faithful hypothesis-free `compile`, under its premises; Gödel II, if those hold and Sleight is consistent, would
   make uniform stripped-run safety unprovable (09).
 - **slc after its first error** can print false later messages and drops some; acceptance seems unchanged (10; BUGS.md 25). Defects
-  found are in BUGS.md 13, 18, 19, and 23 to 26.
+  found are in BUGS.md 13, 18, 19, and 23 to 27.
 
 ## Decisions, at a glance (00-summary §3)
 

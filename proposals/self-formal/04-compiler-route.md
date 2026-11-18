@@ -274,7 +274,7 @@ definition whose header is `(erased name :`.
   session's proposal B).
 - [C] The `-imm` operations write through `(cast a : int array)` with
   `Array.unsafe_set` and `caml_blit_bytes` (`lib/ffi_core.ml:235-241,
-  315-320`), and so do their templates (`lib/ffi_templates.txt:51-52`)
+  315-321`), and so do their templates (`lib/ffi_templates.txt:51-52`)
   and the emitted `imm` cell stores above. [T] ocamlopt 4.14.1 compiles
   an `Array.unsafe_set` on an `int array` to a store with no call to
   `caml_modify`, and the same store on an `Obj.t array` to one with the
@@ -1472,3 +1472,9 @@ Points I am unsure of:
   `04_head_arg_compiled.sl` and `04_effect_vs_crash.sl` before running
   anything (02, Round 7 review notes), so those runs say nothing about
   order.
+
+## Round 7 coordinator notes
+
+1. 2.5 cited `lib/ffi_core.ml:315-320` for the `-imm` blits;
+   `array_move_imm` is at `:321`. Extended, as 08 §2 has it. Raised by
+   the round-7 reviewer of 08.
