@@ -28,8 +28,9 @@ Each item is the tracks' recommendation, not a decision.
   abstract never-reused addresses compared only for equality, mutable blocks, a total step, one
   fixed order, `Nat` primitive, `slot-eq` from an oracle (02 §3; decisions 4, 5, 7, 8, 9).
 - **Fuel.** If Sleight's functions terminate (SOUNDNESS.md's (T) and (E), argued, not proved, and
-  read as 03 F6 reads them), no hypothesis-free non-erased Sleight `compile` on source text is
-  faithful on every source (key finding 2; partly untested). Fuel either stays internal, never
+  read as 03 F6 reads them), then, under further premises (key finding 21), no hypothesis-free
+  non-erased Sleight `compile` on source text is faithful on every source (key finding 2; partly
+  untested). Fuel either stays internal, never
   showing in a result, or the unbounded part moves into the driver's `Program` loop, fuel-free in
   prototypes; mechanisms differ by track (decisions 18, 18a).
 - **Theorems.** Intrinsic, since a type holds no call (§9): T1/T2 accepted ⇒ `Elab`, rejected ⇒
@@ -75,10 +76,12 @@ Each item is the tracks' recommendation, not a decision.
    (03 F2, F3), its `World` blocking only the literal construction (03's reading, r2.1). 05 §4.3's
    version, through `read-file` in a macro, needs T1 to T4 (determinism through T3, per oracle, so
    the `ENone` copy too), not T5, and, T1 to T3 being erased derivations, soundness of the logic (05
-   §1, r4.2, r4.3), and crashes kept out of the oracle, since by T3 a `compile` may reject under an
-   oracle that crashes at once (05 §4.3, r7.2); its quine form, its call in Q's final value, needs an unwritten quine (05 r2.1,
+   §1, r4.2, r4.3), and crashes kept out of the oracle, since, if a compile-time crash is a
+   rejection, a `compile` that rejects Q under an oracle that crashes at once meets T1 to T4 on Q
+   (05 §4.3, r7.2); its quine form, its call in Q's final value, needs an unwritten quine (05 r2.1,
    r5.2).
-3. **Theorems must be intrinsic.** §9: "The elaborated form of a type never contains a function
+3. **Theorems must be intrinsic, or about a graph relation duplicating the function** (05 F1,
+   r7.8; 05 recommends intrinsic). §9: "The elaborated form of a type never contains a function
    call" (tested). A toy checker returning its verdict with an erased `Elab` or `Fails` and an
    erased exclusivity lemma passes `--goal proved` (05 F1 to F3).
 4. **Fuel-free shapes exist, with limits.** A total step looped by the driver runs with no fuel (02
@@ -102,7 +105,8 @@ Each item is the tracks' recommendation, not a decision.
    `ENone` interpreted, `ESome` in `--build` binaries with externs (02 §2.4, r2.5);
    `slot_eq_share.sl` is `ESome` only in native builds, slc's and the reference's (02 r7.6, 04
    r7.4), which 04 attributes to ocamlopt's ability to share equal immutable constants, and which a
-   spec with 02's never-reused addresses gives under no oracle (02 N1, decision 4, r7.6); `bootstrap.sh`'s `--byte` test builds would not see it, its
+   spec with 02's never-reused addresses gives under no oracle, on 02's reading (02 N1, decision 4,
+   r7.6); `bootstrap.sh`'s `--byte` test builds would not see it, its
    ocamlopt-built `native-compute` runs could (04 §2.5, r2.7, r5.6); `const_share.sl` is `ENone`
    everywhere tried (02 second review).
 6. **Evaluation order.** DESIGN.md fixes eagerness (§31), inner forms first in run position (§27),
@@ -236,9 +240,9 @@ Each item is the tracks' recommendation, not a decision.
     both implementations, and applying those hypotheses directly in a body is refused
     (`proto/godel/g2_*.sl`; 09 §2.4 B, round-7 coordinator note 1; 05 §4.3, r7.1). Reading ¬`P g` as
     G needs `g` to be a code of that type itself, which no code built from the formula's structure
-    can be (the occurs check refutes it, `proto/review7/09_g2_cycle.sl`) and a unit's text, as the
-    macro-built diagonal splices in, might be; a relationally built G adds steps not tried (09 r7.2;
-    05 r7.1). The last step to ⊥ elaborates as a top-level application, so far only with consistency
+    can be (the occurs check refutes it, `proto/review7/09_g2_cycle.sl`) and a text code, such as
+    the file text a macro-built diagonal splices in, might be; a relationally built G adds steps not
+    tried (09 r7.2; 05 r7.1). The last step to ⊥ elaborates as a top-level application, so far only with consistency
     postulated by a `def-prim` that gives an element of every type (`proto/review7/09_g2_final.sl`,
     `--no-prelude`; 09 r7.1, round-7 coordinator note 2). A macro in a goal type can splice in its own file's text (`r_self_goal.sl`, with
     `std/macro.sl`, both; 09 r6.1); D2 and D3 for such codes are open (§45). Level stratification
@@ -255,7 +259,8 @@ Each item is the tracks' recommendation, not a decision.
     call as covered, a reading only, since part 5's last sentence, while calling each `Program` step
     "a total call", puts the driver's loop "outside the claim" (09 §3.2). Six premises then carry
     the argument: (T) and (E), argued, not proved, cover that call, (E) giving termination of the
-    stripped run if its "follows" is read step by step; the spec accepts P as both implementations
+    stripped run if its "follows" is read as an order-preserving correspondence with a finite full
+    run (03 r7.6); the spec accepts P as both implementations
     do and elaborates Q's prefix as P's, the prefix making no compile-time use of its own file's
     name or text (true of `diagonal.sl`); `compile`'s spec run is deterministic, one semantics for
     evaluator and driver, crashes set aside; the macro's other code ends (by inspection in
@@ -271,9 +276,9 @@ Each item is the tracks' recommendation, not a decision.
     reported by nothing (`proto/aftererr/`, `proto/review7/10_*`; 10 §1 to §4, r7.3 to r7.5, r7.16,
     r7.17). Acceptance seems unchanged, the first error already making slc exit 1, on a reading of
     every writer of slc's message list (10 §4, r7.8, r7.19; BUGS.md 25). If §4's "Warnings ... do not
-    stop elaboration", or §54's `dump-context`, which "stops elaboration with a report of the
-    context", is read as implying that an error stops elaboration, slc's going on also differs from
-    DESIGN.md (10 §1, r6.1, r7.2).
+    stop elaboration" is read as implying that an error stops elaboration, slc's going on also
+    differs from DESIGN.md; and §54 says `dump-context` "stops elaboration with a report of the
+    context", while slc goes on after the report (`tests/dump_context.sl`; 10 §1, r6.1, r7.2).
 
 ## 3. Decisions for the owner
 
@@ -315,8 +320,8 @@ before their statement, inner before outer, head, arguments, `values` left to ri
 before branch; (O2) only what DESIGN.md fixes, the spec a relation over orders, with a diamond proof
 about as big as type soundness; (O3) O1 now, order-independence later. *Rec.* (02): O1/O3.
 Sub-question: does §15's "behaves as if" fix timing (rough edge 4)? 02's variant "a form head, then
-the §15 bindings" fits the tested runtime order of the reference and of slc's compiled code (key
-finding 6) and §6 with §27; the brief's proposal A fits hoisting only if applied after it (02 §2.2).
+the §15 bindings" fits the tested runtime order of both implementations (key finding 6; 02 r7.8)
+and §6 with §27; the brief's proposal A fits hoisting only if applied after it (02 §2.2).
 04 shows a real run observing order through a §31 crash and asks whether it is meant to be fixed
 (key finding 6). *Deps:* lock-step versus confluence; slc's emitter vs O1. *Wording:* O1, O3 need
 it. (02 decision 3, Q3; 04 §5.1.)
@@ -339,15 +344,18 @@ completeness, 8. *Wording:* (c), (d) need it. (01 decision 6; 02 decision 4; 05 
 
 **6. What is a compile-time crash or fuel exhaustion?** §31 allows crashes "where the host cannot
 represent what is asked of it"; §72 makes one "an error at its argument"; elsewhere silent. Both
-implementations refuse. The tracks disagree:
+implementations refuse, except that on a host stack overflow both die, naming no form (key finding
+8). The tracks disagree:
 - 01: the spec never crashes; the theorem allows a third outcome `Crashed` proving nothing (today an
   uncovered rejection, and a departure from §72 unless the compiled run is an oracle input).
 - 02 (C4): a depth bound as compiler input, so acceptance is a function of (source, bound, flags,
-  `read-file` oracle) given 4 and 5, and statement 3 would hold per bound if the rest of elaboration
-  terminates (SOUNDNESS.md part 6 argues so without (T)); the bound bounds each run's steps (02's
-  count, unchecked) if it counts activations, tail calls included, as `--eval-fuel` does; departs
-  from §31; heap exhaustion stays host-dependent; slc's interpreter runs on after out of fuel (02
-  Q5, r3.2, r4.1, r4.2, r6.4). 01 and 02 are opposite and cross-referenced (01 r2.2; 02 r2.4).
+  `read-file` oracle) given 3, 4, and 5, and statement 3 would hold per bound if the rest of
+  elaboration terminates (SOUNDNESS.md part 6 argues so without (T)); the bound bounds each run's
+  steps (02's count, unchecked) if it counts activations, tail calls included, as `--eval-fuel`
+  does; departs from §31; heap exhaustion stays host-dependent; both implementations can die of a
+  host stack overflow before a large bound is spent, and slc's interpreter runs on after out of fuel
+  (02 Q5, r3.2, r4.1, r4.2, r6.4, r7.4, r7.5). 01 and 02 are opposite and cross-referenced (01
+  r2.2; 02 r2.4).
 - 03: fuel exhaustion is not obviously a §31 crash; `OutOfFuel` an outcome outside the spec; the
   answer bears on whether slc conforms. 04: open (under 10). 07: its toy's `FLetStuck` is a
   stand-in, and stuck is not a §31 crash.
@@ -471,7 +479,7 @@ only the budget alternative. (01 decision 2; 03 decisions 2, 4, F7; 05 decision 
 on/off, `--fn-same`, `--goal`, `--comptime-unconfine` names, and FFI names and arities; out:
 `--eval-fuel`, `--no-native`, `--hints`, and `--warn-unused` (its first review unsure on `--no-native`
 and `--warn-unused`; `--no-native` changes acceptance with no crash, through `slot-eq`, an oracle on 01's
-reading, key finding 5);
+reading if decision 5 takes (a), key finding 5);
 warnings ignored, `--warnings-as-errors` a driver policy, though in the reference it also delays
 `Program` finals (key finding 15). §62 fixes the limit at 10000; 01, 03, and 04 keep it. Open are
 making it a parameter `N` (01 r4.3) and what a call past it does: §62 does not say the cap's breach is
@@ -539,8 +547,9 @@ r7.2; 07 r7.1). 06 proposes no change, since a
 counter closure works. *Wording:* only if changed. (06 decision 2.)
 
 **19. Judgment shape and staging.** *Rec.* (01): 01 §4.2's layers and Σ/Γ split, the run a parameter
-of elaboration so its metatheory holds for every lawful run (a relation-valued `TyCtor` index's
-usability unverified; 05 F7). Open: run-position facts in Γ or Σ (01 r2.3). Staging S0 to S6:
+of elaboration so its metatheory holds for every lawful run (the indexing by a relation-valued
+`TyCtor` compiles, 05 F7; proving the metatheory once that way is unverified, 01 r7.6). Open:
+run-position facts in Γ or Σ (01 r2.3). Staging S0 to S6:
 reader; `mini/` recast; `Settled` and the round trip; erasure and uses; externs, macros, and
 prelude; slots and cells; sugar, goals, and `native-compute` (S2 and S3 in either order). *Deps:*
 how much of `mini/` is rewritten. *Wording:* none. (01 decisions 10, 11.)
@@ -575,7 +584,7 @@ need anyway" (11). *Wording:* none; 02 asks what §13's "the only reference" mea
 3. **§15's bindings.** §29 mentions binders for "head, arguments and scrutinee (§15)", but §15 names
    only arguments; how are several ordered? (02 §5.2, §5.3; 04 §5.1.)
 4. **§15's "behaves as if" and time**: if temporal, `((pick) (h n))` runs `(h n)` first, against §6
-   with §27 and against the reference and slc's compiled code (key finding 6). (02 §5.10.)
+   with §27 and against both implementations in the tests run (key finding 6). (02 §5.10, r7.8.)
 5. **Is evaluation order meant to be fixed, or every order a correct run?** A real run observes it
    without divergence through a §31 crash, which the spec's run would not have (key finding 6); a
    crash against a divergence is another case if §17's levels leave any. (04 §5.1, r2.20, r3.7,
@@ -614,22 +623,24 @@ need anyway" (11). *Wording:* none; 02 asks what §13's "the only reference" mea
 19. **Reader details**: `042` (§1 vs §45); `\q` (§45); `Pos` column unit (§42). The reference
     refuses the first two; columns are bytes in both. (01 §5.4 to §5.6.)
 20. **Multiple errors**: nothing explicit, though §4's "Warnings ... do not stop elaboration" may
-    imply errors do; implementations differ (key finding 22). (01 §5.11, r5.4; 10 §1, r6.1.)
+    imply errors do, and §54 has `dump-context` stop elaboration (22); implementations differ (key
+    finding 22). (01 §5.11, r5.4; 10 §1, r6.1, r7.2.)
 21. **`--warnings-as-errors`** (§4) depends also on warnings WARNINGS.md defines beyond DESIGN.md's
     (§4, §69). (01 §5.8, r5.7.)
-22. **`dump-context`** is defined via MANUAL.md (§27, §54). (01 §5.10.)
+22. **`dump-context`** is defined via MANUAL.md (§27, §54) and "stops elaboration" (§54); slc goes
+    on after its report (key finding 22). (01 §5.10.)
 23. **`read-file` that never ends** (a FIFO, §65). (03 §5.)
 24. **May an implementation itself be "the driver's loop over total functions" (§42)?** (03 §5.)
 25. **Character literal bounds** are "asserted rather than decided" (§45): a spec axiom. (05 §8.4.)
 26. **Tests fix free behaviour**: `tests/slot_eq.sl` expects `ESome` where §67 allows `ENone`; not a
     contradiction. (02 §5.9.)
 27. **Packed-level closures**: a function that receives such a closure can call it only given a
-    `Predates` for its level: one packed with it, or one derived through `predates-subterm` from a
-    `Predates` about the state or value that holds it, which the top level can prove for one built
-    before the function's level (`proto/review7/06_packed_subterm.sl`, `07_cert_predates.sl`). A
-    state a stepper builds gets neither, by §18's introduction-order rule for `prove-predates` as 06
-    reads it; a consequence, not a gap; wanted (18c)? (06 §5.1, r3.1, r4.2, r6.5, r7.2, r7.3; 07
-    r7.1.)
+    `Predates` for its level; as far as 06 and its reviews found, it has one packed with the
+    closure, or derived through `predates-subterm` from a `Predates` about the state or value that
+    holds it, which the top level can prove for one built before the function's level
+    (`proto/review7/06_packed_subterm.sl`, `07_cert_predates.sl`). A state a stepper builds gets
+    neither, by §18's introduction-order rule for `prove-predates` as 06 reads it; a consequence,
+    not a gap; wanted (18c)? (06 §5.1, r3.1, r4.2, r6.5, r7.2, r7.3; 07 r7.1.)
 28. **Divergence** is never mentioned (07 searched); §17, §20, §33, §42, and §62 suggest functions
     halt, but nothing says every compile-time run does, or what a never-returning checker means, or
     whether levels, with §10's `Type : Type` and no positivity, prevent divergence. (07 §5, r2.7.)
@@ -642,7 +653,7 @@ need anyway" (11). *Wording:* none; 02 asks what §13's "the only reference" mea
 31. **When the driver runs a file's final value** (§27): at its file's end or after every file, and
     does a `Program`'s `Exit` end the unit? The implementations differ on acceptance, and the
     reference's acceptance depends on `--warnings-as-errors` even when nothing warns (key finding
-    15), a known divergence (BUGS.md 19). (01 §5.14, r5.1, r6.5.)
+    15), and on `--extract`, a known divergence (BUGS.md 19). (01 §5.14, r5.1, r6.5, r7.)
 32. **The size of `compile-error` as an expression**: §4 lets it "stand anywhere a form may", §54
     makes it "also usable as an expression", and §27 lists it among the statements, which produce no
     values; whether slc's "expects 1 return value, got 0" after one in a branch is a false message
@@ -682,7 +693,9 @@ Open ones; numbers follow the review log, gaps being resolved items.
   (03 §6, r2.3, r3.4, r5.1); all rests on (T) and (E), and 05's version also on logic soundness and
   on crashes kept out of the oracle, all unproved; 05's quine form assumes unwritten quines (05 §9, r5.2).
 - **Gödel II** (key finding 20): `Prov`, D1 to D3, the diagonal sentence, condition (d) beyond an
-  abstract relation with hypothetical D2, D3, and D1 instance and a G coded by text, route C's lemmas, any interpretation of HA, IΣ₁, or PRA, and the r.e. readings are unattempted or unchecked;
+  abstract relation with hypothetical D2, D3, and D1 instance, whether a text code can stand for
+  ⌜G⌝ in D1's instance and still meet D2 (09 r7), route C's lemmas, any interpretation of HA,
+  IΣ₁, or PRA, and the r.e. readings are unattempted or unchecked;
   the named results are from memory (09 §5); README.md's IΣ₂ / ω^ω^ω claim is unchecked (05 §9).
   `05_stripped_absurd_final.sl` shows only route C's program shape, its `p` a `def-prim`, which
   SOUNDNESS.md excludes (05 r5.1).
@@ -722,7 +735,7 @@ Open ones; numbers follow the review log, gaps being resolved items.
 - **OCaml**: `let ... and` and argument order in versions other than 4.14, whose manual leaves them
   unspecified (02 §2.2, r4.3); other targets, flambda, many-argument tail calls; constant sharing
   beyond immutable tuples; GC safety of the `imm` stores on arm64 hardware (only qemu's user mode
-  ran) and across domains beyond one stress schedule, and whether `Imm` proofs can be forged through the logic (08 §8); `Slots` hashing across GC moves;
+  ran) and across domains beyond the schedules of a few stress runs (08 r7.11), and whether `Imm` proofs can be forged through the logic (08 §8); `Slots` hashing across GC moves;
   `bytes-str` input never mutated (02 §6; 04 §2.5, §6, r3.1, fourth review).
 
 
@@ -740,10 +753,11 @@ Effort: ~210 lines of determinism, soundness glue, result types, and `complete.s
 and `run-total` are code) against 90 stepper and 67 spec; 7821 and 26021 steps take 1.0–1.5 s and
 8.5–12.1 s in the reference interpreter, 0.39–0.58 s and 3.3–3.6 s in slc's, and at most 0.07 s
 compiled (single runs per review; 06 F5, F6, r6.4, r6.7). Costs: one evidence type per partial
-helper over a dependent relation (§9; "There is no currying", §17; a wrapper written with a
-relation's own signature can stand in for one, but it serves one signature shape and the four here
-have four, so none is saved: `proto/review6/06_generic_out.sl`, `proto/review7/06_generic_out_more.sl`),
-long telescopes, and opaque numerals (§45) (06 F4.3, F5, r6.2, r7.1).
+helper (§9; "There is no currying", §17; a wrapper written with a relation's own signature can
+stand in for one, dependent or not, but it serves one signature shape and the four relations here
+have four, so none is saved: `proto/review6/06_generic_out.sl`,
+`proto/review7/06_generic_out_more.sl`), long telescopes, and opaque numerals (§45) (06 F4.3, F5,
+r6.2, r7.1).
 
 **07, the §29 round trip with a suspendable checker** (`proto/roundtrip/`). Top-level `Let` (run at
 check time), `Assert` (a `comptime-match`), and `Need` (facts only); inductive `Elab` with

@@ -162,9 +162,10 @@ depends on it.
    theorem allows a third compiler outcome, `Crashed`, which proves
    nothing about the spec. DESIGN.md says a crash is an error only for
    `native-compute` (§72); see section 5 below, item 3. Two tensions for the owner: both
-   implementations refuse a run-position form whose run crashes
-   (MANUAL.md, `--eval-fuel`), so `Crashed` would be a rejection the
-   theorem says nothing about; and for `native-compute`, §72 makes a
+   implementations refuse a run-position form whose run fails with a
+   runtime error (MANUAL.md, `--eval-fuel`), and on a host stack
+   overflow both die, naming no form (BUGS.md 27), so `Crashed` would
+   be a rejection, or a death, the theorem says nothing about; and for `native-compute`, §72 makes a
    crash "an error at its argument", so treating it as `Crashed` departs
    from DESIGN.md unless the spec takes the compiled run's outcome as an
    oracle input. A third: 02 (C4) recommends the opposite for compile
@@ -1189,3 +1190,11 @@ Unsure, not changed:
   reference's acceptance in item 14's case, and `--build`, which takes
   the same path (`bin/main.ml:93`) but was not run.
 - The summary is still far beyond the brief's 15 lines.
+
+## Round 7 coordinator notes
+
+1. Decision 7 said both implementations refuse a run-position form
+   whose run crashes. On a host stack overflow both die instead,
+   naming no form (02 r7.3, r7.4; BUGS.md 27). Narrowed. Raised by
+   the round-7 check of 00-summary.
+

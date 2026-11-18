@@ -2284,3 +2284,124 @@ the glance's decision table row by row against §3; Oxford commas; tense.
 
 Unsure: 00-summary.md is now 727 lines, further over the ~710 aimed at. 09 §4's last line points
 to "00-summary's Gödel item (§3 item 20)", which is §2 item 20; not this check's file.
+
+## Round 7 summary check
+
+An independent check of the round-7 updates to 00-summary.md and 00-glance.md (every change from
+62db1dd to 5e09de7), after reading REVIEW.md, the brief, CLAUDE.md, and all of DESIGN.md, against
+01 to 10 and BUGS.md as they stand. Re-run, outputs in the session scratchpad: `01_slot_eq_native.sl`
+(`(BTrue)` by default on the reference and `slc --interpret`; "expected `BTrue`, got `(BFalse)`",
+exit 1, under `--no-native` on both and under the reference's `--no-extern`);
+`04-compiler-route/slot_eq_share.sl` (`(BFalse)` under both interpreters and both `--byte` builds,
+the reference's `--byte` build not reported before; `(BTrue)` under both native builds);
+`head_crash_arg_write.sl`, `head_write_arg_crash.sl`, and `crash_probe.sl` in the seven modes (the
+reference interpreted, `--no-extern`, native, and `--byte`; `slc --interpret`, native, and
+`--byte`: nothing, `head ran`, and `before` printed before "Stack overflow", exit 2), and their
+depth-10 controls under both interpreters (each prints its write, the probe also `after`, exit 0);
+`01_order_accept.sl` (`(MkPair _ _ (MkPair _ _ 2 3) 0)`, both) and `01_order_refuse.sl` (refused,
+both); `03_fuel_iterate.sl` (`out of fuel`, `finished`; reference, `--no-extern`, `slc
+--interpret`); `02_deep_runpos.sl` ("Fatal error: exception Stack overflow", exit 2, the reference
+with and without `--eval-fuel 1000000000`, `slc --interpret`, and slc emitting), and a 100-deep
+copy under `--eval-fuel 20` ("runtime error: out of fuel" naming the file, and "compile-time
+evaluation failed: out of fuel" at the form, exit 1); `g2_defs.sl` with `g2_step.sl` and with
+`g2_fixed.sl` (`--goal proved: PASS`, both), `g2_direct_bad.sl` (refused with the quoted message;
+slc four times), `09_g2_cycle.sl` after `g2_defs.sl` (accepted, both; with `(Bot)` for the inner
+`g`, "not refuted: it may be headed by `Refl`", both), and `09_g2_final.sl` under `--no-prelude`
+after `09_g2_pre.sl` and `g2_defs.sl` (accepted, both); `move_imm_interp.sl` after
+`std/immediate.sl` (exit 139 twice, and once with `s=4k`; `--build` exit 139, no binary; `0` under
+`slc --interpret`); `08_blit_many_imm_interp.sl` under `--build` (exit 139, the summary's own
+check); `06_packed_subterm.sl`, `07_cert_predates.sl`, and `06_generic_out_more.sl` (accepted,
+both); `tests/dump_context.sl` (the reference prints the report alone; slc adds two errors and a
+warning); and the `01_prog_first.sl` pair (the reference prints `effect`, exit 0, and under
+`--extract` refuses with the later file's error). The GC matrices of 08 were not re-run; their
+figures were checked against 08 §1, §6, §8, its round-7 coordinator note, and r7.1 to r7.3. No
+timing claim was re-run.
+
+Errors in the changed text, or in text the change left contradicting it:
+
+1. Key finding 2 gave 05's crash condition as "by T3 a `compile` may reject under an oracle that
+   crashes at once", dropping 05 §4.3's and r7.2's "if a compile-time crash counts as a rejection".
+   Restored, with 05's "meets T1 to T4 on Q".
+2. Key finding 20 and the glance's Gödel bullet said a "unit's text, as the macro-built diagonal
+   splices in," might code G. `r_self_goal.sl` splices its own file's text, not the unit's (09 §2.4
+   B, r6.1, r7.8), as the same key finding says two sentences later. Now a text code such as the
+   file text a macro splices in.
+3. Key finding 22 read §54's `dump-context`, like §4's warning sentence, as possibly implying that
+   an error stops elaboration. 10 §1 and BUGS.md 25 set it apart: §54 says `dump-context` "stops
+   elaboration", and slc goes on after its report (`tests/dump_context.sl`, re-run). Split.
+4. The glance's GC bullet said 08's stress tests pass "on arm64 under qemu"; only the stress test
+   without Zarith ran there (08 §6, §8, slc's cell driver not being built for arm64), and the
+   systhread variants, which ran on all three new compilers, were attached to 5.4.1 alone. Fixed.
+5. The glance's `slot-eq` bullet said both answers "now" reach acceptance, change-log wording
+   (CLAUDE.md rule 18). Removed.
+6. The glance's decision 15 row kept "only a parameter `N` open" after decision 15 gained the
+   outcome of a call past the limit as a second open question (01 r7.4). Fixed.
+7. The glance's 18c row dropped the condition on the derived `Predates`, that the holder be built
+   before the function's level (06 r7.2, 07 r7.1). Added.
+8. Rough edge 27 listed the two ways to have the `Predates` after a colon, as exhaustive; 06 §5.1
+   says "as far as the spike and its reviews found", and 06's round-7 unsure point that no other
+   way was ruled out. Hedged.
+9. Section 6 listed (d) as unchecked beyond an abstract relation "and a G coded by text", as if a
+   text code had been checked; 09's round-7 unsure point says whether one can stand for ⌜G⌝ in
+   D1's instance and still meet D2 was not examined. Now stated as that open point.
+10. Section 6's OCaml bullet said multi-domain evidence was "one stress schedule"; 08 r7.11
+    replaced that with the schedules of a few runs. Fixed.
+11. Key finding 5 said a spec with 02's never-reused addresses gives `slot_eq_share.sl`'s `ESome`
+    under no oracle, without 02 N1's and decision 4's "(reading)". Hedged.
+12. Decision 15 called `--no-native`'s effect "an oracle on 01's reading"; 01 decision 8 says so
+    under its decision 6 (b), which is this summary's decision 5 (a). Condition added.
+13. Section 7's 06 costs kept "per partial helper over a dependent relation" beside 06 r7.1's
+    finding that a wrapper with a relation's own signature serves dependent relations too, so the
+    cost is per helper, a wrapper saving none here (06 F5). "Over a dependent relation" removed.
+14. Decision 6 still said "Both implementations refuse" a compile-time crash, which key finding 8,
+    as updated, contradicts for a host stack overflow (BUGS.md 27). Qualified.
+15. Section 1's fuel bullet stated the diagonal with termination as its only premise, while the
+    glance's diagonal, as updated, adds "under further premises 09 lists" (03 r7.3). Added.
+
+Round-7 corrections the update did not carry to the place the summary condenses:
+
+16. Key finding 21 read (E)'s "follows" "step by step"; 09 §3.2 has "an order-preserving
+    correspondence with a finite full run", and 03 r7.6 corrected the same paraphrase in 03 F6.
+    Now 09's wording.
+17. Decision 6's 02 bullet made acceptance a function of the bound "given 4 and 5"; 02 r7.5 adds
+    the elaboration order (3), and r7.4 that both implementations can die of a host stack overflow
+    before a large bound is spent. Added.
+18. Decision 19 called a relation-valued `TyCtor` index's usability unverified, against key finding
+    13; 01 r7.6 narrowed this to proving the metatheory once that way, the indexing compiling (05
+    F7). Fixed.
+19. Key finding 3's title, "Theorems must be intrinsic", against 05 F1, which gives a graph
+    relation as the other form, and 05 r7.8, which corrected the same claim in 05 §1. Fixed, with
+    05's recommendation of the intrinsic form.
+20. Decision 4 and rough edge 4 set the head-first order against "the reference and slc's compiled
+    code"; key finding 6 and 02 r7.8 now have it in both implementations, `slc --interpret`
+    included, in the tests run. Fixed.
+21. Rough edges 20 and 22 lacked §54's "stops elaboration" for `dump-context` and slc going on
+    after it (01 §5 item 10 and r7; 10 r7.2, and 10's round-7 notes, which flag item 20 as stale).
+    Added.
+22. Rough edge 31 lacked the reference's dependence on `--extract` (01 §5 item 14 and r7;
+    re-run). Added.
+
+Checked and unchanged: the citation key; key findings 4, 6, 8, and 19 against their tests and
+notes (the seven modes and two call shapes of 02 §2.2, round-7 coordinator note 1, and r7.1; 03
+r7.2; 02 r7.3 and r7.4, 04 r7.3, and BUGS.md 27, with MANUAL.md:162-164; 08's round-7 coordinator
+note 1 and r7.3); the rest of key finding 20 against 09 §2.4 B and its round-7 notes; key finding
+22's other clauses against 10 §1, §4, and r7.3 to r7.19; decision 5's added condition (02 decision
+4); decision 18c; rough edge 32 (DESIGN.md mentions `compile-error` only in §4, §27, and §54, by
+grep); section 6's slc-internals bullet (10's round-7 unsure points); section 7's 07 paragraph
+(07 r7.1); section 8 and the glance against BUGS.md, whose entries 1, 13, and 18 to 22 predate the
+exploration (`git show d942596^:BUGS.md`), 23 to 27 coming from it and 13, 18, and 19 extended by
+it; BUGS.md 25 to 27 against key findings 22, 19, and 8.
+
+Unsure:
+- Key finding 8 now reads 01 decision 7's "refuse a run-position form whose run crashes" as "fails
+  with a runtime error". 01 decision 7 itself, not this check's file, still says "crashes", which
+  BUGS.md 27 qualifies for a host stack overflow.
+- Key finding 19 gives 08's new runs and source readings but not 08 §7's extended reading, that
+  with its conditions the stores also look GC-safe on 5.4.1 and on 4.14.1 with flambda, for one
+  domain; left, since the evidence it lists is right.
+- Key finding 15 does not mention `--extract` either; rough edge 31 now does.
+- Section 6's "a packed level from a caller" under "Closures as suspensions" may be partly settled
+  by `06_packed_subterm.sl`; what the phrase meant was not traced, so it is left.
+- 07 r7's unsure point, that the `Predates` route was compiled for one call of `init` and `step`
+  each, is not in section 7; left as detail.
+- 00-summary.md is now 788 lines, 00-glance.md 120.

@@ -32,7 +32,7 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
   items 16, 17).
 - **`slot-eq`.** §67 lets answers differ between runs, so acceptance can depend on the implementation; answers already
   differ between implementations and modes, though not between runs as far as seen (`imm_eq.sl`, `slot_eq_share.sl`).
-  Both answers now reach acceptance: a `comptime-match` on `slot-eq` asked through `native-compute` passes by
+  Both answers reach acceptance: a `comptime-match` on `slot-eq` asked through `native-compute` passes by
   default and fails under `--no-native`, on both implementations (`01_slot_eq_native.sl`). The output theorem therefore
   cannot be "the same values, up to crash";
   04 makes `slot-eq` an oracle beside the host's answers to `world-do` and `read-file` (00-summary §2 items 5, 18).
@@ -51,14 +51,16 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
 ## Follow-ups 08 to 10 (00-summary §2 items 19 to 22, §8)
 
 - **GC.** Compiled `imm` stores look GC-safe on OCaml 4.14.1 when both words are immediates, among 08's conditions
-  (08's reading); 08's stress tests also pass on 4.14.1 with flambda, on 5.4.1 with and without flambda (systhreads
-  and domains too), and on arm64 under qemu, while real arm64 hardware and the multi-domain memory model are
-  unchecked. The reference interpreter's `-imm` blits corrupt its heap (all three tried; BUGS.md 26).
+  (08's reading); 08's stress tests, with systhread and (on 5.4.1) domain variants, also pass on 4.14.1 with
+  flambda and on 5.4.1 with and without flambda, and the one without Zarith on arm64 under qemu, while real arm64
+  hardware and the multi-domain memory model are unchecked. The reference interpreter's `-imm` blits corrupt its
+  heap (all three tried; BUGS.md 26).
 - **Gödel II** may apply; nothing establishes it. Missing: a formalized `Prov` with D1 to D3, a diagonal sentence (a
   macro in a goal type can build one from its own file's text), and lemmas tying `Prov` to the stripped run. The
   derivation's internal steps (⊢ Con → ¬`P g`) go through despite level stratification for an abstract relation given
   D2, D3, and the diagonal's D1 instance as hypotheses (`g2_step.sl`); reading that as ⊢ Con → G needs `g` to be a code
-  of ¬`P g` itself, which no structural formula code can be and a unit's text might (`09_g2_cycle.sl`). 03's diagonal already rules out a
+  of ¬`P g` itself, which no structural formula code can be and a file's text, as a macro splices it in, might
+  (`09_g2_cycle.sl`). 03's diagonal already rules out a
   faithful hypothesis-free `compile`, under its premises; Gödel II, if those hold and Sleight is consistent, would
   make uniform stripped-run safety unprovable (09).
 - **slc after its first error** can print false later messages and drops some; acceptance seems unchanged (10; BUGS.md 25). Defects
@@ -88,13 +90,13 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 | 12 | Compile-time values in output: trees or heap graphs? | V1 trees for the theorem, V2 an option, the spec's store a heap (02) | — | no |
 | 13 | Intrinsic theorems, positive `Fails`, rejection contents? | intrinsic, positive `Fails`; tracks disagree on its shape | 3 | no |
 | 14 | Form of theorem 3 and hypothesis H? | tracks disagree | 6, 18 | part (budget option) |
-| 15 | Which flags are spec parameters; is expansion limit one? | 01's flag list; §62's 10000 kept (01, 03, 04), only a parameter `N` open | — | part (10001st expansion, or `N`) |
+| 15 | Which flags are spec parameters; is expansion limit one? | 01's flag list; §62's 10000 kept (01, 03, 04); open: a parameter `N`, and what a call past the limit does | — | part (10001st expansion, or `N`) |
 | 16 | What is the prelude to the spec? | tracks disagree (01: any prelude text, `--no-prelude` qualified; 05: too wide) | — | no |
 | 17 | Which compiler route? | R3, new spec-first compiler; slc for differential tests (04) | 18–23 | no |
 | 18 | How is fuel kept out of results and theorems? | tracks disagree | 17 | no |
 | 18a | Resumable checker: derivation zipper or replay? | zipper for a new kernel; replay only retrofitting slc (07) | 17, 18 | no |
 | 18b | Certified stepper invariant: erased trace or counter closure? | erased trace, as a working hypothesis (06) | — | no |
-| 18c | Apply a closure whose level is packed beside it? | no change proposed; it works with a packed `Predates` or one derived from a `Predates` about its holder, except, on 06's reading of §18, applying one extended at a level minted during the run (06) | — | only if changed |
+| 18c | Apply a closure whose level is packed beside it? | no change proposed; it works with a packed `Predates` or one derived from a `Predates` about a holder built before the function's level, except, on 06's reading of §18, applying one extended at a level minted during the run (06) | — | only if changed |
 | 19 | Judgment shape and staging? | 01 §4.2 layers (Γ/Σ home of run-position facts open); run relation as a parameter (01) | — | no |
 | 20 | Where does the proof stop at the output end? | O1 now, O2 + O4 later (04) | — | no |
 | 21 | `native-compute`? | N3, same trust as the output end (04) | — | no, unless 6 changes §72 |
