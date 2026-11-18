@@ -79,10 +79,12 @@ depends on it.
    terminating inside Sleight. That looks like the diagonal obstacle
    the owner does not expect to overcome for `no_false` (statement 1);
    this is unverified here. 03 F6 argues a version of it, not checked:
-   no non-erased `compile` function taking no further evidence can
-   agree with the spec on every source. *Options:* (a) relative to H. Statement 4 words
-   H as "every accepted compile-time form's spec run halts"; this file
-   uses the broader "every compile-time run in the spec halts", and
+   if Sleight's functions terminate, and under F6's further premises,
+   no non-erased `compile` function taking no further evidence agrees
+   with the spec on every source. *Options:* (a) relative to H.
+   Statement 4 words H as "every accepted compile-time form's spec run
+   halts"; this file uses the broader "every compile-time run in the
+   spec halts", and
    which one is meant is for the owner. (b) A fuel parameter, with a
    third outcome `OutOfFuel`, or with exhausted fuel a rejection, as
    02's C4 proposes for a depth bound. (c) A coinductive "diverges" outcome.
@@ -728,8 +730,8 @@ before one that only adds rules.
   such indexing is accepted.
 - That a proof of theorem 3 without hypotheses would hit the diagonal
   obstacle of statement 1 (decision 2). Here this is an analogy, not an
-  argument; 03 F6 argues it, not checked, for a non-erased `compile`
-  function.
+  argument; 03 F6 argues it, not checked and under its premises, for a
+  non-erased `compile` function.
 - That §50's meta solving is independent of order within a boundary.
 - That the Run layer needs only the fact engine, scope lookup, and Σ,
   and never the full elaborator (§3.2). This comes from reading §65,

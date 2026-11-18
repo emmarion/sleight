@@ -29,24 +29,30 @@ same exit code, so they are not distinguished further.
   goes on (self/README.md, "Errors are values"), and `--first-error`
   only cuts the report short (self/main.sl:45). Apart from those two
   texts, everything below is a difference from the reference, not from
-  DESIGN.md, except where a message slc prints is false.
+  DESIGN.md, except where a message slc prints, or an answer `resolve`
+  gives a macro, is false.
 - After an error, slc does not run run-position code through its
-  evaluator for `let`s, calls, constructor applications, run-position
-  `match`es, `coerce`, or `let-match`, and does not compile or run a
-  `native-compute` (`proto/review7/10_*.sl` for the last three). Macro
+  evaluator for `let`s, calls (primitives such as `settled-value`
+  included), constructor applications, run-position `match`es,
+  `coerce`, or `let-match`, and does not compile or run a
+  `native-compute` (`proto/review7/` tests `settled-value`, `coerce`,
+  `let-match`, and `native-compute`; `proto/aftererr/` the rest). Macro
   expansion is not gated: a macro bound before the error still runs, at
   compile time, after it, and the macro-world primitives it calls answer
   as before (`gensym` and `read-file` were run), except that `resolve`
   answers `RHypothetical` for a binder that holds the token
-  (`proto/review7/10_macro_prims.sl`).
+  (`proto/review7/10_macro_prims.sl`), so the prelude's `unary` and
+  `prove-literal-lt` refuse such a binder as not a constant
+  (`10_literal_macros.sl`).
 - A nullary `(Zero)` bound after the error is `Settled`, but it seems
   not to hold the value `(Zero)`. A run-position
   `let` whose right-hand side needed no hoisted temporaries gets its
   binders set to the erased token (`env-set-tokens`), and slc's
   discriminant read takes a token as the word 0 (`self/eval.sl:51`). So
-  the binder reads as the `Nat` 0, a `String` as `(SNil)`, or, for a
-  tagged enum, as its first fieldless constructor, whatever the
-  right-hand side was. `(Zero)` reads as `0` only by coincidence. Other
+  a `Nat` binder reads as 0, a `String` binder as `(SNil)`, and a
+  binder of a tagged enum as the enum's first fieldless constructor,
+  whatever the right-hand side was. `(Zero)` reads as `0` only by
+  coincidence. Other
   kinds of type were not surveyed; one single-constructor case is in
   the review notes.
 - That gives false messages: after an error, `(let ((many x)) (BFalse))`
@@ -54,13 +60,17 @@ same exit code, so they are not distinguished further.
   `BFalse`, got `(BTrue)`"; `x` bound to `3`, to `(Succ y)`, to a call,
   or to a variable holding `1` is reported as `0`. It also hides errors:
   `(comptime-match many x (BTrue))` on that `BFalse` binder, and
-  `(comptime-match many x (Zero))` on `x` bound to `3`, pass silently.
-  Where the binder is left `Hypothetical` (a right-hand side that needed
-  temporaries, or the fields of a `let-match`), slc reports that the
-  scrutinee is not `Settled`, which DESIGN.md §27-§29 would, in this
-  agent's reading, make it. A string binder is not left `Hypothetical`:
-  it holds the token too (`comptime-match` reads it as `(SNil)`), but
-  the check on the message of `compile-warn` and `compile-error` words
+  `(comptime-match many x (Zero))` on `x` bound to `3`, pass silently,
+  and some messages are dropped once an error is recorded, among them
+  the crash of a pre-error macro expanded after the error (§2, "What is
+  not reported"). Where the binder is left `Hypothetical` (a right-hand
+  side that needed temporaries, or the fields of a `let-match`), slc
+  reports that the scrutinee is not `Settled`, which DESIGN.md §27-§29
+  would, in this agent's reading, make it. The string binders tested,
+  of a literal and of a `Settled` string variable, are not left
+  `Hypothetical`: they hold the token too (`comptime-match` reads it as
+  `(SNil)`), but the check on the message of `compile-warn` and
+  `compile-error` words
   any stored value that is not a string as "is `Hypothetical`"
   (`elab.sl:2585-2587`; `14_string_msg.sl`,
   `proto/review7/10_string_token.sl`).
