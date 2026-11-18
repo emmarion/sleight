@@ -5,40 +5,50 @@ Written by an agent at the coordinator's request, as a follow-up to
 and nothing here is a design decision (CLAUDE.md rules 1, 11). Where
 this file and DESIGN.md disagree, DESIGN.md is right. Code citations
 are to the tree at commit `5fba336`; the readings of slc's source are
-this agent's and may be wrong in detail, though every behaviour quoted
-below was observed by running the tests.
+this agent's and may be wrong in detail. Every message quoted below was
+observed by running the tests; a behaviour marked as read was not.
 
 Implementations: the reference is `_build/default/bin/main.exe`; slc is
-`_build/release/slc` (built after the last change to `self/`), run both
-as `slc --interpret` and compiled (`slc` with no flag). On every test
-below the two slc modes printed byte-identical output and the same exit
-code, so they are not distinguished further.
+`_build/release/slc` (built after the last change to `self/`), run as
+`slc --interpret`, as `slc` with no flag (which writes the OCaml to
+standard output when there is no error), and as `slc --build`. On every
+test below the three slc modes printed byte-identical output and the
+same exit code, so they are not distinguished further.
 
 ## 1. Summary
 
 - DESIGN.md says nothing explicit about reporting more than one error
-  (01 §3.7). The nearest text is §4's "Warnings go to standard error and
-  do not stop elaboration", which may be read as implying that an error
+  (01 §3.7). Two texts come near. §4's "Warnings go to standard error
+  and do not stop elaboration" may be read as implying that an error
   does stop it; on that reading slc's going on is itself a difference
-  from DESIGN.md. The reference stops at the first error. slc records
-  errors and goes on (self/README.md, "Errors are values"), and
-  `--first-error` only cuts the report short (self/main.sl:45). Apart
-  from that reading of §4, everything below is a difference from the
-  reference, not from DESIGN.md, except where a message slc prints is
-  false.
+  from DESIGN.md. And §54 says that `dump-context` "stops elaboration
+  with a report of the context", while slc goes on after that report
+  too: on `tests/dump_context.sl` it prints two more errors and a
+  warning after the report, where the reference prints the report
+  alone. The reference stops at the first error. slc records errors and
+  goes on (self/README.md, "Errors are values"), and `--first-error`
+  only cuts the report short (self/main.sl:45). Apart from those two
+  texts, everything below is a difference from the reference, not from
+  DESIGN.md, except where a message slc prints is false.
 - After an error, slc does not run run-position code through its
   evaluator for `let`s, calls, constructor applications, run-position
-  `match`es, or `let-match`. Macro expansion is not gated: a macro bound
-  before the error still runs, at compile time, after it.
+  `match`es, `coerce`, or `let-match`, and does not compile or run a
+  `native-compute` (`proto/review7/10_*.sl` for the last three). Macro
+  expansion is not gated: a macro bound before the error still runs, at
+  compile time, after it, and the macro-world primitives it calls answer
+  as before (`gensym` and `read-file` were run), except that `resolve`
+  answers `RHypothetical` for a binder that holds the token
+  (`proto/review7/10_macro_prims.sl`).
 - A nullary `(Zero)` bound after the error is `Settled`, but it seems
   not to hold the value `(Zero)`. A run-position
   `let` whose right-hand side needed no hoisted temporaries gets its
   binders set to the erased token (`env-set-tokens`), and slc's
   discriminant read takes a token as the word 0 (`self/eval.sl:51`). So
-  the binder reads as the `Nat` 0, or, for a tagged enum, as its first
-  fieldless constructor, whatever the right-hand side was. `(Zero)`
-  reads as `0` only by coincidence. Other kinds of type were not
-  surveyed; one single-constructor case is in the review notes.
+  the binder reads as the `Nat` 0, a `String` as `(SNil)`, or, for a
+  tagged enum, as its first fieldless constructor, whatever the
+  right-hand side was. `(Zero)` reads as `0` only by coincidence. Other
+  kinds of type were not surveyed; one single-constructor case is in
+  the review notes.
 - That gives false messages: after an error, `(let ((many x)) (BFalse))`
   followed by `(comptime-match many x (BFalse))` reports "expected
   `BFalse`, got `(BTrue)`"; `x` bound to `3`, to `(Succ y)`, to a call,
