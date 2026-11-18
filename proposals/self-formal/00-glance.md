@@ -32,7 +32,9 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
   items 16, 17).
 - **`slot-eq`.** §67 lets answers differ between runs, so acceptance can depend on the implementation; answers already
   differ between implementations and modes, though not between runs as far as seen (`imm_eq.sl`, `slot_eq_share.sl`).
-  That an `ENone` answer rejects is inferred. The output theorem therefore cannot be "the same values, up to crash";
+  Both answers now reach acceptance: a `comptime-match` on `slot-eq` asked through `native-compute` passes by
+  default and fails under `--no-native`, on both implementations (`01_slot_eq_native.sl`). The output theorem therefore
+  cannot be "the same values, up to crash";
   04 makes `slot-eq` an oracle beside the host's answers to `world-do` and `read-file` (00-summary §2 items 5, 18).
 - **Evaluation order.** DESIGN.md fixes eagerness and some run-position order, but not body statements, sibling
   arguments, `values` entries, or several §15 bindings in general. Elaboration order is visible through gensyms; both
@@ -91,7 +93,7 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 | 18 | How is fuel kept out of results and theorems? | tracks disagree | 17 | no |
 | 18a | Resumable checker: derivation zipper or replay? | zipper for a new kernel; replay only retrofitting slc (07) | 17, 18 | no |
 | 18b | Certified stepper invariant: erased trace or counter closure? | erased trace, as a working hypothesis (06) | — | no |
-| 18c | Apply a closure whose level is packed beside it? | no change proposed; it works with packed `Predates`, except, on 06's reading of §18, applying one extended at a level minted during the run (06) | — | only if changed |
+| 18c | Apply a closure whose level is packed beside it? | no change proposed; it works with a packed `Predates` or one derived from a `Predates` about its holder, except, on 06's reading of §18, applying one extended at a level minted during the run (06) | — | only if changed |
 | 19 | Judgment shape and staging? | 01 §4.2 layers (Γ/Σ home of run-position facts open); run relation as a parameter (01) | — | no |
 | 20 | Where does the proof stop at the output end? | O1 now, O2 + O4 later (04) | — | no |
 | 21 | `native-compute`? | N3, same trust as the output end (04) | — | no, unless 6 changes §72 |

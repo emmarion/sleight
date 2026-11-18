@@ -92,8 +92,10 @@ Each item is the tracks' recommendation, not a decision.
    F6); a driven run's result reaches only its own later steps, never compile-time code or `qed` (05
    F6, r2.5).
 5. **`slot-eq` makes acceptance implementation-dependent.** §67: "which one a call answers may
-   differ between runs". A run-position `comptime-match` on `ESome` is accepted by both; that
-   `ENone` would reject is inferred, not observed (01 §3.8; 05 §2.2). Answers differ between
+   differ between runs". A run-position `comptime-match` that needs `ESome` from a
+   `native-compute` asking `slot-eq` is accepted by both implementations by default and refused by
+   both under `--no-native` (and by the reference under `--no-extern`), so a flag changes acceptance
+   with no crash (`proto/review7/01_slot_eq_native.sl`; 01 §3.8, r7.3; 05 §2.2). Answers differ between
    implementations and modes, though no run-to-run variation was seen (02 §1, r4.4): `imm_eq.sl` is
    `ENone` interpreted, `ESome` in `--build` binaries with externs (02 §2.4, r2.5);
    `slot_eq_share.sl` is `ESome` only in slc's native build, which 04 attributes to ocamlopt's
@@ -447,11 +449,14 @@ only the budget alternative. (01 decision 2; 03 decisions 2, 4, F7; 05 decision 
 
 **15. Which flags are spec parameters; is the expansion limit one?** 01 in: prelude and extern
 on/off, `--fn-same`, `--goal`, `--comptime-unconfine` names, and FFI names and arities; out:
-`--eval-fuel`, `--no-native`, `--hints`, and `--warn-unused` (its review unsure on the last two);
+`--eval-fuel`, `--no-native`, `--hints`, and `--warn-unused` (its first review unsure on `--no-native`
+and `--warn-unused`; `--no-native` changes acceptance with no crash, through `slot-eq`, an oracle on 01's
+reading, key finding 5);
 warnings ignored, `--warnings-as-errors` a driver policy, though in the reference it also delays
-`Program` finals (key finding 15). §62 fixes the limit at 10000; 01, 03, and 04 keep it, and only
-making it a parameter `N` is open (01 r4.3). §62 does not say the cap's breach is an error; both
-implementations make it one. *Wording:* for the 10001st expansion, or for `N`. (01 decisions 3, 8;
+`Program` finals (key finding 15). §62 fixes the limit at 10000; 01, 03, and 04 keep it. Open are
+making it a parameter `N` (01 r4.3) and what a call past it does: §62 does not say the cap's breach is
+an error, though both implementations make it one (01 r7.4). *Wording:* for the 10001st expansion, or
+for `N`. (01 decisions 3, 8;
 03 decision 5; 04 §2.3.)
 
 **16. What is the prelude to the spec?** (a) a fixed elaborated snapshot; (b) the shipped text; (c)
@@ -507,7 +512,10 @@ stepper's). One extended at a level minted during the run is built (`ho_exist_bu
 applied: by 06's reading of §18's rule for `prove-predates` ("`x` must have an introduction order
 (§5) earlier than `L`'s"), such a level is never provable below the stepper's (06 F4.2, r4.1, r4.2,
 r5.3). Code minted after a top-level destructure of the value can apply it
-(`proto/review6/07_cert_drive.sl`), no help to a stepper (06 r6.5). 06 proposes no change, since a
+(`proto/review6/07_cert_drive.sl`), and so can a function given a `Predates` about the state or value
+that holds it, built before the function's level, through `predates-subterm`
+(`proto/review7/06_packed_subterm.sl`, `07_cert_predates.sl`); neither helps a stepper (06 r6.5,
+r7.2; 07 r7.1). 06 proposes no change, since a
 counter closure works. *Wording:* only if changed. (06 decision 2.)
 
 **19. Judgment shape and staging.** *Rec.* (01): 01 §4.2's layers and Σ/Γ split, the run a parameter
@@ -595,9 +603,13 @@ need anyway" (11). *Wording:* none; 02 asks what §13's "the only reference" mea
 25. **Character literal bounds** are "asserted rather than decided" (§45): a spec axiom. (05 §8.4.)
 26. **Tests fix free behaviour**: `tests/slot_eq.sl` expects `ESome` where §67 allows `ENone`; not a
     contradiction. (02 §5.9.)
-27. **Packed-level closures**: without a packed `Predates` to the caller's level, a function that
-    receives such a closure cannot call it, by §18's introduction-order rule for `prove-predates`; a
-    consequence, not a gap; wanted (18c)? (06 §5.1, r3.1, r4.2, r6.5.)
+27. **Packed-level closures**: a function that receives such a closure can call it only given a
+    `Predates` for its level: one packed with it, or one derived through `predates-subterm` from a
+    `Predates` about the state or value that holds it, which the top level can prove for one built
+    before the function's level (`proto/review7/06_packed_subterm.sl`, `07_cert_predates.sl`). A
+    state a stepper builds gets neither, by §18's introduction-order rule for `prove-predates` as 06
+    reads it; a consequence, not a gap; wanted (18c)? (06 §5.1, r3.1, r4.2, r6.5, r7.2, r7.3; 07
+    r7.1.)
 28. **Divergence** is never mentioned (07 searched); §17, §20, §33, §42, and §62 suggest functions
     halt, but nothing says every compile-time run does, or what a never-returning checker means, or
     whether levels, with §10's `Type : Type` and no positivity, prevent divergence. (07 §5, r2.7.)
@@ -703,9 +715,10 @@ Effort: ~210 lines of determinism, soundness glue, result types, and `complete.s
 and `run-total` are code) against 90 stepper and 67 spec; 7821 and 26021 steps take 1.0–1.5 s and
 8.5–12.1 s in the reference interpreter, 0.39–0.58 s and 3.3–3.6 s in slc's, and at most 0.07 s
 compiled (single runs per review; 06 F5, F6, r6.4, r6.7). Costs: one evidence type per partial
-helper over a dependent relation (§9; "There is no currying", §17; a generic wrapper, one per input
-count, serves `run-op`'s, `proto/review6/06_generic_out.sl`, and, 06 expects, `pick`'s), long
-telescopes, and opaque numerals (§45) (06 F4.3, F5, r6.2).
+helper over a dependent relation (§9; "There is no currying", §17; a wrapper written with a
+relation's own signature can stand in for one, but it serves one signature shape and the four here
+have four, so none is saved: `proto/review6/06_generic_out.sl`, `proto/review7/06_generic_out_more.sl`),
+long telescopes, and opaque numerals (§45) (06 F4.3, F5, r6.2, r7.1).
 
 **07, the §29 round trip with a suspendable checker** (`proto/roundtrip/`). Top-level `Let` (run at
 check time), `Assert` (a `comptime-match`), and `Need` (facts only); inductive `Elab` with
@@ -718,9 +731,11 @@ refused (07 F2, F5, r2.2). Not proved: completeness or termination (key finding 
 premises (07's reading), and `Reach`; replay: direct style, ~50 of 127 lines for request equality,
 not quite 03's (e) (07 F3, F6, r4). Effort: spec 178, determinism 123, zipper 151 (suspension ~45),
 replay 127, and driver and tests 61; the evaluator side was trivial only because `Step` is the
-implementation's machine (07 F4). A function given a `Certified` value cannot call its packed-level
-`step` (`proto/review6/07_cert_fn_bad.sl`); destructured at the top level before the driver's levels
-are minted, it drives program 0 (`07_cert_drive.sl`; 07 F7, r6.2).
+implementation's machine (07 F4). A function given only a `Certified` value cannot call its
+packed-level `step` (`proto/review6/07_cert_fn_bad.sl`); given also a `Predates` about the value,
+proved at the top level for a value built before the function's level, it calls `init` and `step`
+(`proto/review7/07_cert_predates.sl`; 07 F7, r7.1); destructured at the top level before the driver's
+levels are minted, the value drives program 0 (`07_cert_drive.sl`; 07 F7, r6.2).
 
 As a reading, the shape 03, 05, and the brief's proposal C describe is writable and checkable at toy
 scale; completeness and scale remain open.
