@@ -100,8 +100,9 @@ Each item is the tracks' recommendation, not a decision.
    with no crash (`proto/review7/01_slot_eq_native.sl`; 01 §3.8, r7.3; 05 §2.2). Answers differ between
    implementations and modes, though no run-to-run variation was seen (02 §1, r4.4): `imm_eq.sl` is
    `ENone` interpreted, `ESome` in `--build` binaries with externs (02 §2.4, r2.5);
-   `slot_eq_share.sl` is `ESome` only in slc's native build, which 04 attributes to ocamlopt's
-   ability to share equal constants; `bootstrap.sh`'s `--byte` test builds would not see it, its
+   `slot_eq_share.sl` is `ESome` only in native builds, slc's and the reference's (02 r7.6, 04
+   r7.4), which 04 attributes to ocamlopt's ability to share equal immutable constants, and which a
+   spec with 02's never-reused addresses gives under no oracle (02 N1, decision 4, r7.6); `bootstrap.sh`'s `--byte` test builds would not see it, its
    ocamlopt-built `native-compute` runs could (04 §2.5, r2.7, r5.6); `const_share.sl` is `ENone`
    everywhere tried (02 second review).
 6. **Evaluation order.** DESIGN.md fixes eagerness (§31), inner forms first in run position (§27),
@@ -112,11 +113,13 @@ Each item is the tracks' recommendation, not a decision.
    (inferred), then expand each macro call among an application's arguments, left to right, its
    output before the next argument, then a head that is a name, then the arguments left to right
    (`proto/review3/gensym_*.sl`, `review4/01_head_name_err.sl`, `review6/01_splice_output.sl`;
-   special forms' operands unchecked; 01 §3.6, r3.1, r4.2). At runtime, the reference (interpreted
-   and built), `slc --interpret`, and slc's native and `--byte` builds all run a head form before an
-   argument form in a body in two tests that set a world write against a stack overflow
-   (`proto/dyn/head_crash_arg_write.sl`, `head_write_arg_crash.sl`; 02 §2.2, round-7 coordinator
-   note 1). Earlier crash-against-crash tests showed the same for the reference and slc's builds
+   special forms' operands unchecked; 01 §3.6, r3.1, r4.2), and a gensym number can decide
+   acceptance (`proto/review7/01_order_accept.sl`, `01_order_refuse.sl`; 01 r7). At runtime, the
+   reference (interpreted, with and without externs, and built natively and with `--byte`),
+   `slc --interpret`, and slc's native and `--byte` builds all run a head form before an argument
+   form in a body in two tests, one call shape each, that set a world write against a stack
+   overflow (`proto/dyn/head_crash_arg_write.sl`, `head_write_arg_crash.sl`; 02 §2.2, round-7
+   coordinator note 1, r7.1). Earlier crash-against-crash tests showed the same for the reference and slc's builds
    (`proto/review3/head_arg_order.sl`, `proto/review5/04_head_arg_compiled.sl`; 02 §6; 04 r5.2), but
    not for `slc --interpret`, whose out of fuel is an error value after which the run goes on (02
    §6, r6.4, r6.5). slc's emitter writes the head before the hoisted argument and a `values` as
@@ -129,7 +132,9 @@ Each item is the tracks' recommendation, not a decision.
 7. **Extern mode changes acceptance by DESIGN.md's text.** §35: "with externs too, `(slot-of k)` is
    tag slot `k`"; `proto/dyn/tagslot.sl` is refused under `--no-extern` (02 §2.5, Q6).
 8. **Compile-time fuel and crashes.** DESIGN.md does not mention fuel (03 F1). Both implementations
-   refuse a run-position form whose run crashes (01 decision 7). slc's only fuel known to change a
+   refuse a run-position form whose run fails with a runtime error (01 decision 7); on a host stack
+   overflow both die instead (exit 2), naming no form, though MANUAL.md:162-164 says such a form is
+   refused (`proto/review7/02_deep_runpos.sl`; 02 r7.3, r7.4; 04 r7.3). slc's only fuel known to change a
    verdict is its depth bound (default 1000000000, fresh per form, macro run, and `Program` step);
    `merge-opens` would accept early if its bound were short, which 03 believes, unproved, it is not
    (03 §1, F3, r2.5), and its interpreter runs on after out of fuel; whether that is a defect
@@ -251,14 +256,19 @@ Each item is the tracks' recommendation, not a decision.
     evaluator and driver, crashes set aside; the macro's other code ends (by inspection in
     `diagonal.sl`; no P can hold it, as it needs a `MacroWorld`, §65); `read-file` returns Q's text;
     the expansion, with what follows the call, decides Q's verdict (09 §3.4; 03 F6, r6.1 to r6.4).
-22. **slc after its first error** goes on, but no longer runs run-position `let`s, calls, or
-    matches, though macros bound before the error still expand and run; a `let` whose right-hand
-    side hoists no temporary gets the erased token (string binders aside, untraced), read as the
-    word 0, so later messages can be false (a `(BFalse)` binder "got `(BTrue)`", `3` "got 0"), and
-    some errors are missed (`proto/aftererr/`; 10 §1 to §3). Acceptance seems unchanged, the first
-    error already making slc exit 1 (10 §4; BUGS.md 25). If §4's "Warnings ... do not stop
-    elaboration" is read as implying that an error does, slc's going on also differs from DESIGN.md
-    (10 §1, r6.1).
+22. **slc after its first error** goes on, but no longer runs run-position `let`s, calls, matches,
+    `coerce`, `let-match`, `native-compute`, or a file's final expression, though macros bound
+    before the error still expand and run. A `let` whose right-hand side hoists no temporary gets
+    the erased token, string binders included, read as the word 0, so later messages can be false
+    (a `(BFalse)` binder "got `(BTrue)`", `3` "got 0"); `resolve` answers `RHypothetical` for such a
+    binder, so the prelude's `unary` and `prove-literal-lt` refuse it with a false usage message;
+    and some errors are missed and some messages dropped, a crash in a later expansion being
+    reported by nothing (`proto/aftererr/`, `proto/review7/10_*`; 10 §1 to §4, r7.3 to r7.5, r7.16,
+    r7.17). Acceptance seems unchanged, the first error already making slc exit 1, on a reading of
+    every writer of slc's message list (10 §4, r7.8, r7.19; BUGS.md 25). If §4's "Warnings ... do not
+    stop elaboration", or §54's `dump-context`, which "stops elaboration with a report of the
+    context", is read as implying that an error stops elaboration, slc's going on also differs from
+    DESIGN.md (10 §1, r6.1, r7.2).
 
 ## 3. Decisions for the owner
 
@@ -313,7 +323,8 @@ fail it, and both implementations' built code on two separately computed `Nat`s 
 `proto/review5/02_big_nat_slot_eq.sl`; 02 Q4, r2.5, r5.2). *Rec.* by every track that decides it:
 (a), shapes differing: 01 an answer stream; 02 a step → bit map with `ESome` needing the bit *and*
 equal words, theorem "some oracle exists", which on 02's reading needs equal `Nat`s to be one word,
-as E2 makes them (9), and a shared store (12) (02 Q4, r5.1); 05 an oracle also recording crash
+as E2 makes them (9), a shared store (12), and either equal immutable constants sharing a word or
+native builds not sharing them (key finding 5) (02 Q4, r5.1, r7.6); 05 an oracle also recording crash
 points and file contents, existentially quantified in the verdict and logged by the compiler; 04
 treats the answers as an oracle (key finding 18). 05 warns an oracle free to answer `ENone` or crash
 lets a compiler over-reject while meeting T1 to T3, a crash rejecting every source that runs
@@ -691,8 +702,9 @@ Open ones; numbers follow the review log, gaps being resolved items.
 - **Reported histories and figures**: "accepted as first written" claims (06 F4, 07 F4) and 05's
   "first attempt refused" claims (one reproduced, 05 r3); 07's quadratic estimate; single-run
   timings (06 r2.6; 07 §6); all cost and effort figures (01 §6; 03 §6; 04 §6).
-- **slc internals**: after an error, why a string binder stays `Hypothetical`, and whether `coerce`,
-  `gensym`, `read-file`, and the `settled-*` forms are gated (10's review); that the per-form and
+- **slc internals**: after an error, whether any place but `apply-answer` returns to an earlier
+  `Env`, on which the reading that acceptance is unchanged rests, and `open-bind`'s token for a
+  non-empty context (10 r7); that the per-form and
   per-file expansion bounds never bind before the global count, store cycles, macro callbacks never
   evaluating, checkpoint rollback of counters, failed fuel attempts as prefixes (03 §6, Q1, second
   review); `merge-opens`'s bound (03 §1).

@@ -24,11 +24,10 @@ references.
   (`g2_step.sl`), and so does its final step to ⊥ at the top level,
   with consistency postulated (`review7/09_g2_final.sl`).
   So 03 and 05 may claim Gödel-based limits only conditionally on that
-  step (§4 gives the wording; 05 does not yet say that (d) was tried in
-  this form). §9 does not force the
-  diagonal sentence to be built from a relational `Sub`: a macro in a
-  goal type can splice in the text of its own file (`r_self_goal.sl`,
-  compiled).
+  step (§4 gives the wording they carry, revised there since). §9 does
+  not force the diagonal sentence to be built from a relational `Sub`:
+  a macro in a goal type can splice in the text of its own file
+  (`r_self_goal.sl`, compiled).
 - **What the cheap diagonal already gives.** 03's `read-file` diagonal
   gives two things without Gödel, under the premises of §3.4 and §2.5:
   no faithful, hypothesis-free, non-erased `compile`; and no uniform H
@@ -311,8 +310,9 @@ so far only in an abstract form:
   no `g` equals a term that contains `g`: §7's occurs check refutes
   the equation (`review7/09_g2_cycle.sl`, accepted by both). So, on my
   reading, `g` has to be a code not built from the formula's
-  structure, such as a `Txt` holding the text of the unit that states
-  G, as in the macro-built diagonal (`r_self_goal.sl`). For a
+  structure, such as a `Txt` holding the source text that states G, as
+  the macro-built diagonal of `r_self_goal.sl` splices in its own
+  file's text. For a
   relational diagonal, G ↔ ¬`Prov ⌜G⌝` is a theorem rather than a
   definition, and its two directions are further internal steps, not
   tried.
@@ -513,9 +513,7 @@ them on P.
 
 03 F6 and 05 (§1, §4.3, T7, and §9; 05's Coordinator note 1) carry this
 wording, revised there by later reviews; where they differ, they are
-the current text. 05 §4.3 adds a condition (d), included below. 05 does
-not yet carry what the wording below says was tried for (d): its §1,
-§4.3, T7, and §9 call (d) unattempted.
+the current text. 05 §4.3 adds a condition (d), included below.
 
 **03 F6, after "(T) and (E) for P then say that this call of `compile`
 returns, reading part 5 as counting the driver's call as one of the
@@ -603,8 +601,8 @@ the conditions.
   (`r_induction_rule.sl`). G2 for consistent r.e. extensions of PRA is
   from memory.
 - The macro-built diagonal: `r_self_goal.sl` shows only that a goal type
-  can contain the unit's own text, not that D2 or D3 can be proved about
-  such codes.
+  can contain its own file's text, not the whole unit's, and not that
+  D2 or D3 can be proved about such codes.
 - Route B: no `Prov`, D2, D3, `Sub`, or G was built. The derivation's
   internal steps ((d) in §4) were tried only with D2, D3, and one D1
   instance as hypotheses about an abstract `P`, and with G read as
@@ -806,6 +804,91 @@ Unsure:
    hypotheses: the packed ⊢ Con → G passes `--goal proved` on both
    implementations, the direct application of packed hypotheses is
    refused, and the fixed-level form passes. Added to §1, §2.4 B, §4's
-   wording for 05, and §5. 05 still carries the earlier wording ("None
-   of (b), (c), (d) ... has been attempted"), for the coordinator to
-   bring in line after this round's review of 05.
+   wording for 05, and §5.
+
+## Round 7 review notes
+
+A seventh reviewer read REVIEW.md, the brief, CLAUDE.md, all of
+DESIGN.md, all of SOUNDNESS.md, README.md's "Logic and strength", 05's
+Gödel paragraphs as they now stand, and 00-summary key finding 20. It
+re-ran, on the reference and `_build/release/slc`: `--goal proved` on
+`g2_defs.sl` with `g2_step.sl` and with `g2_fixed.sl` (PASS), and
+`g2_direct_bad.sl` (refused with the quoted message; slc reports four
+such errors, three naming `K` and one `KC`); `hyp_fixed.sl`,
+`hyp_packed_bad.sl`, `hyp_factory.sl`, and `r_result_closure_bad.sl`
+(as stated); `--goal proved` on `sys.sl` with `sigma1.sl`, `con.sl`,
+and `top_mp.sl`, on `r_induction_rule.sl`, and on `std/macro.sl
+r_self_goal.sl` (PASS); `call_in_type_bad.sl` (refused, citing §9);
+`05_stripped_absurd_final.sl` under `--no-prelude` ("absurd code
+reached", reference and `slc --interpret`); and `03_detour.sl` under
+the reference and `slc --interpret` (`(BFalse)`), with the 909-byte
+prefix comparison.
+
+`con-to-g` was checked step by step against the usual derivation: from
+the D1 instance and `p : P g`, `d2` gives `P (Imp (Pv g) Bot)`; `d3`
+gives `P (Pv g)`; `d2` again gives `P Bot`; Con refutes it. That is
+⊢ Prov⌜G⌝ → Prov⌜⊥⌝ and its contrapositive, so the function proves
+⊢ Con → ¬`P g` from the packed D2, D3, and D1 instance; G enters only
+through reading ¬`P g` as G, and through the code `g` in the D1
+instance.
+
+1. §1 said the internal steps "do go through ... with the final step
+   to ⊥ at the top level". That step had not been compiled with these
+   definitions, and the sentence dropped the reading of G that the
+   result rests on (item 2). `review7/09_g2_final.sl`, run under
+   `--no-prelude` after `review7/09_g2_pre.sl` and `g2_defs.sl`,
+   applies `con-to-g` at the top level to a postulated Con and to
+   proofs of D2, D3, and the D1 instance for a relation that holds of
+   every code, unpacks the result, and reaches a `(False)`; both
+   implementations accept it. The same last step in a function body is
+   refused by both (`N2` was not in scope when its level was minted),
+   and a wrong proof of `P g` is refused. `--goal proved` refuses
+   `--no-prelude`, so the file is checked as a plain run. §1, §2.4 B,
+   and §5 now say this.
+2. §2.4 B read G as ¬`P g` "by definition" without saying what that
+   takes: `g` must be a code of the type ¬`P g` itself. In
+   `g2_defs.sl`'s coding that type's code is `Imp (Pv g) Bot`, which
+   contains `g`, and §7's occurs check refutes any such equation
+   (`review7/09_g2_cycle.sl`, an `absurd` function from
+   `(Eq (Fm) g (Imp (Pv g) (Bot)))`, accepted by both; the same with
+   `(Bot)` in place of the inner `g` is refused as not refuted). So `g`
+   has to be a code such as a unit's text, as a macro-built diagonal
+   gives; for a relational one, the two directions of G ↔ ¬`Prov ⌜G⌝`
+   are further, untried steps. Added as a bullet; §1, §5, and §4's
+   wording for 05 (§4.3 and §9) now carry the condition.
+3. §2.4 B's description of `g2_defs.sl` left out the `Txt` constructor,
+   and wrote the D1 instance as `P ⌜g → ¬Pv g⌝`, corner quotes around a
+   term that already holds the code `g`. Now `Txt` is listed and the
+   instance is `P (Imp g (Imp (Pv g) Bot))`, with what it codes.
+4. In §2.4 B the inserted bullet list swallowed the paragraph after it
+   (the intuitionistic G2 argument, Willard, and Barras), whose
+   unindented lines continued the last bullet. Split off.
+5. §4's last line placed 00-summary's Gödel item at "§3 item 20". It is
+   key finding 20, in 00-summary's §2; §3 there is "Decisions for the
+   owner". Fixed.
+6. §2.1 named `--no-prelude`'s `def-prim` axioms as a way flags change
+   the theory, without saying that both implementations refuse
+   `--no-prelude` with `--goal proved` (MANUAL.md; checked: "--goal
+   proved does not take --no-prelude", FAIL). Added.
+7. The coordinator's note said that 05 still carries the earlier
+   wording on (d) and that 00-summary and 00-glance call (d) untried.
+   8ea3540 had already changed both summaries, and 05's own round-7
+   review has since put the abstract (d), with the reading of G, in its
+   §1, §4.3, T7, and §9. Both clauses removed, and §1 now says that 05
+   revised §4's wording. An intermediate state of this review, which
+   said that 05 did not yet carry it, was committed in passing.
+8. §5 still said that `r_self_goal.sl` shows a goal type containing
+   "the unit's own text"; round 6 corrected the phrase in §1 and §2.4 B
+   only. The file splices its own file's text, and the unit also holds
+   `std/macro.sl`. Fixed.
+
+Unsure:
+
+- Whether a text code can stand for ⌜G⌝ inside the structural code
+  `Imp g (Imp (Pv g) Bot)` of D1's instance, and still meet D2 for a
+  `Prov` that formalizes acceptance, was not examined.
+- 00-glance's Gödel item still states the abstract (d) without the
+  reading of G, and 00-summary key finding 20 says (d) "holds in one
+  abstract form" and that the last step "is a top-level application",
+  which is now compiled only with Con postulated; neither file is this
+  reviewer's.

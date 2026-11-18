@@ -39,8 +39,8 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
 - **Evaluation order.** DESIGN.md fixes eagerness and some run-position order, but not body statements, sibling
   arguments, `values` entries, or several §15 bindings in general. Elaboration order is visible through gensyms; both
   implementations elaborate a head that is a form (inferred), then expand an application's argument macro calls, then
-  elaborate a head that is a name, then the arguments, left to right. At runtime both implementations, in all five
-  modes, run a head form before an argument form in the two tests built to show it. A real run observes order
+  elaborate a head that is a name, then the arguments, left to right. At runtime both implementations, in the seven
+  modes tried, run a head form before an argument form in the two tests built to show it. A real run observes order
   via a §31 crash, which the spec's run would not have: an argument's write precedes another's crash, §15 allowing
   either order (00-summary §2 item 6).
 - **slc printer defect.** `slc --interpret` on a 100003-element list prints 49,999 `Cons _ 0` then `Cons _ _ _)`: a
@@ -60,7 +60,7 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
   D3, and the diagonal's D1 instance as hypotheses (`g2_step.sl`). 03's diagonal already rules out a
   faithful hypothesis-free `compile`, under its premises; Gödel II, if those hold and Sleight is consistent, would
   make uniform stripped-run safety unprovable (09).
-- **slc after its first error** can print false later messages; acceptance seems unchanged (10; BUGS.md 25). Defects
+- **slc after its first error** can print false later messages and drops some; acceptance seems unchanged (10; BUGS.md 25). Defects
   found are in BUGS.md 13, 18, 19, and 23 to 26.
 
 ## Decisions, at a glance (00-summary §3)

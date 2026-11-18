@@ -483,3 +483,125 @@ Unsure:
    §7, and §8; `toolchain.sh`, `arm64.sh`, `noz_ops.ml`, and the two
    helpers are new in `proto/gc/`.
 
+
+## Round 7 review notes
+
+A seventh adversarial review, at commits be4fccb to c7525ee; no file
+under `lib/`, `self/`, `std/`, `tests/`, or `bin/` differs from 5fba336
+or from `origin/main`. Reruns, with outputs in the session scratchpad:
+`toolchain.sh` on 4.14.1 with flambda (`-O3`), 5.4.1, and 5.4.1 with
+flambda (`-O3`), and `arm64.sh`, every configuration; `-dcmm` of
+`kinds.ml` and `08_match_loads.ml` on those three compilers;
+`zarith_small.ml` against each one's Zarith; the 5.4.1 source
+citations; `blit_imm_interp.sl` (also under `--build`) and
+`08_blit_many_imm_interp.sl` on the reference; and `move_imm_interp.sl`
+on the reference, under `--build`, and under `slc --interpret`, with its
+`array-move` control and a sweep of 40 smaller variants.
+
+1. §6's arm64 row gave 745 verifications with systhreads and 2,375
+   with domains as fixed counts. Three runs of `arm64.sh` (the first
+   run, the coordinator's rerun, and this review's) logged 745, 936,
+   and 1,131 with systhreads and 2,375, 2,448, and 2,315 with domains;
+   the single-domain counts, 43, 230, and 14,021, repeated exactly.
+   With domains, each domain logs a verification at the end of each
+   major cycle (`major_gc.c:1617-1619`), about four per major
+   collection (2,315 for 579). Reworded.
+2. §6's systhreads and domains row gave 67,250 minor and 2,429 major
+   collections, and 1,756 verifications in a debug run, as single
+   values. Three runs of `stress.ml` with domains and `s=4k` on 5.4.1
+   made 67,250 and 2,429, 31,698 and 1,164, and 97,124 and 3,626; two
+   debug runs logged 1,755 verifications for 439 major collections
+   and 1,943 for 486. No recorded run logged 1,756. Reworded with the
+   spread.
+3. §1's last bullet said the negative controls behave the same on
+   5.4.1. Only `neg_young.ml` ran there and on arm64; `neg_mark.ml`
+   reads 4.14's header colours and ran only on 4.14.1 with flambda,
+   as §8 says. Reworded. Round 7 coordinator note 1 and 00-summary key
+   finding 19 say the same as the old text.
+4. The header's [S] tag said sources were read at the release tag of
+   the installed version. 5.4.1 is not installed, and its citations
+   in §4 and §6 come from the `ocaml_5.4.1.orig.tar.xz` source the
+   compilers were built from. The tag now says so.
+5. The header said `toolchain.sh` and `arm64.sh` "build and run them",
+   after a sentence about compilers. They build the tests with a given
+   compiler; they do not build compilers. Reworded.
+6. §4 put 5.4.1's `write_barrier` at `memory.c:183-202`; its closing
+   brace is at 203. Fixed.
+7. §6 cited `shared_heap.c:884-903` for `V=1`'s walk from the roots.
+   Those lines are `verify_object` up to its unmarked-status assertion;
+   the walk is `caml_verify_heap_from_stw` (`:921-931`), which
+   `major_gc.c:1618` calls on each domain. Widened to `:884-931`, with
+   "on each domain".
+8. `move_imm_interp.sl` under the reference's `--build` was not
+   reported. It segfaults (exit 139, 3 of 3) and writes no binary;
+   the `array-move` control's `--build` makes a binary that prints
+   `0`. Added to §1 and §6, with the smaller runs' other ways of
+   stopping (BUGS.md 26) and that the debug runtime was not tried.
+9. §6 described `stress.ml`'s arrays as "old and young". It promotes
+   the arrays and cells with `Gc.full_major` (`stress.ml:44`) before
+   the first operation, so every `-imm` store lands in an old block,
+   as the file's header comment says. Reworded.
+10. §2 checked "the brief's ranges", a brief the reader does not have
+    (round 6 fixed the same phrase in §1). Removed. 04 cites
+    `ffi_core.ml:235-241, 315-320`, which leaves out `:321`,
+    `array_move_imm`; 04 is not this reviewer's file.
+11. §7's condition 5 called the multi-domain evidence "one schedule";
+    several runs have now been made. Reworded.
+
+Checked and unchanged: every configuration passes, with the counts
+§6 gives for 4.14.1 with flambda (32, 405, and 2,056; 48, 1,304, and
+1,399) and for 5.4.1 (215 for 215); `neg_young` 10,000 of 10,000
+without the barrier and 0 with it on all four targets; `neg_mark` 20,
+0, and 0, and `gc_ctrl.c:64` failing in the debug runtime, on 4.14.1
+with flambda; `-dcmm` on all three compilers as §4 says (plain
+`(store int …)` for both `int array` stores, the tag-254 test and
+`caml_modify` for `Obj.t array`, `caml_modify` alone for `word array`
+and the record field, `load_mut` for the match's fields); `zarith_small`
+0 of 1,000,000 boxed and 2^62 boxed with all three Zarith builds, whose
+`ml_z_reduce` and `Z_MAX_INT` are the same in 1.13 and 1.14; 5.4.1's
+`memory.c:209-230`, `cmm_helpers.ml:776-778`, `str.c:366-371`,
+`shared_heap.c:884-931`, and `major_gc.c:1617-1618`; the arm64
+binaries are aarch64 ELF; the installed 4.14.1 headers match the
+4.14.1 source package; `blit_imm_interp.sl` and
+`08_blit_many_imm_interp.sl` exit 139 (twice each) and stop with "not
+an extern integer: _" under `s=4k` (twice each), and the first's
+`--build` exits 139; `move_imm_interp.sl` exits 139 three times with
+and without `s=4k`, its control and `slc --interpret` print `0`; the
+repository lines of §1, §2, and §5. Single-domain counts repeat
+exactly for a fixed `OCAMLRUNPARAM`. On 5.4.1 with flambda, adding
+`v=0x800` changes the debug runs' counts a little (7,255 minor
+collections become 7,254 for `stress.ml` with `s=4k`, and 3,629 major
+become 3,627 for the cells driver with `s=4k,o=20`), which accounts for
+the first run's different figures there.
+
+BUGS.md entries 23 to 26, reviewed in the same pass (BUGS.md has no
+notes section of its own):
+
+1. Entry 26 listed the move sweep's runs as printing `0`, segfaulting,
+   or aborting with "Fatal error: out of memory". A second sweep of
+   the same 40 configurations had 17 print `0`, 17 segfault, 3 abort
+   out of memory, and 3 stop with "runtime error: not an extern
+   integer: _" (exit 1; `s=4k`, 50 allocation steps, 3, 10, and 100
+   trials); repeating one of these gave exit 1, exit 134, and exit 1.
+   None printed another value. Added, with the variation.
+2. Entry 26 did not say that `move_imm_interp.sl` also crashes under
+   `--build`. Added.
+3. Entry 26 said the blit-many reproducer segfaulted in "both runs
+   tried"; two more runs here did too. Now "every run tried".
+
+Checked and unchanged: entry 23's four reproducers (with `ulimit -s
+unlimited`, 49,999 `Cons _ 0` then `Cons _ _ _)` from slc, emitting
+and under `--interpret`; 50,002 and `Nil _)` from the reference and
+from `show_at_fn.sl`'s `--build` binary) and its citations; entry
+24's citations; entry 25's four reproducers and citations; the
+DESIGN.md quotes of §27, §28, §31, §45, and §54.
+
+Unsure:
+
+- The qemu caveat of §8 is left as hedged: on an amd64 host, as I
+  understand it, emulated loads and stores keep the host's stronger
+  ordering, so these runs cannot show arm64-only reorderings.
+- "An earlier build printed 393" on 4.14.1 with flambda was not
+  reproduced; three later runs printed 405.
+- Why one sweep configuration stops in different ways between runs of
+  the same binary was not looked into.
