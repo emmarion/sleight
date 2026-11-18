@@ -256,6 +256,18 @@ Notes on the table:
   (`slc: stopped at the first error (--first-error)`) on every test that
   has a second message, so none of the false messages is shown.
 
+Review tests under `proto/review7/`, each with a `(compile-error
+"first")` before the forms shown, in the same columns:
+
+| Test | After the error | slc's later messages | False? |
+|---|---|---|---|
+| 10_letmatch | `y` = 1 before; `let-match many y (Succ p)`; `comptime-match` `p` `Zero` | needs a Settled scrutinee; expected `Zero`, got `?` | yes (both) |
+| 10_coerce | `y` = 1 before; `x` = `(coerce y (coercible-refl (Shared) y))`; `Succ` | expected `Succ`, got 0 | yes |
+| 10_settled_value | `y` = `(BFalse)` before; `v` = `settled-value` of `(settled-of many y)`; `BFalse` | expected `BFalse`, got `(BTrue)` | yes |
+| 10_native | `f` gives `(BFalse)`, bound before; `x` = `(native-compute f)`; `BFalse` | scrutinee is not a datatype value; expected `BFalse`, got `_` | yes (both) |
+| 10_string_token | `s` = `"abc"`, `t` = a pre-error `"abc"`; `SCons` on each; `compile-warn t` | got `(SNil)` (twice); `t` is `Hypothetical` | yes (all three) |
+| 10_macro_prims | a pre-error macro's `resolve` on a later `def-fns` name, a later `let` binder, and a pre-error binder; its `gensym` and `read-file` | `RSettled`, `RHypothetical`, `RSettled`; both primitives answered | the `RHypothetical` |
+
 ## 4. Are reported messages false?
 
 [A] Yes, in this agent's reading, for every "yes" row above: each one
