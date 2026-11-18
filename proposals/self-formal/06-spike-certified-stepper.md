@@ -473,7 +473,8 @@ not being built at run time, which erasure (§14, §27) already implies.
   at a fresh level each step (F4.2); two packed shapes were tried
   (`ho_exist_use_bad.sl`, also with a `Predates` about the state written
   out, `proto/review8/06_use_self_predates_bad.sl`, and
-  `proto/review3/06_packed_predates_bad.sl` with a packed `Predates`). Two shapes that keep one level do work: the
+  `proto/review3/06_packed_predates_bad.sl` with a packed `Predates`).
+  Two shapes that keep one level do work: the
   fixed-level counter of F4.1, and `proto/review4/06_packed_counter.sl`,
   which packs that level. A `Predates` about the state, passed beside
   it, serves a state built before the stepper's level

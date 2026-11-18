@@ -121,8 +121,9 @@ compiling or running anything (`proto/review7/10_native.sl`: a later
 `comptime-match` on its binder reports "scrutinee is not a datatype
 value" and "got `_`"), and a file's final expression is not run by
 `env-run-final` (`:3393`). Read only: `:2537`, `:2560`, and `:2565`
-stop elaborating a `settled-ty-apply` or `settled-val-apply` once
-failed. `settled-type`, `settled-erase`, `settled-mult`, and
+stop elaborating a `settled-ty-apply` or `settled-val-apply` form once
+failed; performing one while a macro expands is another matter
+("What still runs", below). `settled-type`, `settled-erase`, `settled-mult`, and
 `settled-value` are elaborated as primitive calls
 (`elab-main.sl:1075-1081`, `elab-prim-call` at `:2482-2513`), so the
 gate at `:739` keeps them from running in run position: in
@@ -174,7 +175,7 @@ the error they refuse a binder bound after it with their usage message
 ("takes two constants of type `Nat` or `Char`" and its `unary` form),
 while a literal or a binder bound before the error still serves
 (`proto/review7/10_literal_macros.sl`). `comptime-match`,
-`show-typed`, and head dispatch have no such test, and `message-of`
+`show-typed`, and special-form dispatch have no such test, and `message-of`
 (`elab.sl:2578-2587`) words a token as `Hypothetical` without one. This
 suggests the token is meant there as a "not run" marker, but that was
 not confirmed, and `vacant-slot`'s, bound with the built-ins, is not
@@ -225,7 +226,7 @@ rule, where the same match on an `x2` that is `(None (Nat))` leaves
 `t2` `Settled` and `is (Nat)`. Its report also gives `x1` as
 `is (Some (Nat) 4)` and `= (None _)`.
 
-Head dispatch reads the token the same way. `special-of-entry`
+Special-form dispatch reads the token the same way. `special-of-entry`
 (`elab.sl:124-133`) takes a stored value that is not a `BTag` through
 `word-of-block` (`:127`), so a `Settled`, non-erased entry whose minted
 type is `(Special)` and which holds the token dispatches as the form at
@@ -259,9 +260,10 @@ self-expanding macro bound before the error still hits "more than 10000
 macro expansions"). Of the macro-world primitives that `macro-prim`
 performs (`eval.sl:1540` on), only `resolve` tests `env-failed`;
 `gensym` and `read-file` answered after the error as without it
-(`proto/review7/10_macro_prims.sl`). `settled-ty-apply` and
-`settled-val-apply` are performed by `apply-answer` instead
-(`elab-main.sl:323`), which makes no such test of its own; the
+(`proto/review7/10_macro_prims.sl`). A `settled-ty-apply` or
+`settled-val-apply` that a macro's function calls is performed by
+`apply-answer` instead (`elab-main.sl:323`), which makes no such test
+of its own; the
 `settled-ty-apply` of `prove-literal-lt` still answered after the error
 (`10_literal_macros.sl`, on `3 5` and `b 9`). A `def-fns` after the
 error still closes its group (`elab-main.sl:2267-2272`,
@@ -411,7 +413,7 @@ a head is, that an argument is not a constant, or what `resolve` finds)
 that DESIGN.md §27 ("its results become `Settled` with the resulting
 values"), §28, and §29 site 1 (site 3 for 06, 10_string_token's `t`,
 15's second, and 10_special_rename's `cw`) contradict, with §6 and §19
-for head dispatch, §64 for `settled-value`, §72 for `native-compute`,
+for special-form dispatch, §64 for `settled-value`, §72 for `native-compute`,
 §65 for `resolve`, and §45 and §49 for what `prove-literal-lt` and
 `unary` take; for 10_resolve_vacant, the same implementation answers
 `RSettled` for the same entries before the error. As a check on the

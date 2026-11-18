@@ -467,12 +467,22 @@ My reading of the limits, hedged:
   same goes for uniform (T) with full-semantics safety, given the
   matching lemma. (d) has been tried only in an abstract form (09
   §2.4 B): for a relation `P` on codes that formalizes nothing, with D2,
-  D3, and the diagonal's D1 instance as hypotheses, and G taken to be
-  ¬`(P ⌜G⌝)` itself, as a macro-built G would be (a relationally built
-  G adds steps that were not tried), `proto/godel/g2_step.sl`, after
-  `g2_defs.sl`, proves ⊢ Con → G for every such `P` and code, and `--goal proved` passes on both
-  implementations; 09 §2.4 B places the last step, to ⊢ ⊥, at the top
-  level. Nothing builds a `Prov` that formalizes acceptance, and (b),
+  D3, and the diagonal's D1 instance as hypotheses,
+  `proto/godel/g2_step.sl`, after `g2_defs.sl`, proves ⊢ Con →
+  ¬`(P g)` for every such `P` and code `g`, and `--goal proved` passes on
+  both implementations. That is ⊢ Con → G when G is ¬`(P ⌜G⌝)` itself,
+  as a macro-built G would be (a relationally built G adds steps that
+  were not tried), which needs `g` to be a code of ¬`(P g)`. In
+  `g2_defs.sl`'s coding no code built from the formula's structure can
+  be one, since §7's occurs check refutes `g` = `(Imp (Pv g) (Bot))`
+  (`proto/review7/09_g2_cycle.sl`, accepted by both); a text code, such
+  as the file text a macro-built G splices in, might be (09 §2.4 B). The
+  last step, to ⊢ ⊥, is a top-level application (09 §2.4 B).
+  `proto/review7/09_g2_final.sl`, under `--no-prelude` after
+  `09_g2_pre.sl` and `g2_defs.sl`, takes it and is accepted by both, but
+  only with Con postulated by an axiom that gives an element of every
+  type, so it shows how the step elaborates, not anything about Con.
+  Nothing builds a `Prov` that formalizes acceptance, and (b),
   (c), and those lemmas have not been attempted (09 §2.4). As far as I recall, that derivation is intuitionistic, so
   anticlassicality (F8) does not obviously exempt Sleight. The claimed
   IΣ₂ strength (F9) would supply a base for G2 only if it means that
@@ -484,8 +494,8 @@ My reading of the limits, hedged:
   stripped-run type safety would imply internal consistency. Take a
   program with a `many` run-position form of type `(False)` that the
   checker accepts as a form. H, read as covering every such form, says
-  its run halts with a value, preservation says the value has type
-  `(False)`, and canonical forms say no such value exists.
+  its run halts, progress and preservation say that it halts with a
+  value of type `(False)`, and canonical forms say no such value exists.
   "Normalization implies consistency" is the general form of this. The
   same holds of uniform (T) and full-semantics safety. So, if Sleight is
   consistent and meets the conditions above, it cannot prove both
@@ -529,8 +539,8 @@ Options:
    `erased` halting proof (for that input, or for every input, which
    the next sentence rules out for a faithful compiler), or a fuel run whose result
    carries the derivation, which has then already computed the
-   verdict. The diagonal above is exactly why, under its premises, no
-   Sleight code can supply `h` for every `src`. So, as a way to *run* the compiler, it still
+   verdict. The diagonal above is exactly why, under its premises and if
+   the logic is sound, no Sleight code can supply `h` for every `src`. So, as a way to *run* the compiler, it still
    needs fuel or a proof; its use is as a statement. If the logic were
    unsound, `h` could be fake and `compile-h` could diverge. *Cost:* low
    (F4).
@@ -564,8 +574,8 @@ Options:
    erased `TyCtor` indices, plus a `(Model R …)` record with `many`
    functions and erased laws. Candidates for the parameter are the
    extern models or FFI behaviour, the oracle of §4.2, the file system,
-   and possibly the budget of §4.3 option 4. One proof covers
-   `--extern` and `--no-extern` and every `slot-eq`. *Con:* generic code
+   and possibly the budget of §4.3 option 4. One proof covers runs
+   with and without `--no-extern`, and every `slot-eq` answer. *Con:* generic code
    can match on a parameter relation only if the record also carries its
    constructors and `Matchable` (F7), and every helper that calls a
    parameter function needs a factory (F5).
@@ -701,7 +711,10 @@ value is the only reference to it." My reading of its role:
   and any interpretation of HA, IΣ₁, or PRA are unattempted. Whether the
   derivation's internal steps go through (§4.3 (d)) was tried only for
   an abstract relation, with D2, D3, and the diagonal's D1 instance as
-  hypotheses (09 §2.4 B, compiled); nothing builds a `Prov` that
+  hypotheses, and with G read as ¬`(P g)` itself, which needs `g` to be
+  a code of that type, such as a text (09 §2.4 B, compiled); its last
+  step was compiled only with an axiom that gives every type
+  (`proto/review7/09_g2_final.sl`); nothing builds a `Prov` that
   formalizes acceptance. The
   obvious translation of nested implications meets level
   stratification (09 §2.3, compiled); a PRA-style translation with
