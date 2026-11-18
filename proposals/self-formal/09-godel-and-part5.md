@@ -18,14 +18,17 @@ references.
   one: a Sleight relation `Prov` that formalizes acceptance and meets the
   derivability conditions D1 to D3 inside Sleight. Nobody has built it.
   So 03 and 05 may claim Gödel-based limits only conditionally on that
-  step (§4 below gives wording). §9 does not force the diagonal
-  sentence to be built from a relational `Sub`: a macro in a goal type
-  can splice in the unit's own text (`r_self_goal.sl`, compiled).
+  step (§4 gives the wording they now carry). §9 does not force the
+  diagonal sentence to be built from a relational `Sub`: a macro in a
+  goal type can splice in the text of its own file (`r_self_goal.sl`,
+  compiled).
 - **What the cheap diagonal already gives.** 03's `read-file` diagonal
-  gives three things without Gödel: no faithful, hypothesis-free,
-  non-erased `compile`; no uniform H in a form a function can recurse
-  on; and, as a G1-style corollary, an unprovable true non-halting
-  statement. Gödel II adds limits on Π-type statements: uniform safety,
+  gives two things without Gödel, under the premises of §3.4 and §2.5:
+  no faithful, hypothesis-free, non-erased `compile`; and no uniform H
+  in a form a function can recurse on. Separately, a Kleene-style
+  argument (§2.4) would give an unprovable true non-halting statement,
+  given r.e., Σ₁-completeness for a halting relation, and consistency.
+  Gödel II adds limits on Π-type statements: uniform safety,
   and (T) together with safety. It also needs only consistency, not
   soundness. Its price is the internal `Prov` step above.
 - **The obvious arithmetic translation meets level stratification.**
@@ -65,7 +68,7 @@ a *theorem*, written ⊢ T, when some files F make
 `(goal erased T)`. `erased` is the natural mode for propositions. A
 `many` goal needs a run-time value as well. *Consistency* means that no
 F makes `(goal erased (False))` pass, with the prelude's `False`
-(DESIGN.md §59; any type whose opened `Matchable` lists no constructors
+(`lib/prelude.sl:15`; DESIGN.md §59 declares one the same way; any type whose opened `Matchable` lists no constructors
 would serve, §25).
 
 Three things make this a theory *relative to* fixed choices, not one
@@ -90,11 +93,11 @@ passes", ⊢ T is Σ₁ too if the spec's elaboration is finitely branching
 (`slot-eq` has two answers; the file system is fixed by F): a passing
 unit then has a finite tree of runs, by König's lemma, and that tree is
 the witness. DESIGN.md is prose, so that the check is decidable is my
-reading of it. The reference implementation is evidence (rule 2): it
-implements the elaboration and terminates on accepted inputs within its
-fuel. A run that finishes within fuel is a finished run, if its
-evaluator is faithful (SOUNDNESS.md part 11 lists the evaluator as
-trusted).
+reading of it. The implementations are evidence only for the inputs
+run: each such run ended. The reference's evaluator has no fuel bound
+unless `--eval-fuel` sets one, and slc's default is 1000000000
+(MANUAL.md). A run that finishes is a finished run, if its evaluator is
+faithful (SOUNDNESS.md part 11 lists the evaluator as trusted).
 
 Decidability would need (C) for every source. SOUNDNESS.md part 1 states
 (C) "about any program the checker accepts" (line 45). Read literally,
@@ -191,9 +194,13 @@ including axioms whose hypotheses are implications. Two options fail:
   at later levels (§18: "a function at a later level cannot be called
   from code at an earlier level"). Also, validating every S-axiom
   instance (A→(B→C))→((A→B)→(A→C)) by direct closures seems to need
-  level(A→C) above level(A→(B→C)) for every B. That means infinitely
-  many levels below one, against "a well-order of type ω" (SOUNDNESS.md
-  part 3, line 115). With shared levels, a same-level call needs a
+  level(A→C) above level(A→(B→C)) and level(B→C) for every B. If, so
+  that a proof can apply its hypothesis, ⟦X→Y⟧ must sit above ⟦X⟧ when X
+  is an implication, then the levels of B→C rise with B's nesting, and
+  infinitely many distinct levels lie below level(A→C), against "a
+  well-order of type ω" (SOUNDNESS.md part 3, line 115). Without that
+  condition the formulas could share levels, and this argument does not
+  apply. With shared levels, a same-level call needs a
   `subterm` decrease.
 - Packed levels. Internal MP with a data consequent fails
   (`hyp_packed_bad.sl`), and so does the innermost step of axiom S
@@ -236,8 +243,8 @@ then needs:
   units compose. §71's "at most once per unit" for `goal`/`qed`, global
   gensym and literal state (§65, §45), and shadowing (§19) make this a
   real lemma about the formalization, not a triviality.
-- **D3 (internal):** `Prov ⌜A⌝ → Prov ⌜Prov ⌜A⌝⌝`, formalized Σ₁
-  completeness of `Prov`.
+- **D3 (internal):** `Prov ⌜A⌝ → Prov ⌜Prov ⌜A⌝⌝`, an instance of
+  formalized Σ₁ completeness, for the Σ₁ relation `Prov`.
 - **A diagonal sentence G** with ⊢ G → ¬`Prov ⌜G⌝` and the converse.
   §9 bars a substitution function in types, but its own words make an
   exception: "elaborating a type calls none: the only code that runs is
@@ -246,8 +253,10 @@ then needs:
   `Sub` is functional. Or, as 03's diagonal does, a macro reads the
   unit's text with `read-file` (§65) and expands to ¬`Prov` of that
   text; then G is ¬`Prov ⌜G⌝` after expansion, if codes are unit texts.
-  `r_self_goal.sl` (`--goal proved` PASS, reference and slc) has a goal
-  type that a macro expands to `(Prov "<the file's own text>")`. That
+  `r_self_goal.sl` (`--goal proved` PASS, reference and slc, run after
+  `std/macro.sl`, whose `fail-raw` and `str-raw` it calls) has a goal
+  type that a macro expands to `(Prov "<the file's own text>")`; the
+  unit's other file, `std/macro.sl`, is not in the code. That
   second form puts the burden on `Prov`'s formalization of macros and
   `read-file`, which route B needs anyway. A string literal is opaque to
   the checker (§45), so whether D2 and D3 can be proved about such codes
@@ -262,16 +271,22 @@ reasoning). The usual G2 argument from D1 to D3 is intuitionistic, so
 anticlassicality (README.md, `tests/anticlassical.sl`) is no exemption.
 G2 fails for some very weak theories with suitably weak consistency
 statements (Willard's self-verifying systems, from memory). So D3 is a
-real premise, not a formality. As far as I can see, this route is how
-self-formalizations meet G2: they prove consistency of a weaker system
-inside the stronger one, as in Barras's Coq-in-Coq, from memory.
+real premise, not a formality. The self-formalizations I recall do not
+contradict G2 because they prove the consistency or normalization of a
+weaker system inside the stronger one, as in Barras's Coq-in-Coq, from
+memory.
 
 **C. Normalization implies consistency (05 §4.3).** This is route B
 plus a lemma. If ⊢ "every accepted program's stripped run is safe" for
 the formalized semantics, then ⊢ ¬`Prov ⌜False⌝`. Given a proof `p` of
 `(False)`, the program whose final `(Fn L -> (many (Nat) r))` has body
-`(lift p)` is accepted (§29: defining it "involves no evaluation").
-Stripped, it reaches absurd code (`proto/review5/05_stripped_absurd_final.sl`).
+`(lift p)`, with `lift` a `many absurd` function from an erased
+`(False)`, is accepted (§29: defining it "involves no evaluation").
+Stripped, it reaches absurd code: `proto/review5/05_stripped_absurd_final.sl`,
+under `--no-prelude` with `p` from a `def-prim` axiom, which SOUNDNESS.md
+part 1 excludes, is accepted and stops with "absurd code reached" under
+the reference and `slc --interpret`. It shows the program's shape, not
+a `p` from a passing unit.
 Internally that needs two lemmas about the formalization:
 - `Prov ⌜False⌝` implies acceptance of that program;
 - its formalized stripped run reaches absurd code.
@@ -288,8 +303,11 @@ proof.
 give G1-type results: some sentence is undecided. They do not give
 "consistency is unprovable". For Sleight, a Kleene-style G1 needs:
 - r.e. (§2.2);
-- Σ₁-completeness for a halting relation (⊢ `Halts e` whenever e
-  halts, by a written derivation);
+- a halting relation `Halts e` on codes e of a machine whose halting is
+  undecidable, such as a Turing machine (Sleight's own functions return,
+  by (T), so they cannot play that part);
+- Σ₁-completeness for it (⊢ `Halts e` whenever e halts, by a written
+  derivation);
 - consistency, with ¬`Halts e` applicable to `Halts e` at the top
   level (§20), so that no e has both proved.
 
@@ -297,8 +315,8 @@ From these, some e diverges while ⊬ ¬`Halts e`. If every true
 non-halting statement were provable, enumerating proofs would decide
 halting. Σ₁-soundness (⊢ `Halts e` only if e halts) is not needed for
 this; on my reading it would follow from SOUNDNESS.md's (T), (S), and
-(E), which are argued there, not proved. Every proof of G2 I know needs some internalized Σ₁
-completeness, D3 or an instance of it.
+(E), which are argued there, not proved. Every proof of G2 I know needs
+some internalized Σ₁ completeness, at least D3.
 
 ### 2.5 The cheap diagonal against Gödel II
 
@@ -342,8 +360,8 @@ so it falls under part 5's first sentence. The measure argument
 ("Each activation therefore makes finitely many calls, each of which
 finishes, by well-founded induction on μ") asks a decrease only of the
 calls an activation makes, never of the root. The root here is called
-with no proof, as a top-level call is (§20). The invariants (I1) to (I3)
-at that call are those in force at the end of elaboration. Part 5's
+with no proof, as a top-level call is (§20). The invariants (I1) to (I4)
+of part 4 at that call are those in force at the end of elaboration. Part 5's
 remark that each `Program` step is "a total call" can be read as
 treating driver-made calls as covered, though the same sentence puts
 the driver's loop "outside the claim". So I read (T) as covering the final-`Fn` call, and
@@ -362,9 +380,11 @@ of the full semantics") suggests that meaning without saying it.
 
 From `proto/review5/`:
 - `main.exe ../../../../std/macro.sl 03_detour.sl` prints `(BFalse)`,
-  exit 0. Every run below also warns on standard error that line 37,
-  inside the string literal, is "dedented past indentation 2"; that is
-  a layout warning, not a refusal.
+  exit 0. Every elaboration below also warns on standard error at line
+  37, column 2, the `))` just after the string literal closes, that it
+  is "dedented past indentation 2" (with a note pointing at line 18);
+  that is a layout warning, not a refusal. The built programs print
+  nothing on standard error.
 - `--extract out.ml` writes the OCaml, exit 0. (`--extract` takes the
   next argument as its output path. Written as `--extract
   ../../../../std/macro.sl 03_detour.sl`, it took `std/macro.sl` as the
@@ -412,11 +432,12 @@ Yes, on my reading, under these premises:
    unlimited stack and heap"; that is my reading. It also sets crashes
    aside: §31 and §42 allow one run to crash where the other does not.
 4. The rest of the macro run ends. In `diagonal.sl` this is by
-   inspection: `diag-fn`, `macro-fail`, `fail-raw`, and `str-raw`
-   (`std/macro.sl:5-36`) are non-recursive and, apart from `compile`
+   inspection: `diag-fn` (`diagonal.sl:8-15`), and `macro-fail`,
+   `fail-raw`, and `str-raw` (`std/macro.sl:5-36`), are non-recursive and, apart from `compile`
    and each other, call only `read-file` and `intern-string`. Those
-   must return; for `read-file` that is a host assumption (03 F7). 03's "the same way" cannot be a P, because
-   `diag-fn` needs a `MacroWorld` that only the expander supplies (§65).
+   must return; for `read-file` that is a host assumption (03 F7). This
+   code cannot be given a P, as 03 F6 says, because `diag-fn` needs a
+   `MacroWorld` that only the expander supplies (§65).
    Inspection replaces it here. For a real `compile`, the macro must
    also read every file of its unit and build `Src` from them, still by
    non-recursive code plus calls already covered.
@@ -433,7 +454,11 @@ Under 1 to 6, Q's spec run ends, and its verdict is the negation of
 established (§3.3), but premise 2 then adds that the spec agrees with
 them on P.
 
-## 4. Suggested wording for 03 and 05 (not applied)
+## 4. Wording for 03 and 05
+
+03 F6 and 05 (§1, §4.3, T7, and §9; 05's Coordinator note 1) carry this
+wording, revised there by later reviews; where they differ, they are
+the current text. 05 §4.3 adds a condition (d), included below.
 
 **03 F6, after "(T) and (E) for P then say that this call of `compile`
 returns, reading part 5 as counting the driver's call as one of the
@@ -460,15 +485,17 @@ Sleight meets the conditions." with:
 > conditional form. Let `Prov` be a Sleight inductive relation on codes
 > of units, formalizing acceptance under `--goal proved` (§71). Suppose
 > (a) no unit proves `(goal erased (False))`; (b) whenever a unit proves
-> T, one proves `(Prov ⌜T⌝)`; and (c) Sleight proves D2 and D3 for
+> T, one proves `(Prov ⌜T⌝)`; (c) Sleight proves D2 and D3 for
 > `Prov`, and a diagonal sentence G with G ↔ ¬`(Prov ⌜G⌝)`, built from a
 > relational substitution or by a macro that reads the unit's text (09
-> §2.4). Then, by the usual derivation from these conditions (cited from
-> memory), no unit proves ¬`(Prov ⌜False⌝)`. If moreover Sleight proves
+> §2.4); and (d) the internal steps of the usual derivation from these
+> conditions, which compose implications between `Prov` statements, go
+> through despite level stratification (09 §2.3, §2.4 B). Then, by that
+> derivation (cited from memory), no unit proves ¬`(Prov ⌜False⌝)`. If moreover Sleight proves
 > that `(Prov ⌜False⌝)` yields an accepted program whose stripped run
 > reaches absurd code, it cannot prove uniform stripped-run safety. The
 > same goes for uniform (T) with full-semantics safety, given the
-> matching lemma. None of (b), (c), or those lemmas has been attempted
+> matching lemma. None of (b), (c), (d), or those lemmas has been attempted
 > (09 §2.4). As far as I recall, that derivation is intuitionistic, so
 > anticlassicality does not obviously exempt Sleight. README.md's IΣ₂
 > remark is derived there from the functions Sleight computes; read
@@ -482,7 +509,7 @@ closure under deduction; README.md derives it from the functions
 Sleight computes, which does not give that (09 §2.4)."
 
 **05 T7.** Replace "if it is consistent and meets Gödel II's conditions
-(unchecked)" with "if it is consistent, conditions (b) and (c) of
+(unchecked)" with "if it is consistent, conditions (b) to (d) of
 §4.3 hold for a formalized `Prov`, and the matching lemmas of §4.3 hold
 (all unattempted)".
 
@@ -496,8 +523,7 @@ The obvious translation of nested implications meets level
 stratification (09 §2.3, compiled); a PRA-style translation with
 first-order implications does not obviously meet it (09 §2.4)."
 
-**00-summary's Gödel bullet** (line 576) should then point to 09 for
-the conditions. It is not part of this task.
+00-summary's Gödel item (§3 item 20) points to 09 for the conditions.
 
 ## 5. Unverified
 
