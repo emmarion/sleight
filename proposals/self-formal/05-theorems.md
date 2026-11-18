@@ -601,7 +601,7 @@ value is the only reference to it." My reading of its role:
 - **It is what makes the heap machine agree with the tree reading** that
   the fact table relies on. `is` facts are rules over terms (§7), which
   SOUNDNESS.md part 3 reads as immutable trees: beyond the cells of
-  `lean/`'s fragment, which "`machine_main` appears to prove", it
+  `lean/`'s fragment, for which "`machine_main` appears to prove it", it
   "assumes" that "a `unique` binder, a cell
   and an in-place update are read as an implementation of fresh
   immutable values" (OPEN.md 2's first step, OPEN.md 3). If a mutated

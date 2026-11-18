@@ -5,8 +5,9 @@ Written by an agent at the coordinator's request, as a follow-up to
 and nothing here is a design decision (CLAUDE.md rules 1, 11). Where
 this file and DESIGN.md disagree, DESIGN.md is right. Code citations
 are to the tree at commit `5fba336`; the readings of slc's source are
-this agent's and may be wrong in detail. Every message quoted below was
-observed by running the tests; a behaviour marked as read was not.
+this agent's and may be wrong in detail. Every message quoted below as
+printed was observed by running the tests; a behaviour marked as read
+was not.
 
 Implementations: the reference is `_build/default/bin/main.exe`; slc is
 `_build/release/slc` (built after the last change to `self/`), run as
@@ -60,8 +61,8 @@ same exit code, so they are not distinguished further.
   `(comptime-match many x (BTrue))` on that `BFalse` binder, and
   `(comptime-match many x (Zero))` on `x` bound to `3`, pass silently,
   and some messages are dropped once an error is recorded, among them
-  the crash of a pre-error macro expanded after the error (§2, "What is
-  not reported"). Where the binder is left `Hypothetical` (a right-hand
+  the error for a pre-error macro whose run crashes after the error
+  (§2, "What is not reported"). Where the binder is left `Hypothetical` (a right-hand
   side that needed temporaries, or the fields of a `let-match`), slc
   reports that the scrutinee is not `Settled`, which DESIGN.md §27-§29
   would, in this agent's reading, make it. The string binders tested,

@@ -48,7 +48,7 @@ proposal.
   addresses.
   `slot-eq` compiles to OCaml `==`, and ocamlopt can share two equal immutable
   constants, so a native compiled run can answer `ESome` where
-  `slc --interpret` and the reference answer `ENone` (2.5).
+  `slc --interpret` and the reference's interpreter answer `ENone` (2.5).
 - [C] There are 103 FFI implementations and 7 extern types. [P] Under §42
   each one is an agreement axiom.
 
@@ -262,7 +262,8 @@ definition whose header is `(erased name :`.
   under ocamlc), and `slot_eq_share.sl`, two run-position
   `(str-append "a" "b")`, prints `(BTrue)` compiled by `slc --build`
   (ocamlopt) and `(BFalse)` under `slc --build --byte`, under
-  `slc --interpret`, and under the reference. `bootstrap.sh` builds the
+  `slc --interpret`, and under the reference's interpreter; the
+  reference's own native build prints `(BTrue)` too. `bootstrap.sh` builds the
   tests it compares with `--byte` (`self/README.md:191`), so those runs
   would not show this; its `native-compute` runs are built with ocamlopt
   (`elab-main.sl:38`) and compared with `--no-native`, so a test that
@@ -777,15 +778,18 @@ IR's call and constructor arguments syntactically atomic in either case.
    "after every write". A crash and a divergence in two arguments are a
    second such case, if §17's levels ("Termination rests on levels")
    leave any divergence, which is not settled here. Head-versus-argument
-   order is in 2.5. Question for the owner: is order meant to be fixed,
+   order is in 2.5 and 02 §2.2. Question for the owner: is order meant to be fixed,
    and if not, is every order a correct run, so that the output above
    may differ between implementations?
 2. **A crash at compile time.** §31: "A real run may crash where the host
    cannot represent what is asked of it." §72 makes a crashed native run
    "an error at its argument". DESIGN.md does not say what a crash (or
    fuel exhaustion) in an *evaluator* run of a run-position form is.
-   MANUAL.md:163-165 says both implementations refuse such a form, which
-   describes the implementations, not the language.
+   MANUAL.md:162-164 says both implementations refuse such a form, which
+   describes the implementations, not the language. On a host stack
+   overflow in run position, both instead die with "Stack overflow" and
+   no message naming the file or the form
+   (`proto/review7/02_deep_runpos.sl`).
 3. **`def-prim` and `def-opaque` are not in §54's registry**, although
    §54 opens "Every special form, as a constructor of `Special`", the
    prelude uses them (`lib/prelude.sl:1399-1403`, for `Placed` and
