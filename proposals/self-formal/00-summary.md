@@ -117,10 +117,12 @@ Each item is the tracks' recommendation, not a decision.
    world effects through the unique `World`; in general it does not fix body statements, sibling
    arguments, `values` entries, or several §15 bindings (02 §2.2; rough edges 1 to 4). Gensym
    numbers expose elaboration order: both implementations elaborate a head that is a form
-   (inferred), then expand each macro call among an application's arguments, left to right, its
-   output before the next argument, then a head that is a name, then the arguments left to right
-   (`proto/review3/gensym_*.sl`, `review4/01_head_name_err.sl`, `review6/01_splice_output.sl`;
-   special forms' operands unchecked; 01 §3.6, r3.1, r4.2), and a gensym number can decide
+   (inferred), then expand each macro call among an application's arguments whose head is a name
+   or `(share n)`, left to right, its output before the next argument, then a head that is a name,
+   then the arguments left to right, a macro call whose head is itself a form being expanded in its
+   argument's turn (`proto/review3/gensym_*.sl`, `review4/01_head_name_err.sl`,
+   `review6/01_splice_output.sl`, `review8/01_form_head_arg.sl`; special forms' operands unchecked;
+   01 §3.6, r3.1, r4.2, r8.1), and a gensym number can decide
    acceptance (`proto/review7/01_order_accept.sl`, `01_order_refuse.sl`; 01 §3.6). At runtime, the
    reference (interpreted, with and without externs, and built natively and with `--byte`),
    `slc --interpret`, and slc's native and `--byte` builds all run a head form before an argument
@@ -276,12 +278,16 @@ Each item is the tracks' recommendation, not a decision.
     before the error still expand and run. A `let` whose right-hand side hoists no temporary gets
     the erased token, string binders included, which slc's discriminant read takes as the word 0,
     so later messages can be false (a `(BFalse)` binder "got `(BTrue)`", `3` "got 0"; other kinds
-    of type not surveyed, 10 r7.15); `resolve` answers `RHypothetical` for such a
-    binder, so the prelude's `unary` and `prove-literal-lt` refuse it with a false usage message;
+    of type not surveyed, 10 r7.15; an enum with no fieldless constructor, such as `Result`, reads
+    as none, "got `_`", 10 r8.1); special-form dispatch reads the token too, so a `compile-warn`
+    renamed after the error is dispatched as `let` (10 r8.3); `resolve` answers `RHypothetical` for
+    such a binder, and for `vacant-slot`, which holds the token from the start (10 r8.6), so the
+    prelude's `unary` and `prove-literal-lt` refuse a post-error binder with a false usage message;
     and some errors are missed and some messages dropped, a crash in a later expansion being
     reported by nothing (`proto/aftererr/`, `proto/review7/10_*`; 10 §1 to §4, r7.3 to r7.5, r7.16,
     r7.17). Acceptance seems unchanged, the first error already making slc exit 1, on a reading of
-    every writer of slc's message list (10 §4, r7.8, r7.19; BUGS.md 25). If §4's "Warnings ... do not
+    every writer of slc's message list that no recorded error is dropped (10 §4, r7.8, r7.19, r8.4;
+    BUGS.md 25). If §4's "Warnings ... do not
     stop elaboration" is read as implying that an error stops elaboration, slc's going on also
     differs from DESIGN.md; and §54 says `dump-context` "stops elaboration with a report of the
     context", while slc goes on after the report (`tests/dump_context.sl`; 10 §1, r6.1, r7.2).
@@ -315,8 +321,9 @@ also the prelude (16). *Rec.* (05): (b), plus (c) if syntax is separated; 04: th
 expansion count (§62), and which error comes first; DESIGN.md fixes head first (§6), statements
 before later code (§27), and sequential threading (§65), not item order. (a) fix it; (b) leave it
 free, acceptance a relation. *Rec.* (01): (a), both implementations' tested order of key finding 6
-(a form head, the arguments' macro calls, a name head, the arguments, each left to right; rough edge
-30), each statement before later code (01 §3.6, r3.1, r4.2). 07 reads a mirror-shaped `Fails` and a
+(a form head, the arguments' macro calls by a name or `(share n)`, a name head, the arguments, each
+left to right, a macro call by any other form in its argument's turn; rough edge 30), each statement
+before later code (01 §3.6, r3.1, r4.2, r8.1). 07 reads a mirror-shaped `Fails` and a
 zipper as needing a fixed order (07 F3); in its toy the order can decide whether a verdict exists
 (`Let 3; Need 0 Succ; Let omega`, partly reasoning; 07 r5.4). *Deps:* T3, 13's error content, 5.
 *Wording:* (a) needs it. (01 decision 5; 05 §2.2; 07 §5.)
@@ -552,8 +559,9 @@ r7.9); by 06's reading of §18's rule for `prove-predates` ("`x` must have an in
 r5.3). Code minted after a top-level destructure of the value can apply it
 (`proto/review6/07_cert_drive.sl`), and so can a function given a `Predates` about the state or value
 that holds it, built before the function's level, through `predates-subterm`
-(`proto/review7/06_packed_subterm.sl`, `07_cert_predates.sl`); neither helps a stepper (06 r6.5,
-r7.2; 07 r7.1). 06 proposes no change, since a
+(`proto/review7/06_packed_subterm.sl`, `07_cert_predates.sl`), and, for a closure at its own level,
+a function given a packed `Eq (Level) L S` (`proto/review8/06_packed_same_level.sl`); none of these
+helps a stepper extend a closure at a fresh level (06 r6.5, r7.2, r8.1; 07 r7.1). 06 proposes no change, since a
 counter closure works. *Wording:* only if changed. (06 decision 2.)
 
 **19. Judgment shape and staging.** *Rec.* (01): 01 §4.2's layers and Σ/Γ split, the run a parameter
@@ -644,13 +652,16 @@ need anyway" (11). *Wording:* none; 02 asks what §13's "the only reference" mea
 25. **Character literal bounds** are "asserted rather than decided" (§45): a spec axiom. (05 §8.4.)
 26. **Tests fix free behaviour**: `tests/slot_eq.sl` expects `ESome` where §67 allows `ENone`; not a
     contradiction. (02 §5.9.)
-27. **Packed-level closures**: a function that receives such a closure can call it only given a
-    `Predates` for its level; as far as 06 and its reviews found, it has one packed with the
-    closure, or derived through `predates-subterm` from a `Predates` about the state or value that
-    holds it, which the top level can prove for one built before the function's level
-    (`proto/review7/06_packed_subterm.sl`, `07_cert_predates.sl`). A state a stepper builds gets
-    neither, by §18's introduction-order rule for `prove-predates` as 06 reads it; a consequence,
-    not a gap; wanted (18c)? (06 §5.1, r3.1, r4.2, r6.5, r7.2, r7.3; 07 r7.1.)
+27. **Packed-level closures**: a function that receives such a closure has called it, in the
+    tests so far, with a `Predates` for its level, packed with the closure or derived through
+    `predates-subterm` from a `Predates` about the state or value that holds it, which the top level
+    can prove for one built before the function's level (`proto/review7/06_packed_subterm.sl`,
+    `07_cert_predates.sl`), or, for a closure at the function's own level, through a packed
+    `Eq (Level) L S` as a same-level call with a `subterm` proof (`proto/review8/06_packed_same_level.sl`);
+    the reviews did not rule out other ways. A state a stepper builds at a fresh level gets none of
+    these, by §18's introduction-order rule for `prove-predates` as 06 reads it, and the written-out
+    proofs tried are refused; a consequence, not a gap; wanted (18c)? (06 §5.1, r3.1, r4.2, r6.5,
+    r7.2, r7.3, r8.1 to r8.3; 07 r7.1, r8.1.)
 28. **Divergence** is never mentioned (07 searched); §17, §20, §33, §42, and §62 suggest functions
     halt, but nothing says every compile-time run does, or what a never-returning checker means, or
     whether levels, with §10's `Type : Type` and no positivity, prevent divergence. (07 §5, r2.7.)
@@ -786,8 +797,9 @@ refused (07 F2, F5, r2.2). Not proved: completeness or termination (key finding 
 premises (07's reading), and `Reach`; replay: direct style, ~50 of 127 lines for request equality,
 not quite 03's (e) (07 F3, F6, r4). Effort: spec 178, determinism 123, zipper 151 (suspension ~45),
 replay 127, and driver and tests 61; the evaluator side was trivial only because `Step` is the
-implementation's machine (07 F4). A function given only a `Certified` value cannot call its
-packed-level `step` (`proto/review6/07_cert_fn_bad.sl`); given also a `Predates` about the value,
+implementation's machine (07 F4). A function given only a `Certified` value was refused its call of
+the packed-level `step`, with the proof inferred and written out (`proto/review6/07_cert_fn_bad.sl`,
+`proto/review8/07_cert_fn_self_bad.sl`; 07 r8.1); given also a `Predates` about the value,
 proved at the top level for a value built before the function's level, it calls `init` and `step`
 (`proto/review7/07_cert_predates.sl`; 07 F7, r7.1); destructured at the top level before the driver's
 levels are minted, the value drives program 0 (`07_cert_drive.sl`; 07 F7, r6.2).

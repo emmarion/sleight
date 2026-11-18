@@ -260,9 +260,9 @@ controls: it overflows while extracting the files with depth 10^8.
   the elaborator reaches macro calls. §65 threads the world "sequentially
   through all of elaboration", and §6 elaborates the head first, but I
   found no statement of the order in which a call's arguments are
-  elaborated. Both implementations expand every macro call among an
-  application's arguments whose head is a name or `(share n)` before
-  elaborating any argument, or a head that is a name (01, §3.6,
+  elaborated. Before elaborating any argument, or a head that is a name,
+  both implementations expand every macro call among an application's
+  arguments whose head is a name or `(share n)` (01, §3.6,
   `proto/review3/gensym_depth.sl`, `proto/review4/01_head_name_err.sl`);
   a macro call whose head is itself a form is expanded in its own
   argument's turn (`proto/review8/01_form_head_arg.sl`; the reference's
@@ -694,15 +694,16 @@ option, with the spec's own store a heap (as 01's Σ is).
    optional later theorem. Depends on it: whether the compiler theorem
    is lock-step (cheap) or needs confluence (expensive).
 4. **`slot-eq`: oracle (N1)?** Recommended: yes. It keeps the spec a
-   function, and "there is an oracle" covers every implementation seen
-   tonight, provided `Nat` words are immediates as E2 proposes (N1), the
+   function, and "there is an oracle" covers the runs seen tonight only
+   if `Nat` words are immediates as E2 proposes (N1), the
    spec's store shares `Settled` values (Q8), either the spec lets
    two equal immutable constants share one word, which A1's never-reused
    addresses do not, or native builds stop sharing them (N1,
    `slot_eq_share.sl`), and either the spec's `String` steps return an
    argument's word wherever the FFI's do, which running the prelude's
    model of `append` does not, or the FFI stops doing so (N1,
-   `02_append_share.sl`; reading).
+   `02_append_share.sl`; reading). Each condition comes from a test
+   that broke the claim without it, so the list may not be complete.
 5. **Crash: C2 at runtime, C4 at compile time?** Recommended: yes, with
    C3 as a later strengthening; 01's decision 7 is the alternative.
    The depth bound counts activations, tail calls included (C4).
@@ -745,10 +746,12 @@ option, with the spec's own store a heap (as 01's Σ is).
    refused under the models.
 5. **What a crash does to earlier effects.** §31's "A crash produces no
    value, never a different one" does not say what happens to effects
-   already performed (the world trace), or where a crash may occur.
-   MANUAL.md's "A run-position form whose evaluation crashes is
-   refused", and §72's "a run that crashes is an error at its
-   argument", make acceptance depend on the host.
+   already performed (the world trace), and its "where the host cannot
+   represent what is asked of it" does not say at which steps a crash
+   may occur. MANUAL.md's "A run-position form whose evaluation crashes
+   is refused", and §72's "a run that crashes is an error at its
+   argument", make acceptance depend on the host; on the host limits
+   tried in run position, both implementations die instead (BUGS.md 27).
 6. **Reaching absurd code.** DESIGN.md does not say what happens when
    absurd code is reached at runtime. The reference interpreter
    (`lib/eval.ml:66`) and slc's OCaml runtime (`self/runtime.ml:1`)

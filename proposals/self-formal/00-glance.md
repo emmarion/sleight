@@ -38,8 +38,8 @@ Every line condenses the 00-summary section it cites; where they differ, 00-summ
   04 makes `slot-eq` an oracle beside the host's answers to `world-do` and `read-file` (00-summary §2 items 5, 18).
 - **Evaluation order.** DESIGN.md fixes eagerness and some run-position order, but not body statements, sibling
   arguments, `values` entries, or several §15 bindings in general. Elaboration order is visible through gensyms; both
-  implementations elaborate a head that is a form (inferred), then expand an application's argument macro calls, then
-  elaborate a head that is a name, then the arguments, left to right. At runtime both implementations, in the seven
+  implementations elaborate a head that is a form (inferred), then expand an application's argument macro calls headed
+  by a name or `(share n)`, then elaborate a head that is a name, then the arguments, left to right. At runtime both implementations, in the seven
   modes tried, run a head form before an argument form in the two tests built to show it. A real run observes order
   via a §31 crash, which the spec's run would not have: an argument's write precedes another's crash, §15 allowing
   either order (00-summary §2 item 6).
@@ -76,7 +76,7 @@ Wording column: whether DESIGN.md wording would be needed, as §3 marks it.
 |---|---|---|---|---|
 | 1 | Where does the spec start? | (a) source bytes, small reader before a `Raw` relation (01, 04) | 14, 17 | no |
 | 2 | What does "parameterized the semantics" mean? | (b) generic over a model record (05); 04: extern table | 9, 16 | no |
-| 3 | Is the order of elaboration part of the language? | (a) fix it: form head, argument macro calls, name head, then arguments, left to right (01) | 5, 13 | part |
+| 3 | Is the order of elaboration part of the language? | (a) fix it: form head, argument macro calls by a name or `(share n)`, name head, then arguments, left to right (01) | 5, 13 | part |
 | 4 | Is the runtime evaluation order fixed? | fix it, O1/O3 (02); 04 asks if order is meant to be fixed | — | part |
 | 5 | How is `slot-eq`'s nondeterminism handled? | (a) oracle parameter (01, 02, 05; 04 treats it as one); shapes differ | 8 | part |
 | 6 | What is a compile-time crash or fuel exhaustion? | tracks disagree; 01 and 02 opposite, cross-referenced | 5, 14 | part |

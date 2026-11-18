@@ -138,7 +138,7 @@ definition whose header is `(erased name :`.
 
 | site | kind | zero case |
 |---|---|---|
-| interpreter `eval`/`apply` (`elab-main.sl:185-187, 424`) | fuel. MANUAL.md:154-163: "bounds how deeply applications nest, a tail call nesting inside the call it replaces"; slc's default 10^9 | error value "out of fuel", reported as an error. MANUAL calls it a §31 crash |
+| interpreter `eval`/`apply` (`elab-main.sl:185-187, 424`) | fuel. MANUAL.md:154-163: "bounds how deeply applications nest, a tail call nesting inside the call it replaces"; slc's default 10^9 | error value "out of fuel", reported as an error once the run ends; the code after it runs first and can die of a host stack overflow before then (02 C4). MANUAL calls it a §31 crash |
 | `show-at` depth 100000 (`elab.sl:4680-4682`, used by `show-typed` at `elab.sl:4730`, which the `comptime-match` mismatch message uses at `:4784` and `entry-value` at `:4890`, and by `slc --interpret`'s final printer at `interp.sl:15`) | printer fuel | **prints `_` silently**. The budget is spent twice per nested field (`show-at` at `elab.sl:4682` and `shown-field` at `:4717`). [T] `slc --interpret deep.sl` (a 100003-element list, stack unlimited) prints 49,999 `Cons _ 0` and then `Cons _ _ _)`. [P] That is a wrong output under §45 ("Any other value prints by its type", and `_` is listed only for a union with more than one constructor, erased fields, cells, slots, functions, opaque proofs, and values with no readable `Matchable`), not a §31 crash ("A crash produces no value, never a different one"). `self/README.md:254-258` ("running out returns an error value, never a wrong answer silently") is said of "the interpreter and the generated printer", the emitted one ("a generated printer per type for a final function's result", `README:143-146`); `show-at` is what `README:369-370` calls `elab.sl`'s compile-time printer. [P] Whether that sentence covers `show-at` is unclear: its "100000" matches both `show-at`'s depth and `show-fuel`, and the emitted printers take no fuel at all, so the README is either silent on this defect or contradicted by it |
 | `show-fuel` 100000 (`emit.sl:4`, `:1473`, `:1478`) | fuel for *generating* the emitted OCaml printers, one per type, memoized (`emit.sl:1379-1386`) | [C] uses `show_any`, which prints `?` (`self/runtime.ml:18`). [P] It bounds the nesting of types met while generating, not of values, so it seems hard to reach. [T] The generated printer recurses on the value with no bound: `deep.sl` compiled by slc (the 22 MB output built with `ocamlc` under an unlimited stack) and `proto/review2/04-deep-fn.sl` (the same list, built at run time) compiled by `slc --build` both print all 100003 elements, byte for byte as the reference does (`deep.sl` under the reference, unlimited stack, about 7 minutes), where `slc --interpret` cuts them as above |
 | `heap-strs-fuel` 10^6 (`eval.sl:1018-1025`; also passed to `heap-pairs` and `heap-jobs`, `eval.sl:1055, 1146, 1159`) | fuel | truncates the list (returns `Nil`) |
@@ -272,8 +272,8 @@ definition whose header is `(erased name :`.
   the two do hold one word. It is a refinement mismatch only if the spec
   says that every allocation takes a never-used address (the earlier
   session's proposal B).
-- [C] The `-imm` operations write through `(cast a : int array)` with
-  `Array.unsafe_set` and `caml_blit_bytes` (`lib/ffi_core.ml:235-241,
+- [C] The `-imm` operations write with `Array.unsafe_set` through
+  `(cast a : int array)`, or with `caml_blit_bytes` (`lib/ffi_core.ml:235-241,
   315-321`), and so do their templates (`lib/ffi_templates.txt:51-52`)
   and the emitted `imm` cell stores above. [T] ocamlopt 4.14.1 compiles
   an `Array.unsafe_set` on an `int array` to a store with no call to
