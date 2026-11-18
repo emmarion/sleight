@@ -588,14 +588,18 @@ Values as words:
   needs owner wording. A depth bound does not bound the heap, so a
   compile-time heap exhaustion stays host-dependent unless C3's heap
   bound is added. `native-compute` (§72) stays host-dependent: its
-  answer is treated as an oracle, or excluded. Neither implementation
-  is yet such a function of the bound in its message. Both can die of
+  answer is treated as an oracle, or excluded. Neither implementation's
+  outcome is yet such a function of the bound. Both can die of
   a host stack overflow before a large bound is spent: a run-position
   recursion 10^8 calls deep does so in both under
-  `--eval-fuel 1000000000` (`proto/review7/02_deep_runpos.sl`). And
-  slc's interpreter does not stop at an exhausted bound, since "out of
-  fuel" is an error value and the code after it still runs
-  (`self/elab-main.sl:185-187`, `CLet` at `:192-197`). Under
+  `--eval-fuel 1000000000` (`proto/review7/02_deep_runpos.sl`; BUGS.md
+  27). And slc's interpreter does not stop at an exhausted bound, since
+  "out of fuel" is an error value and the code after it still runs
+  (`self/elab-main.sl:185-187`, `CLet` at `:192-197`), though under
+  `--interpret` it performs no world request once an error is recorded
+  (`self/interp.sl:131-133`): `proto/review8/02_fuel_then_write.sl`,
+  whose head form exhausts `--eval-fuel 20` before its argument writes,
+  writes nothing on either implementation [compiled]. Under
   `--eval-fuel 20`, `proto/review3/head_arg_order.sl`, whose head form
   alone exhausts the bound (`proto/review6/02_fuel_head_alone.sl`, the
   same with a small array, gives "out of fuel" on both), makes slc die
@@ -692,10 +696,13 @@ option, with the spec's own store a heap (as 01's Σ is).
 4. **`slot-eq`: oracle (N1)?** Recommended: yes. It keeps the spec a
    function, and "there is an oracle" covers every implementation seen
    tonight, provided `Nat` words are immediates as E2 proposes (N1), the
-   spec's store shares `Settled` values (Q8), and either the spec lets
+   spec's store shares `Settled` values (Q8), either the spec lets
    two equal immutable constants share one word, which A1's never-reused
    addresses do not, or native builds stop sharing them (N1,
-   `slot_eq_share.sl`; reading).
+   `slot_eq_share.sl`), and either the spec's `String` steps return an
+   argument's word wherever the FFI's do, which running the prelude's
+   model of `append` does not, or the FFI stops doing so (N1,
+   `02_append_share.sl`; reading).
 5. **Crash: C2 at runtime, C4 at compile time?** Recommended: yes, with
    C3 as a later strengthening; 01's decision 7 is the alternative.
    The depth bound counts activations, tail calls included (C4).
