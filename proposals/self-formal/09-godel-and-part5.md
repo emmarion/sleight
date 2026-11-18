@@ -19,9 +19,10 @@ references.
   derivability conditions D1 to D3, with D2 and D3 proved inside
   Sleight, and with the usual derivation's internal steps going through
   despite level stratification (§2.4 B). Nobody has built it. For an
-  abstract relation given D2, D3, and the diagonal's D1 instance as
-  hypotheses, with G taken to be ¬`Prov ⌜G⌝` itself, the derivation's
-  internal steps compile (`g2_defs.sl` with `g2_step.sl`); reading G
+  abstract relation `P` in place of `Prov`, given D2, D3, and the
+  diagonal's D1 instance as hypotheses, with G taken to be ¬`P ⌜G⌝`
+  itself, the derivation's internal steps compile (`g2_defs.sl` with
+  `g2_step.sl`); reading G
   that way puts conditions on its code (§2.4 B). Its final step to ⊥
   is accepted at the top level,
   but only with consistency postulated by a `def-prim` that gives an
@@ -295,7 +296,7 @@ so far only in an abstract form:
   `g`, D2, D3, and the D1 instance ⊢ `P (Imp g (Imp (Pv g) Bot))`,
   that is, `P` of the code of G → ¬`Pv` ⌜G⌝ with ⌜G⌝ = `g`, as
   hypotheses packed with their level (`Hbl`). With G read as ¬`P g`,
-  so that ¬`Prov ⌜G⌝` → G holds by definition, its `con-to-g` proves,
+  so that ¬`P ⌜G⌝` → G holds by definition, its `con-to-g` proves,
   for every such `P` and `g`, a packed ¬`P g` from a packed
   ¬`P ⌜⊥⌝`: ⊢ Con → G, which `g2_step.sl` states as its goal
   (`--goal proved` PASS, reference and slc). The proof unpacks the
@@ -334,7 +335,8 @@ so far only in an abstract form:
   gives each formula one code and codes implications with `Imp` would
   need `g` = `Imp (Pv g) Bot` there, so, on my reading, a `Prov` that
   formalizes acceptance would have to meet D1 for a code that mixes a
-  text code with structural ones; whether one can is not examined. For
+  text code with structural ones, and D2 for such codes too; whether
+  one can is not examined. For
   a relational diagonal, G ↔ ¬`Prov ⌜G⌝` is a theorem rather than a
   definition, and its two directions are further internal steps, not
   tried.
@@ -573,9 +575,9 @@ Sleight meets the conditions." with:
 > that `(Prov ⌜False⌝)` yields an accepted program whose stripped run
 > reaches absurd code, it cannot prove uniform stripped-run safety. The
 > same goes for uniform (T) with full-semantics safety, given the
-> matching lemma. (d) has been tried only for an abstract relation, with
-> D2, D3, and the diagonal's D1 instance as hypotheses and G taken to be
-> ¬`(Prov ⌜G⌝)` itself (09 §2.4 B); (b),
+> matching lemma. (d) has been tried only for an abstract relation `P`
+> in place of `Prov`, with D2, D3, and the diagonal's D1 instance as
+> hypotheses and G taken to be ¬`(P ⌜G⌝)` itself (09 §2.4 B); (b),
 > (c), and those lemmas have not been attempted (09 §2.4). As far as I recall, that derivation is intuitionistic, so
 > anticlassicality does not obviously exempt Sleight. README.md's IΣ₂
 > remark is derived there from the functions Sleight computes; read
@@ -600,9 +602,9 @@ statements and consistency of a coded system are expressible as goals
 (09 §2.3, compiled). D1 to D3 for a formalized `Prov`, the diagonal
 sentence, the derivation's internal steps under level stratification,
 and any interpretation of HA, IΣ₁, or PRA are unattempted, except
-that the internal steps were tried for an abstract relation with D2,
-D3, and a D1 instance as hypotheses, and G taken to be ¬`Prov ⌜G⌝`
-itself (09 §2.4 B).
+that the internal steps were tried for an abstract relation `P` in
+place of `Prov`, with D2, D3, and a D1 instance as hypotheses, and G
+taken to be ¬`P ⌜G⌝` itself (09 §2.4 B).
 The obvious translation of nested implications meets level
 stratification (09 §2.3, compiled); a PRA-style translation with
 first-order implications does not obviously meet it (09 §2.4)."

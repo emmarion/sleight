@@ -151,7 +151,9 @@ Each item is the tracks' recommendation, not a decision.
    04 r7.3; BUGS.md 27). slc's only fuel known to change a verdict is its depth bound (default
    1000000000, fresh per form, macro run, and `Program` step);
    `merge-opens` would accept early if its bound were short, which 03 believes, unproved, it is not
-   (03 §1, F3, r2.5), and its interpreter runs on after out of fuel; whether that is a defect
+   (03 §1, F3, r2.5), and its interpreter runs on after out of fuel, before refusing the form or
+   dying of a host limit (`proto/review8/03_fuel_goes_on.sl`: the reference refuses in 0.4 s, slc
+   dies after about 5 s; 03 r8.1); whether that is a defect
    against MANUAL.md's "crashes with `out of fuel`" is open (02 C4, r6.4). The reference has no
    default bound. §62's cap stops a self-calling macro; 10000 expansions are accepted and 10001
    refused by both, so the shipped prelude adds none (01 §3.5, r6.4). slc also has a per-form
@@ -251,8 +253,9 @@ Each item is the tracks' recommendation, not a decision.
     (`proto/godel/g2_*.sl`; 09 §2.4 B, round-7 coordinator note 1; 05 §4.3, r7.1). Reading ¬`P g` as
     G needs `g` to be a code of that type itself, which no code built from the formula's structure
     can be (the occurs check refutes it, `proto/review7/09_g2_cycle.sl`) and a text code, such as
-    the file text a macro-built diagonal splices in, might be; a relationally built G adds steps not
-    tried (09 r7.2; 05 r7.1). The last step to ⊥ elaborates as a top-level application, so far only with consistency
+    the file text a macro-built diagonal splices in, might be, though D1's instance and D2 would then
+    have to hold for codes that mix text and structure, which nobody has examined; a relationally
+    built G adds steps not tried (09 r7.2; 05 r7.1, r8.1). The last step to ⊥ elaborates as a top-level application, so far only with consistency
     postulated by a `def-prim` that gives an element of every type (`proto/review7/09_g2_final.sl`,
     `--no-prelude`; 09 r7.1, round-7 coordinator note 2). A macro in a goal type can splice in its own file's text (`r_self_goal.sl`, with
     `std/macro.sl`, both; 09 r6.1); D2 and D3 for such codes are open (§45). Level stratification

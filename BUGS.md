@@ -313,21 +313,22 @@ is a design decision. Remove an entry when it is fixed.
     maps the three `-imm` blits to the ordinary blit.
     `proposals/self-formal/proto/review6/08_blit_many_imm_interp.sl`
     does the same with `array-blit-many-imm`: a segmentation fault in
-    every run tried, the same message under `OCAMLRUNPARAM=s=4k`, and
-    `0` under `slc --interpret`.
+    every run tried, under `--build` too, the same message under
+    `OCAMLRUNPARAM=s=4k`, and `0` under `slc --interpret`.
     `proposals/self-formal/proto/bugs/move_imm_interp.sl` does it with
     `array-move-imm`, moving two placed `U62`s into an older array of
     `Vacant` slots: a segmentation fault in every run tried, three with
     the default minor heap, three with `s=4k`, and three under `--build`,
     which writes no binary, while the same program with `array-move`
-    prints `0`, and `slc --interpret` prints `0`. In two sweeps of 40
+    prints `0`, and `slc --interpret` prints `0`. In three sweeps of 40
     smaller runs (1, 3, 10, or 100 trials, with 0, 50, 300, 1000, or
     2000 allocation steps around the move, each with the default minor
     heap and with `s=4k`), no run printed a value other than `0`: each
     printed `0` or stopped, with a segmentation fault (exit 139), an
     abort (exit 134, "Fatal error: out of memory" in each one examined),
-    or, in the second sweep, "runtime error: not an extern integer: _"
-    (exit 1). Repeating one configuration can change how it stops.
+    or, in the second and third sweeps, "runtime error: not an extern
+    integer: _" (exit 1). Repeating one configuration can change how it
+    stops.
     §31 says a real run "may crash where the host cannot represent
     what is asked of it", which these small programs seem not to
     approach. The analysis, and the reasoning that
