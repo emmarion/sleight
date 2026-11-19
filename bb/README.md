@@ -37,6 +37,33 @@ In one set of measurements on a 12-core Mac with OCaml 4.14, higher
 levels made the jobs no faster but the compile slower, and lower ones
 made the jobs slower. The check took about 36 s there.
 
+## Checking the BB(6) champion's halting time
+
+`bb/champ6.sl` proves that the machine
+`1RB1RA_1RC1RZ_1LD0RF_1RA0LE_0LD1RC_1RA0RE`, which the bbchallenge
+wiki lists as the BB(6) champion as of November 2025, halts from the
+blank tape after s steps with 2↑↑2↑↑2↑↑10 < s < 2↑↑2↑↑2↑↑11. The goal
+is `HaltsIn champ6 c0 lo hi`: an erased s with `HaltsAt champ6 c0 s` and
+lo < s < hi. Just above it, `lo` and `hi` are bound with proofs
+`(Tet3 10 lo)` and `(Tet3 11 hi)`, where `Tet3 n x` says x = 2↑↑2↑↑2↑↑n
+through the relation `Tw`, so 2↑↑n is `Tw n 1`. With a release slc,
+from the repository root:
+
+```sh
+_build/release/slc std/list.sl std/immediate.sl bb/tm.sl bb/sim.sl bb/cert.sl bb/perm.sl bb/cyc.sl bb/tree.sl bb/tnf.sl bb/sym.sl bb/vec.sl bb/search.sl bb/far.sl bb/wfar.sl bb/pat.sl std/macro.sl bb/skelet.sl bb/space.sl bb/champ6.sl --goal proved
+```
+
+It prints `--goal proved: PASS`. The run itself follows the counter analysis
+on the machine's bbchallenge wiki page: fixed tape rewrites checked by
+`sk-family`, and shift and counter-decrement lemmas by induction. The bounds
+on s come from the size S of the tape at the halting configuration.
+`bb/space.sl` holds the machine-independent half: a step adds at most one
+cell, so S < s, and a halting run never repeats a configuration, so
+pigeonhole over configuration codes gives s ≤ 2^(2S+19) for a 6-state
+machine. `bb/champ6.sl` then bounds S from below and above by towers of 2s,
+tracking only the parities and residues mod 3 of the counter values, not
+the values themselves.
+
 ## The Skelet #1 runners
 
 Two runners for the Skelet #1 job sit side by side and run the same

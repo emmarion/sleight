@@ -82,7 +82,8 @@ sort on unique lists certified against [`msort/spec.sl`](msort/spec.sl).
 
 Three proofs, all translated from existing ones (each directory's
 NOTICE.md credits them): [`bb/`](bb/) proves that the fifth busy beaver
-value is 47,176,870, [`fourcolor/`](fourcolor/) proves the four colour
+value is 47,176,870 and bounds the halting time of the current BB(6)
+champion, [`fourcolor/`](fourcolor/) proves the four colour
 theorem for straight-line drawings, and [`stlc/`](stlc/) proves that the
 simply typed λ-calculus is strongly normalizing, by an induction on types
 in the style of Joachimski and Matthes rather than by reducibility

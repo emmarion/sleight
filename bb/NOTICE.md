@@ -46,6 +46,17 @@ incomplete.
   bbchallenge. The commit history records that no code was copied for
   these.
 
+- `bb/champ6.sl` (the BB(6) champion's halting time) follows mxdys's analysis on
+  the machine's bbchallenge wiki page
+  (<https://wiki.bbchallenge.org/wiki/1RB1RA_1RC1RZ_1LD0RF_1RA0LE_0LD1RC_1RA0RE>)
+  and the shape of the proofs for the related machines in busycoq's
+  `verify/SOBCv5.v` (modules TM62 and TM63, at commit
+  3f302b87f5fb933c46e97672ffbb6907f373fb6e of
+  <https://github.com/ccz181078/busycoq>). No code was copied; the tape
+  patterns were re-derived for this machine's state names. The bounds on
+  the step count, and `bb/space.sl` behind them, are not recorded as
+  following a specific upstream proof.
+
 The analyses behind several of these machines are due to the bbchallenge
 community; for example the Skelet #1 and #10 arguments follow Shawn
 Ligocki's write-ups (<https://www.sligocki.com/2023/03/13/skelet-1-infinite.html>).

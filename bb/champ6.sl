@@ -1,0 +1,928 @@
+(let ((many champ6)) (Cons _ (Mov (BTrue) (DR) 1) $ Cons _ (Mov (BTrue) (DR) 0) $ Cons _ (Mov (BTrue) (DR) 2) $ Cons _ (Hlt) $
+  Cons _ (Mov (BTrue) (DL) 3) $ Cons _ (Mov (BFalse) (DR) 5) $ Cons _ (Mov (BTrue) (DR) 0) $ Cons _ (Mov (BFalse) (DL) 4) $
+  Cons _ (Mov (BFalse) (DL) 3) $ Cons _ (Mov (BTrue) (DR) 2) $ Cons _ (Mov (BTrue) (DR) 0) $ Cons _ (Mov (BFalse) (DR) 4) $ Nil (Tr)))
+(let ((many p6c) (erased dl6)) (defs champ6))
+(let ((erased ex6)) (defl-ext champ6 p6c dl6))
+
+(sk-family Sk6 MkSk6 sk6-of ()
+  (k-se (4 DL "111" TV "0" TV) (4 DL "" TV "0111" TV))
+  (k-se1 (4 DL "1" TV "0" TV) (4 DL "" TV "01" TV))
+  (k-sa (0 DR "" TV "111" TV) (0 DR "111" TV "" TV))
+  (k-sa1 (0 DR "" TV "1" TV) (0 DR "1" TV "" TV))
+  (k-sc (2 DR "1" TV "111" TV) (2 DR "1001" TV "" TV))
+  (k-d1 (4 DL "001" TV "0" TV) (2 DR "1111" TV "" TV))
+  (k-x1 (2 DR "1" TV "11100" TV) (0 DR "101111" TV "" TV))
+  (k-x2 (0 DR "1" TV "" TZ) (4 DL "" TV "0111" TZ))
+  (k-x3 (4 DL "01111" TV "0" TV) (4 DL "" TV "011100" TV))
+  (k-f2 (4 DL "01001" TV "0" TV) (4 DL "" TV "011110" TV))
+  (k-f3 (2 DR "" TV "10" TV) (0 DR "10" TV "" TV))
+  (k-f5 (0 DR "" TV "00" TV) (2 DR "11" TV "" TV))
+  (k-f6 (2 DR "1001" TV "" TZ) (4 DL "" TV "011100111" TZ))
+  (k-lh (4 DL "110111" TZ "0" TV) (2 DR "1110111" TZ "11" TV))
+  (k-g1 (2 DR "1001" TV "0" TV) (2 DR "1111" TV "1" TV))
+  (k-g2 (2 DR "" TV "1100" TV) (2 DR "1110" TV "" TV))
+  (k-hz (2 DR "" TV "100" TV) (1 DR "110" TV "" TV))
+  (k-init ((Zero) DR "" TZ "" TZ) (4 DL "0010010010010010011101001001001001110111" TZ "011100111" TZ)))
+(comptime-match many (sk6-of p6c) (ROk _ sg6))
+
+(def-adts
+  ((Gt : ((Tc) e e2) -> Type)
+    enum
+    (many MkGt : (erased (Tc) e e2) (erased (Bool) g) (erased (Reach p6c e e2 g) r) -> (Gt e e2))))
+
+(def-fns _ $ (erased gt-cat : (erased (Tc) e1 e2 e3) (erased (Gt e1 e2) a) (erased (Gt e2 e3) b) -> (erased (Gt e1 e3) c))
+  (let-match erased a (MkGt _ _ g1 r1))
+  (let-match erased b (MkGt _ _ g2 r2))
+  (let ((erased g) (erased o) (erased r)) (reach-cat p6c e1 e2 e3 g1 g2 r1 r2))
+  (MkGt e1 e3 g r))
+
+(def-fns _ $ (erased gt-refl : (erased (Tc) e) -> (erased (Gt e e) c))
+  (MkGt e e (BFalse) (reach-refl p6c e)))
+
+(def-fns _ $ (erased gt : (erased (Tc) e e2) (erased (Reach p6c e e2 (BTrue)) r) -> (erased (Gt e e2) c))
+  (MkGt e e2 (BTrue) r))
+
+(def-adts
+  ((Bk : ((Bool) a b c) ((Nat) n) ((List (Bool)) t x) -> Type)
+    enum
+    (many BkZ : (erased (Bool) a b c) (erased (List (Bool)) t) -> (Bk a b c (Zero) t t))
+    (many BkS : (erased (Bool) a b c) (erased (Nat) n) (erased (List (Bool)) t x) (erased (Bk a b c n t x) p)
+       -> (Bk a b c (Succ n) t (Cons (Bool) a (Cons (Bool) b (Cons (Bool) c x)))))))
+
+(def-fns _ $ (erased bk-snoc : (erased (Bool) a b c) (erased (Nat) n) (erased (List (Bool)) t x)
+    (subterm erased (Bk a b c n (Cons (Bool) a (Cons (Bool) b (Cons (Bool) c t))) x) p) -> (erased (Bk a b c (Succ n) t x) q))
+  (match erased p _
+    ((BkZ _ _ _ _) (BkS a b c (Zero) t _ (BkZ a b c t)))
+    ((BkS _ _ _ n1 _ x1 p1) (BkS a b c (Succ n1) t x1 (bk-snoc a b c n1 t x1 p1)))))
+
+(def-fns _ $ (erased on-snoc : (erased (Nat) n) (erased (List (Bool)) t x) (subterm erased (Un n (Cons (Bool) (BTrue) t) x) p) -> (erased (Un (Succ n) t x) q))
+  (match erased p _
+    ((UnZ _) (UnS (Zero) t _ (UnZ t)))
+    ((UnS n1 _ x1 p1) (UnS (Succ n1) t x1 (on-snoc n1 t x1 p1)))))
+
+(def-fns _ $ (erased tr-rot : (erased (Nat) n) (erased (List (Bool)) t x) (subterm erased (Bk (BTrue) (BTrue) (BTrue) n (Cons (Bool) (BTrue) t) x) p) ->
+    (erased (List (Bool)) x2) (erased (Eq (List (Bool)) x (Cons (Bool) (BTrue) x2)) e) (erased (Bk (BTrue) (BTrue) (BTrue) n t x2) q))
+  (let-match erased p (BkS _ _ _ n1 _ x1 p1) ((BkZ _ _ _ _) (values t (Refl _ x) (BkZ _ _ _ t))))
+  (let ((erased x3) (erased e1) (erased q1)) (tr-rot n1 t x1 p1))
+  (let-match erased e1 (Refl _ _))
+  (values (bits "111" x3) (Refl _ x) (BkS _ _ _ n1 t x3 q1)))
+
+(def-fns _ $ (erased tr-unrot : (erased (Nat) n) (erased (List (Bool)) t x) (subterm erased (Bk (BTrue) (BTrue) (BTrue) n t x) p) ->
+    (erased (Bk (BTrue) (BTrue) (BTrue) n (Cons (Bool) (BTrue) t) (Cons (Bool) (BTrue) x)) q))
+  (match erased p _
+    ((BkZ _ _ _ _) (BkZ _ _ _ (Cons (Bool) (BTrue) t)))
+    ((BkS _ _ _ n1 _ x1 p1) (BkS _ _ _ n1 _ _ (tr-unrot n1 t x1 p1)))))
+
+(def-fns _ $ (erased se-tr : (erased (Nat) n) (erased (List (Bool)) l x r) (subterm erased (Bk (BTrue) (BTrue) (BTrue) n l x) p) ->
+    (erased (List (Bool)) y) (erased (Bk (BTrue) (BTrue) (BTrue) n r y) q)
+    (erased (Gt (MkTc 4 (DL) x (Cons (Bool) (BFalse) r)) (MkTc 4 (DL) l (Cons (Bool) (BFalse) y))) c))
+  (let-match erased p (BkS _ _ _ n1 _ x1 p1) ((BkZ _ _ _ _) (values r (BkZ _ _ _ r) (gt-refl _))))
+  (let ((erased y1) (erased q1) (erased c1)) (se-tr n1 l x1 (bits "111" r) p1))
+  (values y1 (bk-snoc _ _ _ n1 r y1 q1) (gt-cat _ _ _ (gt _ _ (k-se p6c sg6 x1 r)) c1)))
+
+(def-fns _ $ (erased sa-tr : (erased (Nat) n) (erased (List (Bool)) l x r) (subterm erased (Bk (BTrue) (BTrue) (BTrue) n r x) p) ->
+    (erased (List (Bool)) y) (erased (Bk (BTrue) (BTrue) (BTrue) n l y) q)
+    (erased (Gt (MkTc 0 (DR) l x) (MkTc 0 (DR) y r)) c))
+  (let-match erased p (BkS _ _ _ n1 _ x1 p1) ((BkZ _ _ _ _) (values l (BkZ _ _ _ l) (gt-refl _))))
+  (let ((erased y1) (erased q1) (erased c1)) (sa-tr n1 (bits "111" l) x1 r p1))
+  (values y1 (bk-snoc _ _ _ n1 l y1 q1) (gt-cat _ _ _ (gt _ _ (k-sa p6c sg6 l x1)) c1)))
+
+(def-fns _ $ (erased sc-tr : (erased (Nat) n) (erased (List (Bool)) w x r) (subterm erased (Bk (BTrue) (BTrue) (BTrue) n r x) p) ->
+    (erased (List (Bool)) y) (erased (Bk (BFalse) (BFalse) (BTrue) n w y) q)
+    (erased (Gt (MkTc 2 (DR) (Cons (Bool) (BTrue) w) x) (MkTc 2 (DR) (Cons (Bool) (BTrue) y) r)) c))
+  (let-match erased p (BkS _ _ _ n1 _ x1 p1) ((BkZ _ _ _ _) (values w (BkZ _ _ _ w) (gt-refl _))))
+  (let ((erased y1) (erased q1) (erased c1)) (sc-tr n1 (bits "001" w) x1 r p1))
+  (values y1 (bk-snoc _ _ _ n1 w y1 q1) (gt-cat _ _ _ (gt _ _ (k-sc p6c sg6 w x1)) c1)))
+
+(def-fns _ $ (erased se-on : (erased (Nat) n) (erased (List (Bool)) l x r) (subterm erased (Un n l x) p) ->
+    (erased (List (Bool)) y) (erased (Un n r y) q)
+    (erased (Gt (MkTc 4 (DL) x (Cons (Bool) (BFalse) r)) (MkTc 4 (DL) l (Cons (Bool) (BFalse) y))) c))
+  (let-match erased p (UnS n1 _ x1 p1) ((UnZ _) (values r (UnZ r) (gt-refl _))))
+  (let ((erased y1) (erased q1) (erased c1)) (se-on n1 l x1 (Cons (Bool) (BTrue) r) p1))
+  (values y1 (on-snoc n1 r y1 q1) (gt-cat _ _ _ (gt _ _ (k-se1 p6c sg6 x1 r)) c1)))
+
+(def-fns _ $ (erased sa-on : (erased (Nat) n) (erased (List (Bool)) l x r) (subterm erased (Un n r x) p) ->
+    (erased (List (Bool)) y) (erased (Un n l y) q)
+    (erased (Gt (MkTc 0 (DR) l x) (MkTc 0 (DR) y r)) c))
+  (let-match erased p (UnS n1 _ x1 p1) ((UnZ _) (values l (UnZ l) (gt-refl _))))
+  (let ((erased y1) (erased q1) (erased c1)) (sa-on n1 (Cons (Bool) (BTrue) l) x1 r p1))
+  (values y1 (on-snoc n1 l y1 q1) (gt-cat _ _ _ (gt _ _ (k-sa1 p6c sg6 l x1)) c1)))
+
+(def-adts
+  ((Ctr : ((Nat) n v) ((List (Bool)) t x) -> Type)
+    enum
+    (many CtZ : (erased (List (Bool)) t) -> (Ctr (Zero) (Zero) t t))
+    (many Ct0 : (erased (Nat) n v d) (erased (List (Bool)) t x) (erased (Ctr n v t x) p) (erased (Double v d) dd) -> (Ctr (Succ n) d t (bits "111" x)))
+    (many Ct1 : (erased (Nat) n v d) (erased (List (Bool)) t x) (erased (Ctr n v t x) p) (erased (Double v d) dd) -> (Ctr (Succ n) (Succ d) t (bits "001" x)))))
+
+(def-fns _ $ (erased lc-tr : (erased (Nat) n) (erased (List (Bool)) t x) (subterm erased (Ctr n (Zero) t x) p) -> (erased (Bk (BTrue) (BTrue) (BTrue) n t x) q))
+  (let-match erased p (Ct0 n1 v _ _ x1 p1 dd) ((CtZ _) (BkZ _ _ _ t)))
+  (let-match erased dd (D0))
+  (BkS _ _ _ n1 t x1 (lc-tr n1 t x1 p1)))
+
+(def-fns _ $ (erased tr-lc : (erased (Nat) n) (erased (List (Bool)) t x) (subterm erased (Bk (BTrue) (BTrue) (BTrue) n t x) p) -> (erased (Ctr n (Zero) t x) q))
+  (let-match erased p (BkS _ _ _ n1 _ x1 p1) ((BkZ _ _ _ _) (CtZ t)))
+  (Ct0 n1 (Zero) (Zero) t x1 (tr-lc n1 t x1 p1) (D0)))
+
+(def-fns _ $ (erased dec : (erased (Nat) n v) (erased (List (Bool)) t x r) (subterm erased (Ctr n (Succ v) t x) p) ->
+    (erased (List (Bool)) y) (erased (Ctr n v t y) q)
+    (erased (Gt (MkTc 4 (DL) x (Cons (Bool) (BFalse) r)) (MkTc 2 (DR) (Cons (Bool) (BTrue) y) r)) c))
+  (let-match erased p (Ct0 n1 m _ _ x1 p1 dd) ((Ct1 n1 m _ _ x1 p1 dd) (values (bits "111" x1) (Ct0 n1 m v t x1 p1 dd) (gt _ _ (k-d1 p6c sg6 x1 r)))))
+  (let-match erased dd (DS m1 b dd1))
+  (let ((erased y1) (erased q1) (erased c1)) (dec n1 m1 t x1 (bits "111" r) p1))
+  (values (bits "001" y1) (Ct1 n1 m1 b t y1 q1 dd1)
+    (gt-cat _ _ _ (gt _ _ (k-se p6c sg6 x1 r)) (gt-cat _ _ _ c1 (gt _ _ (k-sc p6c sg6 y1 r))))))
+
+(def-fns _ $ (erased inc0 : (erased (Nat) n v b) (erased (List (Bool)) t x R) (erased (Ctr n (Succ v) t x) p)
+    (erased (Bk (BTrue) (BTrue) (BTrue) (Succ b) (Nil (Bool)) R) rr) ->
+    (erased (List (Bool)) y R2) (erased (Ctr n v t y) q) (erased (Bk (BTrue) (BTrue) (BTrue) (Succ (Succ b)) (Nil (Bool)) R2) rr2)
+    (erased (Gt (MkTc 4 (DL) x (bits "011100" R)) (MkTc 4 (DL) y (bits "011100" R2))) c))
+  (let ((erased y) (erased q) (erased c1)) (dec n v t x (bits "11100" R) p))
+  (let ((erased Y1) (erased b1) (erased c2)) (sa-tr (Succ b) (bits "101111" y) R (Nil (Bool)) rr))
+  (let ((erased w) (erased e) (erased b2)) (tr-rot (Succ b) (bits "01111" y) Y1 b1))
+  (let-match erased e (Refl _ _))
+  (let ((erased Y2) (erased b3) (erased c3)) (se-tr (Succ b) (bits "01111" y) w (bits "111") b2))
+  (values y Y2 q (bk-snoc _ _ _ (Succ b) (Nil (Bool)) Y2 b3)
+    (gt-cat _ _ _ c1 $ gt-cat _ _ _ (gt _ _ (k-x1 p6c sg6 y R)) $ gt-cat _ _ _ c2 $
+      gt-cat _ _ _ (gt _ _ (k-x2 p6c sg6 w (Nil (Bool)))) $ gt-cat _ _ _ c3 (gt _ _ (k-x3 p6c sg6 y Y2)))))
+
+(def-fns _ $ (erased incs : (subterm erased (Nat) n) (erased (Nat) ln b) (erased (List (Bool)) t x R) (erased (Ctr ln n t x) p)
+    (erased (Bk (BTrue) (BTrue) (BTrue) (Succ b) (Nil (Bool)) R) rr) ->
+    (erased (List (Bool)) y R2) (erased (Nat) b2) (erased (Ctr ln (Zero) t y) q) (erased (Add b n b2) ad)
+    (erased (Bk (BTrue) (BTrue) (BTrue) (Succ b2) (Nil (Bool)) R2) rr2)
+    (erased (Gt (MkTc 4 (DL) x (bits "011100" R)) (MkTc 4 (DL) y (bits "011100" R2))) c))
+  (let-match erased n (Succ n1) ((Zero) (values x R b p (add-zero-right b) rr (gt-refl _))))
+  (let ((erased y1) (erased R1) (erased q1) (erased rr1) (erased c1)) (inc0 ln n1 b t x R p rr))
+  (let ((erased y) (erased R2) (erased b2) (erased q) (erased ad) (erased rr2) (erased c2)) (incs n1 ln (Succ b) t y1 R1 q1 rr1))
+  (let-match erased ad (AddSucc _ _ b3 ad1))
+  (values y R2 b2 q (add-succ-right b n1 b3 ad1) rr2 (gt-cat _ _ _ c1 c2)))
+
+(def-adts
+  ((DgV : ((Nat) n v w) -> Type)
+    enum
+    (many DgVZ : (erased (Nat) v) -> (DgV (Zero) v v))
+    (many DgVS : (erased (Nat) n v w d) (erased (DgV n v w) p) (erased (Double w d) dd) -> (DgV (Succ n) v (Succ d)))))
+
+(def-fns _ $ (erased lc-dg : (erased (Nat) n) (erased (List (Bool)) y x) (subterm erased (Bk (BFalse) (BFalse) (BTrue) n y x) p)
+    (erased (Nat) len v) (erased (List (Bool)) t) (erased (Ctr len v t y) c) ->
+    (erased (Nat) len2 v2) (erased (Ctr len2 v2 t x) c2) (erased (DgV n v v2) dv) (erased (Add n len len2) ad))
+  (let-match erased p (BkS _ _ _ n1 _ x1 p1) ((BkZ _ _ _ _) (values len v c (DgVZ v) (AddZero len))))
+  (let ((erased len1) (erased v1) (erased c1) (erased dv1) (erased ad1)) (lc-dg n1 y x1 p1 len v t c))
+  (let ((erased d) (erased dd)) (dbl-ex v1))
+  (values (Succ len1) (Succ d) (Ct1 len1 v1 d t x1 c1 dd) (DgVS n1 v v1 d dv1 dd) (AddSucc n1 len len1 ad1)))
+
+(def-adts
+  ((Mk3 : ((Nat) k) -> Type)
+    enum
+    (many K0 : -> (Mk3 (Zero)))
+    (many K1 : -> (Mk3 (Succ (Zero))))
+    (many K2 : -> (Mk3 (Succ (Succ (Zero)))))))
+
+(def-adts
+  ((Nxk : ((Nat) k k2 j) -> Type)
+    enum
+    (many NxA : -> (Nxk (Zero) (Succ (Succ (Zero))) (Succ (Zero))))
+    (many NxB : -> (Nxk (Succ (Zero)) (Zero) (Succ (Succ (Zero)))))
+    (many NxC : -> (Nxk (Succ (Succ (Zero))) (Succ (Zero)) (Succ (Succ (Zero)))))))
+
+(def-adts
+  ((S6 : ((Nat) L v k a n b) ((Tc) e) -> Type)
+    enum
+    (many MkS6 : (erased (Nat) L v k a n b) (erased (List (Bool)) X Y x R)
+       (erased (Mk3 k) mk) (erased (Ctr L v (bits "110111") X) ox) (erased (Un k (bits "01001" X) Y) om) (erased (Ctr a n Y x) ix)
+       (erased (Bk (BTrue) (BTrue) (BTrue) (Succ b) (Nil (Bool)) R) rr)
+       -> (S6 L v k a n b (MkTc 4 (DL) x (bits "011100" R))))))
+
+(def-fns _ $ (erased s6-incs : (erased (Nat) L v k a n b) (erased (Tc) e) (erased (S6 L v k a n b e) s) ->
+    (erased (Tc) e2) (erased (Nat) b2) (erased (S6 L v k a (Zero) b2 e2) s2) (erased (Add b n b2) ad) (erased (Gt e e2) c))
+  (let-match erased s (MkS6 _ _ _ _ _ _ X Y x R mk ox om ix rr))
+  (let ((erased y) (erased R2) (erased b2) (erased q) (erased ad) (erased rr2) (erased c)) (incs n a b Y x R ix rr))
+  (values (MkTc 4 (DL) y (bits "011100" R2)) b2 (MkS6 L v k a (Zero) b2 X Y y R2 mk ox om q rr2) ad c))
+
+(def-fns _ $ (erased rgp : (erased (Nat) k a) (erased (List (Bool)) M z w) (erased (Mk3 k) mk) (erased (Un (Succ (Succ k)) M z) o)
+    (erased (Bk (BTrue) (BTrue) (BTrue) (Succ a) z w) bk) ->
+    (erased (Nat) k2 j c) (erased (List (Bool)) Y) (erased (Mk3 k2) mk2) (erased (Nxk k k2 j) nx) (erased (Add j a c) ad)
+    (erased (Un k2 M Y) o2) (erased (Bk (BTrue) (BTrue) (BTrue) c Y w) bk2))
+  (let-match erased o (UnS _ _ z1 o1))
+  (let-match erased o1 (UnS _ _ z2 o2))
+  (match erased mk _
+    ((K0) (let-match erased o2 (UnZ _))
+      (values (Succ (Succ (Zero))) (Succ (Zero)) (Succ a) z (K2) (NxA) (AddSucc (Zero) a a (AddZero a)) o bk))
+    ((K1) (let-match erased o2 (UnS _ _ z3 o3)) (let-match erased o3 (UnZ _))
+      (values (Zero) (Succ (Succ (Zero))) (Succ (Succ a)) M (K0) (NxB) (AddSucc _ a _ (AddSucc (Zero) a a (AddZero a))) (UnZ M) (bk-snoc _ _ _ (Succ a) M w bk)))
+    ((K2) (let-match erased o2 (UnS _ _ z3 o3)) (let-match erased o3 (UnS _ _ z4 o4)) (let-match erased o4 (UnZ _))
+      (values (Succ (Zero)) (Succ (Succ (Zero))) (Succ (Succ a)) (Cons (Bool) (BTrue) M) (K1) (NxC) (AddSucc _ a _ (AddSucc (Zero) a a (AddZero a))) (UnS (Zero) M M (UnZ M))
+        (bk-snoc _ _ _ (Succ a) (Cons (Bool) (BTrue) M) w bk)))))
+
+(def-fns _ $ (erased rst : (erased (Nat) L v k a b) (erased (Tc) e) (erased (S6 L (Succ v) k a (Zero) b e) s) ->
+    (erased (Nat) k2 j c a2 n2) (erased (Tc) e2) (erased (S6 L v k2 a2 n2 (Zero) e2) s2) (erased (Gt e e2) gt0)
+    (erased (Nxk k k2 j) nx) (erased (Add j a c) ad) (erased (Add b c a2) ad2) (erased (DgV b (Zero) n2) dv))
+  (let-match erased s (MkS6 _ _ _ _ _ _ X Y x R mk ox om ix rr))
+  (let ((erased tx)) (lc-tr a Y x ix))
+  (let ((erased y1) (erased t1) (erased c1)) (se-tr a Y x (bits "11100" R) tx))
+  (let ((erased y2) (erased o2) (erased c2)) (se-on k (bits "01001" X) Y y1 om))
+  (let ((erased X1) (erased ox1) (erased c3)) (dec L v (bits "110111") X (bits "11110" y2) ox))
+  (let ((erased l2) (erased o3) (erased c4)) (sa-on k (bits "101001" X1) y2 y1 o2))
+  (let ((erased l3) (erased t3) (erased c5)) (sa-tr a l2 y1 (bits "11100" R) t1))
+  (let ((erased y5) (erased t5) (erased c6)) (sc-tr (Succ b) (bits "1111" l3) R (Nil (Bool)) rr))
+  (let-match erased t5 (BkS _ _ _ _ _ y6 t6))
+  (let ((erased k2) (erased j) (erased c) (erased Y2) (erased mk2) (erased nx) (erased ad) (erased o4) (erased bk))
+    (rgp k a (bits "01001" X1) (Cons (Bool) (BTrue) l2) (bits "1111" l3) mk
+      (on-snoc (Succ k) (bits "01001" X1) (Cons (Bool) (BTrue) l2) (UnS k _ l2 o3))
+      (tr-unrot (Succ a) l2 (bits "111" l3) (BkS _ _ _ a l2 l3 t3))))
+  (let ((erased a2) (erased n2) (erased ix2) (erased dv) (erased ad2)) (lc-dg b (bits "1111" l3) y6 t6 c (Zero) Y2 (tr-lc c Y2 (bits "1111" l3) bk)))
+  (values k2 j c a2 n2 (MkTc 4 (DL) y6 (bits "011100111")) (MkS6 L v k2 a2 n2 (Zero) X1 Y2 y6 (bits "111") mk2 ox1 o4 ix2 (BkS _ _ _ (Zero) (Nil (Bool)) (Nil (Bool)) (BkZ _ _ _ (Nil (Bool)))))
+    (gt-cat _ _ _ c1 $ gt-cat _ _ _ c2 $ gt-cat _ _ _ (gt _ _ (k-f2 p6c sg6 X y2)) $ gt-cat _ _ _ c3 $
+      gt-cat _ _ _ (gt _ _ (k-sc p6c sg6 X1 (bits "10" y2))) $ gt-cat _ _ _ (gt _ _ (k-f3 p6c sg6 (bits "1001" X1) y2)) $
+      gt-cat _ _ _ c4 $ gt-cat _ _ _ c5 $ gt-cat _ _ _ (gt _ _ (k-sa p6c sg6 l3 (bits "00" R))) $
+      gt-cat _ _ _ (gt _ _ (k-f5 p6c sg6 (bits "111" l3) R)) $ gt-cat _ _ _ c6 (gt _ _ (k-f6 p6c sg6 y6 (Nil (Bool)))))
+    nx ad ad2 dv))
+
+(def-adts
+  ((Pty : ((Nat) n) ((Bool) p) -> Type)
+    enum
+    (many PyZ : -> (Pty (Zero) (BFalse)))
+    (many PyT : (erased (Nat) n) (erased (Pty n (BFalse)) q) -> (Pty (Succ n) (BTrue)))
+    (many PyF : (erased (Nat) n) (erased (Pty n (BTrue)) q) -> (Pty (Succ n) (BFalse)))))
+
+(def-adts
+  ((Xr : ((Bool) a b c) -> Type)
+    enum
+    (many XFF : -> (Xr (BFalse) (BFalse) (BFalse)))
+    (many XFT : -> (Xr (BFalse) (BTrue) (BTrue)))
+    (many XTF : -> (Xr (BTrue) (BFalse) (BTrue)))
+    (many XTT : -> (Xr (BTrue) (BTrue) (BFalse)))))
+
+(def-fns _ $ (erased pty-ex : (subterm erased (Nat) n) -> (erased (Bool) p) (erased (Pty n p) q))
+  (let-match erased n (Succ n1) ((Zero) (values (BFalse) (PyZ))))
+  (let ((erased p1) (erased q1)) (pty-ex n1))
+  (match erased p1 _
+    ((BFalse) (values (BTrue) (PyT n1 q1)))
+    ((BTrue) (values (BFalse) (PyF n1 q1)))))
+
+(def-fns _ $ (erased pty-add : (erased (Nat) x y z) (subterm erased (Add x y z) a) (erased (Bool) px py) (erased (Pty x px) qx) (erased (Pty y py) qy) ->
+    (erased (Bool) pz) (erased (Pty z pz) qz) (erased (Xr px py pz) xr))
+  (let-match erased a (AddSucc x1 _ z1 a1)
+    ((AddZero _) (let-match erased qx (PyZ)) (match erased py _ ((BFalse) (values py qy (XFF))) ((BTrue) (values py qy (XFT))))))
+  (match erased qx _
+    ((PyT _ q1)
+      (let ((erased pz1) (erased qz1) (erased xr1)) (pty-add x1 y z1 a1 (BFalse) py q1 qy))
+      (match erased xr1 _
+        ((XFF) (values (BTrue) (PyT z1 qz1) (XTF)))
+        ((XFT) (values (BFalse) (PyF z1 qz1) (XTT)))))
+    ((PyF _ q1)
+      (let ((erased pz1) (erased qz1) (erased xr1)) (pty-add x1 y z1 a1 (BTrue) py q1 qy))
+      (match erased xr1 _
+        ((XTF) (values (BFalse) (PyF z1 qz1) (XFF)))
+        ((XTT) (values (BTrue) (PyT z1 qz1) (XFT)))))))
+
+(def-fns _ $ (erased pty-fn : (erased (Nat) n) (erased (Bool) p q) (subterm erased (Pty n p) a) (erased (Pty n q) b) -> (erased (Eq (Bool) p q) e))
+  (match erased a _
+    ((PyZ) (let-match erased b (PyZ)) (Refl _ p))
+    ((PyT n1 a1) (let-match erased b (PyT _ b1) (absurd (PyF _ b1) (pty-fn n1 _ _ a1 b1))) (Refl _ p))
+    ((PyF n1 a1) (let-match erased b (PyF _ b1) (absurd (PyT _ b1) (pty-fn n1 _ _ a1 b1))) (Refl _ p))))
+
+(def-fns _ $ (erased xr-id : (erased (Bool) p q) (erased (Xr (BFalse) p q) x) -> (erased (Eq (Bool) p q) e))
+  (match erased x _ ((XFF) (Refl _ p)) ((XFT) (Refl _ p))))
+
+(def-fns _ $ (erased xr-tt : (erased (Bool) p q r) (erased (Xr (BTrue) p q) x) (erased (Xr (BTrue) q r) y) -> (erased (Eq (Bool) p r) e))
+  (match erased x _
+    ((XTF) (let-match erased y (XTT)) (Refl _ p))
+    ((XTT) (let-match erased y (XTF)) (Refl _ p))))
+
+(def-fns _ $ (erased dbl-even : (subterm erased (Nat) a) (erased (Nat) b) (erased (Double a b) d) -> (erased (Pty b (BFalse)) q))
+  (let-match erased d (DS a1 b1 d1) ((D0) (PyZ)))
+  (PyF (Succ b1) (PyT b1 (dbl-even a1 b1 d1))))
+
+(def-fns _ $ (erased dgv-odd : (erased (Nat) n v w) (erased (DgV (Succ n) v w) dv) -> (erased (Pty w (BTrue)) q))
+  (let-match erased dv (DgVS _ _ w1 d dv1 dd))
+  (PyT d (dbl-even w1 d dd)))
+
+(def-fns _ $ (erased dgv-pow : (erased (Nat) n w) (subterm erased (DgV n (Zero) w) dv) -> (erased (Pow2 n (Succ w)) p))
+  (let-match erased dv (DgVS n1 _ w1 d dv1 dd) ((DgVZ _) (P0)))
+  (PS n1 (Succ w1) (Succ (Succ d)) (dgv-pow n1 w1 dv1) (DS w1 d dd)))
+
+(def-fns _ $ (erased dgv-ge : (erased (Nat) n v w P) (subterm erased (DgV n v w) dv) (erased (Pow2 n P) p) -> (erased (Lt P (Succ (Succ w))) l))
+  (let-match erased dv (DgVS n1 _ w1 d dv1 dd) ((DgVZ _) (let-match erased p (P0)) (LtS (Zero) (Succ v) (LtZ v))))
+  (let-match erased p (PS _ P1 _ p1 dP))
+  (dbl-lq P1 (Succ w1) P (Succ (Succ d)) (dgv-ge n1 v w1 P1 dv1 p1) dP (DS w1 d dd)))
+
+(def-adts
+  ((Fp : ((Nat) k) ((Bool) p q) -> Type)
+    enum
+    (many FpA : (erased (Bool) p) -> (Fp (Zero) p p))
+    (many FpB : (erased (Bool) p q) (erased (Xr (BTrue) p q) x) -> (Fp (Succ (Zero)) p q))
+    (many FpC : (erased (Bool) p q) (erased (Xr (BTrue) p q) x) -> (Fp (Succ (Succ (Zero))) p q))))
+
+(def-fns _ $ (erased rsp : (erased (Nat) L v k a b) (erased (Tc) e) (erased (S6 L (Succ v) k a (Zero) b e) s) (erased (Bool) pa) (erased (Pty a pa) qa)
+    (erased (Pty b (BTrue)) qb) ->
+    (erased (Nat) k2 j a2 b2) (erased (Tc) e2) (erased (S6 L v k2 a2 (Zero) b2 e2) s2) (erased (Gt e e2) g) (erased (Nxk k k2 j) nx)
+    (erased (Bool) pa2) (erased (Pty a2 pa2) qa2) (erased (Fp k pa pa2) fp) (erased (Pty b2 (BTrue)) qb2)
+    (erased (Nat) c) (erased (Add j a c) ad) (erased (Add b c a2) ad2) (erased (Pow2 b (Succ b2)) pb))
+  (let ((erased k2) (erased j) (erased c) (erased a2) (erased n2) (erased e1) (erased s1) (erased g1) (erased nx) (erased ad) (erased ad2) (erased dv))
+    (rst L v k a b e s))
+  (let ((erased e2) (erased b2) (erased s2) (erased ad3) (erased g2)) (s6-incs L v k2 a2 n2 (Zero) e1 s1))
+  (let-match erased ad3 (AddZero _))
+  (let-match erased qb (PyT b0 _))
+  (let ((erased qb2)) (dgv-odd b0 (Zero) n2 dv))
+  (let ((erased pj) (erased qj)) (pty-ex j))
+  (let ((erased pc) (erased qc) (erased xc)) (pty-add j a c ad pj pa qj qa))
+  (let ((erased pa2) (erased qa2) (erased xa)) (pty-add b c a2 ad2 (BTrue) pc qb qc))
+  (let ((erased g)) (gt-cat e e1 e2 g1 g2))
+  (match erased nx _
+    ((NxA)
+      (let-match erased (pty-fn j _ _ qj (PyT (Zero) (PyZ))) (Refl _ _))
+      (let-match erased (xr-tt pa pc pa2 xc xa) (Refl _ _))
+      (values k2 j a2 b2 e2 s2 g nx pa2 qa2 (FpA pa) qb2 c ad ad2 (dgv-pow b n2 dv)))
+    ((NxB)
+      (let-match erased (pty-fn j _ _ qj (PyF (Succ (Zero)) (PyT (Zero) (PyZ)))) (Refl _ _))
+      (let-match erased (xr-id pa pc xc) (Refl _ _))
+      (values k2 j a2 b2 e2 s2 g nx pa2 qa2 (FpB pa pa2 xa) qb2 c ad ad2 (dgv-pow b n2 dv)))
+    ((NxC)
+      (let-match erased (pty-fn j _ _ qj (PyF (Succ (Zero)) (PyT (Zero) (PyZ)))) (Refl _ _))
+      (let-match erased (xr-id pa pc xc) (Refl _ _))
+      (values k2 j a2 b2 e2 s2 g nx pa2 qa2 (FpC pa pa2 xa) qb2 c ad ad2 (dgv-pow b n2 dv)))))
+
+(def-adts $ (C3 : -> Type)
+  enum
+  (many CZ : -> (C3))
+  (many CO : -> (C3))
+  (many CT : -> (C3)))
+
+(def-adts
+  ((Tri : ((Nat) j) ((C3) c) ((Nat) v) -> Type)
+    enum
+    (many TrZ : -> (Tri (Zero) (CZ) (Zero)))
+    (many TrO : -> (Tri (Zero) (CO) (Succ (Zero))))
+    (many TrT : -> (Tri (Zero) (CT) (Succ (Succ (Zero)))))
+    (many TrS : (erased (Nat) j) (erased (C3) c) (erased (Nat) v) (erased (Tri j c v) t) -> (Tri (Succ j) c (Succ (Succ (Succ v)))))))
+
+(def-adts
+  ((Lo : ((Nat) h a b) -> Type)
+    enum
+    (many MkLo : (erased (Nat) h a b T0 T1) (erased (Tw h (Succ (Zero)) T0) t0) (erased (Lt T0 a) lw0) (erased (Lt (Succ (Zero)) T0) o)
+       (erased (Tw (Succ h) (Succ (Zero)) T1) t1) (erased (Lt T1 b) l1) -> (Lo h a b))))
+
+(def-adts
+  ((Up : ((Nat) L a b X) -> Type)
+    enum
+    (many MkUp : (erased (Nat) L a b X) (erased (Lt L (Succ b)) lL) (erased (Lt a (Succ b)) la) (erased (Lt (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))) b) l3)
+       (erased (Lt b (Succ X)) lb) -> (Up L a b X))))
+
+(def-fns _ $ (erased l3-15 : -> (erased (Lt (Succ (Succ (Succ (Zero)))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))))))) l))
+  (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _)))))
+
+(def-fns _ $ (erased lo-step : (erased (Nat) h a b c a2 b2) (erased (Lo h a b) lo) (erased (Add b c a2) ad) (erased (Pow2 b (Succ b2)) pb) -> (erased (Lo (Succ h) a2 b2) lo2))
+  (let-match erased lo (MkLo _ _ _ T0 T1 t0 lw0 o t1 l1))
+  (let-match erased t1 (TwS _ _ Tz _ t3 p01))
+  (let-match erased (tw-fn h (Succ (Zero)) T0 Tz t0 t3) (Refl _ _))
+  (let ((erased o1)) (lt-trans _ T0 T1 o (pow2-gt T0 T1 p01)))
+  (let ((erased T2) (erased p2)) (pow2-ex T1))
+  (MkLo (Succ h) a2 b2 T1 T2 t1 (lt-le-trans T1 b a2 l1 (add-le-left b c a2 ad)) o1 (TwS (Succ h) (Succ (Zero)) T1 T2 t1 p2)
+    (low T1 b T2 b2 (Succ b2) o1 l1 p2 pb (lt-succ (Succ b2)))))
+
+(def-fns _ $ (erased lo-v : (erased (Nat) h a b v V) (erased (Lo h a b) lo) (erased (DgV a v V) dv) -> (erased (Nat) T1) (erased (Tw (Succ h) (Succ (Zero)) T1) t1) (erased (Lt T1 V) l))
+  (let-match erased lo (MkLo _ _ _ T0 T1 t0 lw0 o t1 l1))
+  (let-match erased t1 (TwS _ _ Tz _ t3 p01))
+  (let-match erased (tw-fn h (Succ (Zero)) T0 Tz t0 t3) (Refl _ _))
+  (let ((erased P) (erased pa)) (pow2-ex a))
+  (values T1 t1 (low T0 a T1 V P o lw0 p01 pa (dgv-ge a v V P dv pa))))
+
+(def-fns _ $ (erased nx-j : (erased (Nat) k k2 j) (erased (Nxk k k2 j) nx) -> (erased (Lt j (Succ (Succ (Succ (Zero))))) l))
+  (match erased nx _
+    ((NxA) (LtS _ _ (LtZ _)))
+    ((NxB) (lt-succ _))
+    ((NxC) (lt-succ _))))
+
+(def-fns _ $ (erased up-core : (erased (Nat) b b2 X x y) (erased (Lt (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))) b) l15) (erased (Lt b (Succ X)) lb) (erased (Pow2 b (Succ b2)) pb)
+    (erased (Lt x (Succ (Succ (Succ b)))) lx) (erased (Lt y (Succ b)) ly) (erased (Nat) z) (erased (Add b x z) a) ->
+    (erased (Nat) X2 D) (erased (Pow2 X X2) pX) (erased (Double b D) dd) (erased (Lt z (Succ (Succ (Succ D)))) lz) (erased (Lt z (Succ b2)) lz2)
+    (erased (Lt y (Succ b2)) ly2) (erased (Lt (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))) b2) l32) (erased (Lt b2 (Succ X2)) lb2))
+  (let ((erased l3)) (lt-trans _ _ b (l3-15) l15))
+  (let ((erased D) (erased dd)) (dbl-ex b))
+  (let ((erased lz)) (add-le2 b b x (Succ (Succ b)) z (Succ (Succ D)) (lt-succ b) lx a (add-succ-right _ _ _ (add-succ-right _ _ _ (dbl-add b D dd)))))
+  (let ((erased lbb)) (pow2-gt b (Succ b2) pb))
+  (let ((erased X2) (erased pX)) (pow2-ex X))
+  (let-match erased (pow2-le b X (Succ b2) X2 lb pb pX) (LtS _ _ lX))
+  (values X2 D pX dd lz (le-tr z (Succ (Succ D)) b2 lz (pw-c b D (Succ b2) l3 dd pb)) (le-tr y b b2 ly lbb) (lt-le-trans _ b b2 l15 lbb) (lt-weaken b2 X2 lX)))
+
+(def-fns _ $ (erased up-step : (erased (Nat) L a b c j a2 b2 X k k2) (erased (Up L a b X) up) (erased (Nxk k k2 j) nx) (erased (Add j a c) ad) (erased (Add b c a2) ad2)
+    (erased (Pow2 b (Succ b2)) pb) ->
+    (erased (Nat) X2 D) (erased (Pow2 X X2) pX) (erased (Up L a2 b2 X2) up2) (erased (Double b D) dd) (erased (Lt a2 (Succ (Succ (Succ D)))) la2))
+  (let-match erased up (MkUp _ _ _ _ lL la l3 lb))
+  (let ((erased lc)) (add-le2 j (Succ (Succ (Zero))) a b c (Succ (Succ b)) (nx-j k k2 j nx) la ad (AddSucc _ _ _ (AddSucc _ _ _ (AddZero b)))))
+  (let ((erased X2) (erased D) (erased pX) (erased dd) (erased lz) (erased lz2) (erased lL2) (erased l32) (erased lb2)) (up-core b b2 X c L l3 lb pb lc lL a2 ad2))
+  (values X2 D pX (MkUp L a2 b2 X2 lL2 lz2 l32 lb2) dd lz))
+
+(def-fns _ $ (erased r1-up : (erased (Nat) L a b len1 L2 a2 n2 X) (erased (Up L a b X) up) (erased (Add (Succ L) (Zero) len1) l1) (erased (Add a (Succ len1) L2) l2)
+    (erased (Add b (Zero) a2) l3) (erased (Pow2 b (Succ n2)) pb) -> (erased (Nat) X2) (erased (Pow2 X X2) pX) (erased (Up L2 a2 n2 X2) up2))
+  (let-match erased up (MkUp _ _ _ _ lL la l3b lb))
+  (let-match erased (add-fn (Succ L) (Zero) len1 (Succ L) l1 (add-zero-right (Succ L))) (Refl _ _))
+  (let-match erased (add-fn b (Zero) a2 b l3 (add-zero-right b)) (Refl _ _))
+  (let ((erased w) (erased aw)) (add-ex b (Succ (Succ L))))
+  (let ((erased X2) (erased D) (erased pX) (erased dd) (erased lz) (erased lz2) (erased la2) (erased l32) (erased lb2))
+    (up-core b n2 X (Succ (Succ L)) b l3b lb pb (LtS _ _ (LtS _ _ lL)) (lt-succ b) w aw))
+  (values X2 pX (MkUp L2 b n2 X2 (le-tr L2 w n2 (add-mono a b (Succ (Succ L)) L2 w l2 aw la) lz2) la2 l32 lb2)))
+
+(def-fns _ $ (erased ctr-lt : (erased (Nat) n v P) (erased (List (Bool)) t x) (subterm erased (Ctr n v t x) c) (erased (Pow2 n P) p) -> (erased (Lt v P) l))
+  (match erased c _
+    ((CtZ _) (let-match erased p (P0)) (LtZ (Zero)))
+    ((Ct0 n1 m _ _ x1 c1 dd) (let-match erased p (PS _ P1 _ p1 dP)) (double-mono m P1 v P (ctr-lt n1 m P1 t x1 c1 p1) dd dP))
+    ((Ct1 n1 m d _ x1 c1 dd) (let-match erased p (PS _ P1 _ p1 dP)) (lt-double-succ m P1 d P (ctr-lt n1 m P1 t x1 c1 p1) dd dP))))
+
+(def-fns _ $ (erased bk-len : (erased (Bool) a b c) (erased (Nat) n k) (erased (List (Bool)) t x) (subterm erased (Bk a b c n t x) p) (erased (Length (Bool) t k) lt) ->
+    (erased (Nat) m k2) (erased (Th n m) th) (erased (Add m k k2) ad) (erased (Length (Bool) x k2) lx))
+  (let-match erased p (BkS _ _ _ n1 _ x1 p1) ((BkZ _ _ _ _) (values (Zero) k (ThZ) (AddZero k) lt)))
+  (let ((erased m1) (erased kq) (erased th1) (erased ad1) (erased lx1)) (bk-len a b c n1 k t x1 p1 lt))
+  (values (Succ (Succ (Succ m1))) (Succ (Succ (Succ kq))) (ThS n1 m1 th1) (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ ad1)))
+    (LengthCons _ a _ _ (LengthCons _ b _ _ (LengthCons _ c x1 kq lx1)))))
+
+(def-fns _ $ (erased rounds : (erased (Nat) j) (erased (C3) c) (erased (Nat) v) (subterm erased (Tri j c v) t) (erased (Nat) L a b) (erased (Tc) e)
+    (erased (S6 L v (Succ (Succ (Zero))) a (Zero) b e) s) (erased (Bool) pa) (erased (Pty a pa) qa) (erased (Pty b (BTrue)) qb)
+    (erased (Nat) h X) (erased (Lo h a b) lo) (erased (Up L a b X) up) ->
+    (erased (Nat) u a2 b2) (erased (Tc) e2) (erased (S6 L u (Succ (Succ (Zero))) a2 (Zero) b2 e2) s2) (erased (Tri (Zero) c u) t2) (erased (Gt e e2) g)
+    (erased (Pty a2 pa) qa2) (erased (Pty b2 (BTrue)) qb2)
+    (erased (Nat) k3 h2 X2) (erased (Th j k3) th) (erased (Add k3 h h2) ah) (erased (Lo h2 a2 b2) lo2) (erased (Tw k3 X X2) tw) (erased (Up L a2 b2 X2) up2))
+  (let-match erased t (TrS j1 _ v1 t1)
+    ((TrZ) (values v a b e s t (gt-refl e) qa qb (Zero) h X (ThZ) (AddZero h) lo (TwZ X) up))
+    ((TrO) (values v a b e s t (gt-refl e) qa qb (Zero) h X (ThZ) (AddZero h) lo (TwZ X) up))
+    ((TrT) (values v a b e s t (gt-refl e) qa qb (Zero) h X (ThZ) (AddZero h) lo (TwZ X) up)))
+  (let ((erased h1) (erased i1) (erased a1) (erased b1) (erased e1) (erased s1) (erased g1) (erased nx1) (erased p1) (erased q1) (erased f1) (erased r1)
+        (erased c1) (erased ad1) (erased ae1) (erased pb1))
+    (rsp L (Succ (Succ v1)) _ a b e s pa qa qb))
+  (let-match erased nx1 (NxC))
+  (let ((erased Y1) (erased D1) (erased py1) (erased up1) (erased dd1) (erased la1)) (up-step L a b c1 _ a1 b1 X _ _ up nx1 ad1 ae1 pb1))
+  (let ((erased lo1)) (lo-step h a b c1 a1 b1 lo ae1 pb1))
+  (let ((erased h2) (erased i2) (erased a2) (erased b2) (erased e2) (erased s2) (erased g2) (erased nx2) (erased p2) (erased q2) (erased f2) (erased r2)
+        (erased c2) (erased ad2) (erased ae2) (erased pb2))
+    (rsp L (Succ v1) _ a1 b1 e1 s1 p1 q1 r1))
+  (let-match erased nx2 (NxB))
+  (let ((erased Y2) (erased D2) (erased py2) (erased up2) (erased dd2) (erased la2)) (up-step L a1 b1 c2 _ a2 b2 Y1 _ _ up1 nx2 ad2 ae2 pb2))
+  (let ((erased lo2)) (lo-step (Succ h) a1 b1 c2 a2 b2 lo1 ae2 pb2))
+  (let ((erased h3) (erased i3) (erased a3) (erased b3) (erased e3) (erased s3) (erased g3) (erased nx3) (erased p3) (erased q3) (erased f3) (erased r3)
+        (erased c3) (erased ad3) (erased ae3) (erased pb3))
+    (rsp L v1 _ a2 b2 e2 s2 p2 q2 r2))
+  (let-match erased nx3 (NxA))
+  (let ((erased Y3) (erased D3) (erased py3) (erased up3) (erased dd3) (erased la3)) (up-step L a2 b2 c3 _ a3 b3 Y2 _ _ up2 nx3 ad3 ae3 pb3))
+  (let ((erased lo3)) (lo-step (Succ (Succ h)) a2 b2 c3 a3 b3 lo2 ae3 pb3))
+  (let-match erased f1 (FpC _ _ x1))
+  (let-match erased f2 (FpB _ _ x2))
+  (let-match erased f3 (FpA _))
+  (let-match erased (xr-tt pa p1 p2 x1 x2) (Refl _ _))
+  (let ((erased u) (erased a4) (erased b4) (erased e4) (erased s4) (erased t4) (erased g4) (erased q4) (erased r4) (erased k4) (erased h4) (erased X4)
+        (erased th4) (erased ah4) (erased lo4) (erased tw4) (erased up4))
+    (rounds j1 c v1 t1 L a3 b3 e3 s3 pa q3 r3 (Succ (Succ (Succ h))) Y3 lo3 up3))
+  (values u a4 b4 e4 s4 t4 (gt-cat _ _ _ g1 $ gt-cat _ _ _ g2 $ gt-cat _ _ _ g3 g4) q4 r4
+    (Succ (Succ (Succ k4))) h4 X4 (ThS j1 k4 th4) (add-sh _ _ _ (add-sh _ _ _ (add-sh _ _ _ ah4))) lo4
+    (tw-add (Succ (Succ (Succ (Zero)))) k4 (Succ (Succ (Succ k4))) X Y3 X4
+      (TwS _ _ _ _ (TwS _ _ _ _ (TwS _ _ _ _ (TwZ X) py1) py2) py3) tw4
+      (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-zero-right k4)))))
+    up4))
+
+(def-adts
+  ((Db3 : ((C3) c c2) -> Type)
+    enum
+    (many DbZ : -> (Db3 (CZ) (CZ)))
+    (many DbO : -> (Db3 (CO) (CT)))
+    (many DbT : -> (Db3 (CT) (CO)))))
+
+(def-adts
+  ((Sc3 : ((C3) c c2) -> Type)
+    enum
+    (many ScZ : -> (Sc3 (CZ) (CO)))
+    (many ScO : -> (Sc3 (CO) (CT)))
+    (many ScT : -> (Sc3 (CT) (CZ)))))
+
+(def-adts
+  ((Al3 : ((C3) c) ((Bool) p) ((C3) c2) -> Type)
+    enum
+    (many AlF : (erased (C3) c) -> (Al3 c (BFalse) c))
+    (many AlZ : -> (Al3 (CZ) (BTrue) (CO)))
+    (many AlO : -> (Al3 (CO) (BTrue) (CZ)))
+    (many AlT : -> (Al3 (CT) (BTrue) (CT)))))
+
+(def-fns _ $ (erased c3-dbl : (erased (Nat) j) (erased (C3) c) (erased (Nat) v d) (subterm erased (Tri j c v) t) (erased (Double v d) dd) ->
+    (erased (Nat) j2) (erased (C3) c2) (erased (Tri j2 c2 d) t2) (erased (Db3 c c2) db))
+  (match erased t _
+    ((TrZ) (let-match erased dd (D0)) (values (Zero) (CZ) (TrZ) (DbZ)))
+    ((TrO) (let-match erased dd (DS _ _ dd1)) (let-match erased dd1 (D0)) (values (Zero) (CT) (TrT) (DbO)))
+    ((TrT) (let-match erased dd (DS _ _ dd1)) (let-match erased dd1 (DS _ _ dd2)) (let-match erased dd2 (D0))
+      (values (Succ (Zero)) (CO) (TrS (Zero) (CO) (Succ (Zero)) (TrO)) (DbT)))
+    ((TrS j1 _ v1 t1)
+      (let-match erased dd (DS _ _ dd1))
+      (let-match erased dd1 (DS _ _ dd2))
+      (let-match erased dd2 (DS _ d1 dd3))
+      (let ((erased j2) (erased c2) (erased t2) (erased db)) (c3-dbl j1 c v1 d1 t1 dd3))
+      (values (Succ (Succ j2)) c2 (TrS _ c2 _ (TrS j2 c2 d1 t2)) db))))
+
+(def-fns _ $ (erased c3-suc : (erased (Nat) j) (erased (C3) c) (erased (Nat) v) (subterm erased (Tri j c v) t) ->
+    (erased (Nat) j2) (erased (C3) c2) (erased (Tri j2 c2 (Succ v)) t2) (erased (Sc3 c c2) sc))
+  (let-match erased t (TrS j1 _ v1 t1)
+    ((TrZ) (values (Zero) (CO) (TrO) (ScZ)))
+    ((TrO) (values (Zero) (CT) (TrT) (ScO)))
+    ((TrT) (values (Succ (Zero)) (CZ) (TrS (Zero) (CZ) (Zero) (TrZ)) (ScT))))
+  (let ((erased j2) (erased c2) (erased t2) (erased sc)) (c3-suc j1 c v1 t1))
+  (values (Succ j2) c2 (TrS j2 c2 (Succ v1) t2) sc))
+
+(def-fns _ $ (erased c3-dgv : (erased (Nat) n v w) (subterm erased (DgV n v w) dv) (erased (Nat) j) (erased (C3) c) (erased (Tri j c v) t)
+    (erased (Bool) p) (erased (Pty n p) q) ->
+    (erased (Nat) j2) (erased (C3) c2) (erased (Tri j2 c2 w) t2) (erased (Al3 c p c2) al))
+  (let-match erased dv (DgVS n1 _ w1 d dv1 dd) ((DgVZ _) (let-match erased q (PyZ)) (values j c t (AlF c))))
+  (let ((erased p1) (erased q1)) (pty-ex n1))
+  (let ((erased j1) (erased c1) (erased t1) (erased al1)) (c3-dgv n1 v w1 dv1 j c t p1 q1))
+  (let ((erased j3) (erased c3) (erased t3) (erased db)) (c3-dbl j1 c1 w1 d t1 dd))
+  (let ((erased j4) (erased c4) (erased t4) (erased sc)) (c3-suc j3 c3 d t3))
+  (match erased al1 _
+    ((AlF _)
+      (let-match erased (pty-fn n _ _ q (PyT n1 q1)) (Refl _ _))
+      (match erased db _
+        ((DbZ) (let-match erased sc (ScZ)) (values j4 c4 t4 (AlZ)))
+        ((DbO) (let-match erased sc (ScT)) (values j4 c4 t4 (AlO)))
+        ((DbT) (let-match erased sc (ScO)) (values j4 c4 t4 (AlT)))))
+    ((AlZ) (let-match erased (pty-fn n _ _ q (PyF n1 q1)) (Refl _ _)) (let-match erased db (DbO)) (let-match erased sc (ScT)) (values j4 c4 t4 (AlF c)))
+    ((AlO) (let-match erased (pty-fn n _ _ q (PyF n1 q1)) (Refl _ _)) (let-match erased db (DbZ)) (let-match erased sc (ScZ)) (values j4 c4 t4 (AlF c)))
+    ((AlT) (let-match erased (pty-fn n _ _ q (PyF n1 q1)) (Refl _ _)) (let-match erased db (DbT)) (let-match erased sc (ScO)) (values j4 c4 t4 (AlF c)))))
+
+(def-fns _ $ (erased al-t : (erased (Bool) p) (erased (C3) c) (erased (Al3 (CT) p c) al) -> (erased (Eq (C3) c (CT)) e))
+  (match erased al _ ((AlF _) (Refl _ c)) ((AlT) (Refl _ c))))
+
+(def-fns _ $ (erased rst1p : (erased (Nat) L a b) (erased (Tc) e) (erased (S6 L (Zero) (Succ (Zero)) a (Zero) b e) s) ->
+    (erased (Nat) L2 V a2 n2 len1 V1 V2) (erased (Tc) e2) (erased (S6 L2 V (Succ (Succ (Zero))) a2 n2 (Zero) e2) s2) (erased (Gt e e2) g)
+    (erased (DgV (Succ L) (Zero) V1) d1) (erased (Add (Succ L) (Zero) len1) l1) (erased (Double V1 V2) dd) (erased (DgV a V2 V) d2)
+    (erased (Add a (Succ len1) L2) l2) (erased (DgV b (Zero) n2) d3) (erased (Add b (Zero) a2) l3))
+  (let-match erased s (MkS6 _ _ _ _ _ _ X Y x R mk ox om ix rr))
+  (let-match erased om (UnS _ _ _ om1))
+  (let-match erased om1 (UnZ _))
+  (let ((erased y1) (erased t1) (erased c1)) (se-tr a Y x (bits "11100" R) (lc-tr a Y x ix)))
+  (let ((erased z1) (erased tz) (erased c2)) (se-tr L (bits "110111") X (bits "111101" y1) (lc-tr L (bits "110111") X ox)))
+  (let ((erased tz2)) (bk-snoc _ _ _ (Succ L) (bits "01" y1) (bits "11" z1)
+    (bk-snoc _ _ _ L (bits "11101" y1) (bits "11" z1) (tr-unrot L (bits "1111101" y1) (bits "1" z1) (tr-unrot L (bits "111101" y1) z1 tz)))))
+  (let ((erased W1) (erased tW) (erased c3)) (sc-tr (Succ (Succ L)) (bits "110111") (bits "11" z1) (bits "01" y1) tz2))
+  (let-match erased tW (BkS _ _ _ _ _ W2 tW2))
+  (let ((erased ty)) (bk-snoc _ _ _ a (bits "1100" R) (bits "11" y1) (tr-unrot a (bits "111100" R) (bits "1" y1) (tr-unrot a (bits "11100" R) y1 t1))))
+  (let ((erased W3) (erased tW3) (erased c4)) (sc-tr (Succ a) (bits "111" W2) (bits "11" y1) (bits "1100" R) ty))
+  (let ((erased Y5) (erased tY) (erased c5)) (sc-tr (Succ b) (bits "1101" W3) R (Nil (Bool)) rr))
+  (let-match erased tY (BkS _ _ _ _ _ Y6 tY6))
+  (let-match erased tW3 (BkS _ _ _ _ _ W4 tW4))
+  (let ((erased len1) (erased V1) (erased o1) (erased d1) (erased l1)) (lc-dg (Succ L) (bits "110111") W2 tW2 (Zero) (Zero) (bits "110111") (CtZ (bits "110111"))))
+  (let ((erased V2) (erased dd)) (dbl-ex V1))
+  (let ((erased L2) (erased V) (erased o2) (erased d2) (erased l2))
+    (lc-dg a (bits "111" W2) W4 tW4 (Succ len1) V2 (bits "110111") (Ct0 len1 V1 V2 (bits "110111") W2 o1 dd)))
+  (let ((erased a2) (erased n2) (erased o3) (erased d3) (erased l3)) (lc-dg b (bits "1101001" W4) Y6 tY6 (Zero) (Zero) (bits "1101001" W4) (CtZ (bits "1101001" W4))))
+  (values L2 V a2 n2 len1 V1 V2 (MkTc 4 (DL) Y6 (bits "011100111"))
+    (MkS6 L2 V _ a2 n2 (Zero) W4 (bits "1101001" W4) Y6 (bits "111") (K2) o2 (UnS _ _ _ (UnS _ _ _ (UnZ _))) o3
+      (BkS _ _ _ (Zero) (Nil (Bool)) (Nil (Bool)) (BkZ _ _ _ (Nil (Bool)))))
+    (gt-cat _ _ _ c1 $ gt-cat _ _ _ (gt _ _ (k-se1 p6c sg6 (bits "01001" X) y1)) $ gt-cat _ _ _ (gt _ _ (k-f2 p6c sg6 X (bits "1" y1))) $
+      gt-cat _ _ _ c2 $ gt-cat _ _ _ (gt _ _ (k-lh p6c sg6 (Nil (Bool)) z1)) $ gt-cat _ _ _ c3 $
+      gt-cat _ _ _ (gt _ _ (k-g1 p6c sg6 W2 (bits "1" y1))) $ gt-cat _ _ _ c4 $
+      gt-cat _ _ _ (gt _ _ (k-g2 p6c sg6 (bits "1" W3) R)) $ gt-cat _ _ _ c5 (gt _ _ (k-f6 p6c sg6 Y6 (Nil (Bool)))))
+    d1 l1 dd d2 l2 d3 l3))
+
+(def-fns _ $ (erased rst0h : (erased (Nat) L a b) (erased (Tc) e) (erased (S6 L (Zero) (Zero) a (Zero) b e) s) ->
+    (erased (List (Bool)) W2 W3 R1) (erased (Gt e (MkTc 1 (DR) (bits "1101" W3) (bits "111" R1))) g)
+    (erased (Bk (BFalse) (BFalse) (BTrue) (Succ L) (bits "110111") W2) tw2) (erased (Bk (BFalse) (BFalse) (BTrue) (Succ a) (bits "111" W2) W3) tw3)
+    (erased (Bk (BTrue) (BTrue) (BTrue) b (Nil (Bool)) R1) tr))
+  (let-match erased s (MkS6 _ _ _ _ _ _ X Y x R mk ox om ix rr))
+  (let-match erased om (UnZ _))
+  (let-match erased rr (BkS _ _ _ _ _ R1 rr1))
+  (let ((erased y1) (erased t1) (erased c1)) (se-tr a Y x (bits "11100" R) (lc-tr a Y x ix)))
+  (let ((erased z1) (erased tz) (erased c2)) (se-tr L (bits "110111") X (bits "11110" y1) (lc-tr L (bits "110111") X ox)))
+  (let ((erased tz2)) (bk-snoc _ _ _ (Succ L) (bits "0" y1) (bits "11" z1)
+    (bk-snoc _ _ _ L (bits "1110" y1) (bits "11" z1) (tr-unrot L (bits "111110" y1) (bits "1" z1) (tr-unrot L (bits "11110" y1) z1 tz)))))
+  (let ((erased W1) (erased tW) (erased c3)) (sc-tr (Succ (Succ L)) (bits "110111") (bits "11" z1) (bits "0" y1) tz2))
+  (let-match erased tW (BkS _ _ _ _ _ W2 tW2))
+  (let ((erased ty)) (bk-snoc _ _ _ a (bits "100" R) (bits "1" y1) (tr-unrot a (bits "11100" R) y1 t1)))
+  (let ((erased W3) (erased tW3) (erased c4)) (sc-tr (Succ a) (bits "111" W2) (bits "1" y1) (bits "100" R) ty))
+  (values W2 W3 R1
+    (gt-cat _ _ _ c1 $ gt-cat _ _ _ (gt _ _ (k-f2 p6c sg6 X y1)) $
+      gt-cat _ _ _ c2 $ gt-cat _ _ _ (gt _ _ (k-lh p6c sg6 (Nil (Bool)) z1)) $ gt-cat _ _ _ c3 $
+      gt-cat _ _ _ (gt _ _ (k-g1 p6c sg6 W2 y1)) $ gt-cat _ _ _ c4 (gt _ _ (k-hz p6c sg6 (bits "1" W3) R)))
+    tW2 tW3 rr1))
+
+(def-fns _ $ (erased tri-th : (erased (Nat) j) (erased (C3) c) (erased (Nat) v k) (subterm erased (Tri j c v) t) (erased (Th j k) th) ->
+    (erased (Nat) u) (erased (Tri (Zero) c u) t0) (erased (Add k u v) a))
+  (let-match erased t (TrS j1 _ v1 t1)
+    ((TrZ) (let-match erased th (ThZ)) (values v t (AddZero v)))
+    ((TrO) (let-match erased th (ThZ)) (values v t (AddZero v)))
+    ((TrT) (let-match erased th (ThZ)) (values v t (AddZero v))))
+  (let-match erased th (ThS _ kq th1))
+  (let ((erased u) (erased t0) (erased a)) (tri-th j1 c v1 kq t1 th1))
+  (values u t0 (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ a)))))
+
+(def-fns _ $ (erased xrun-hr : (erased (Conf) c d f) (erased (Bool) g) (subterm erased (XRun p6c c d g) xr) (erased (Nat) s) (erased (HRun champ6 d f s) h) ->
+    (erased (Nat) s2) (erased (HRun champ6 c f s2) h2))
+  (let-match erased xr (XRS _ _ c1 _ g1 st xr1) ((XR0 _ _) (values s h)))
+  (let ((erased s1) (erased h1)) (xrun-hr c1 d f g1 xr1 s h))
+  (values (Succ s1) (HRMove champ6 c c1 f s1 (pstep-stp p6c champ6 ex6 c c1 st) h1)))
+
+(let ((many hl6)) (plook p6c 1 (BTrue)))
+(comptime-match many hl6 (PLOk _ _ _ hx6 hpl6))
+(comptime-match many hx6 (Def ht6))
+(comptime-match many ht6 (Hlt))
+
+(def-fns _ $ (erased halts-from : (erased (List (Bool)) l r) (erased (Gt (MkTc (Zero) (DR) (Nil (Bool)) (Nil (Bool))) (MkTc 1 (DR) l (Cons (Bool) (BTrue) r))) g) ->
+    (erased (Nat) s) (erased (HRun champ6 (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) (MkConf 1 l (BTrue) r) s) h))
+  (let-match erased g (MkGt _ _ b rc))
+  (let-match erased rc (MkRc _ _ _ _ c c2 a a2 xr))
+  (let-match erased (as-fn _ c _ a (MkAsC (Zero) (DR) _ _ _ _ _ _ _ (BFalse) (OrR _ (Nil (Bool)) (Nil (Bool))) (PullNil) (OrR _ (Nil (Bool)) (Nil (Bool))))) (Refl _ _))
+  (let-match erased (as-fn _ c2 _ a2 (MkAsC 1 (DR) l (Cons (Bool) (BTrue) r) (Cons (Bool) (BTrue) r) l r l r (BTrue)
+    (OrR _ l (Cons (Bool) (BTrue) r)) (PullCons (BTrue) r) (OrR _ l r))) (Refl _ _))
+  (xrun-hr c c2 c2 b xr (Succ (Zero)) (HRStop champ6 1 l r (BTrue) (ext-look p6c champ6 1 (BTrue) (Hlt) ex6 hpl6))))
+
+(def-adts $ (Tet3 : ((Nat) n x) -> Type)
+  enum
+  (many MkTet3 : (erased (Nat) n x1 x2 x) (erased (Tw n (Succ (Zero)) x1) t1) (erased (Tw x1 (Succ (Zero)) x2) t2) (erased (Tw x2 (Succ (Zero)) x) t3) -> (Tet3 n x)))
+
+(def-adts $ (HaltsIn : ((List (Tr)) m) ((Conf) c) ((Nat) lo hi) -> Type)
+  enum
+  (many MkHI : (erased (List (Tr)) m) (erased (Conf) c) (erased (Nat) lo hi s) (erased (HaltsAt m c s) h) (erased (Lt lo s) l1) (erased (Lt s hi) l2)
+     -> (HaltsIn m c lo hi)))
+
+(def-fns _ $ (erased tet3-ex : (erased (Nat) n) -> (erased (Nat) x) (erased (Tet3 n x) t))
+  (let ((erased x1) (erased t1)) (tw-ex n (Succ (Zero))))
+  (let ((erased x2) (erased t2)) (tw-ex x1 (Succ (Zero))))
+  (let ((erased x) (erased t3)) (tw-ex x2 (Succ (Zero))))
+  (values x (MkTet3 n x1 x2 x t1 t2 t3)))
+
+(def-fns _ $ (erased tet3-fn : (erased (Nat) n x y) (erased (Tet3 n x) p) (erased (Tet3 n y) q) -> (erased (Eq (Nat) x y) e))
+  (let-match erased p (MkTet3 _ x1 x2 _ t1 t2 t3))
+  (let-match erased q (MkTet3 _ y1 y2 _ u1 u2 u3))
+  (let-match erased (tw-fn n (Succ (Zero)) x1 y1 t1 u1) (Refl _ _))
+  (let-match erased (tw-fn x1 (Succ (Zero)) x2 y2 t2 u2) (Refl _ _))
+  (tw-fn x2 (Succ (Zero)) x y t3 u3))
+
+(unary 10)
+(unary 11)
+
+(def-fns _ $ (erased ph1 : ->
+    (erased (Nat) L2 V a3 b3 X8 T10 Y11 j) (erased (Tc) e5) (erased (S6 L2 V (Succ (Succ (Zero))) a3 (Zero) b3 e5) s5)
+    (erased (Gt (MkTc (Zero) (DR) (Nil (Bool)) (Nil (Bool))) e5) g) (erased (Pty b3 (BTrue)) qb3) (erased (Lo 10 a3 b3) lo) (erased (Up L2 a3 b3 X8) up)
+    (erased (Tw (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))) (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) X8) tw8) (erased (Tw 10 (Succ (Zero)) T10) tt) (erased (Lt T10 V) lV) (erased (Tri j (CO) V) tr3)
+    (erased (Tw 11 (Succ (Zero)) Y11) ty) (erased (Lt (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ V)))))))))))))))))))) (Succ Y11)) lv2) (erased (Pty L2 (BFalse)) qL2))
+  (let ((erased (Pow2 (Succ (Zero)) (Succ (Succ (Zero)))) p2)) (PS _ _ _ (P0) (DS _ _ (D0))))
+  (let ((erased (Pow2 (Succ (Succ (Zero))) (Succ (Succ (Succ (Succ (Zero)))))) p4)) (PS _ _ _ p2 (DS _ _ (DS _ _ (D0)))))
+  (let ((erased (Pow2 (Succ (Succ (Succ (Zero)))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))) p8)) (PS _ _ _ p4 (DS _ _ (DS _ _ (DS _ _ (DS _ _ (D0)))))))
+  (let ((erased (Pow2 (Succ (Succ (Succ (Succ (Zero))))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))))) p16)) (PS _ _ _ p8 (DS _ _ (DS _ _ (DS _ _ (DS _ _ (DS _ _ (DS _ _ (DS _ _ (DS _ _ (D0)))))))))))
+  (let ((erased (Tw (Succ (Succ (Zero))) (Succ (Zero)) (Succ (Succ (Succ (Succ (Zero)))))) tw2)) (TwS _ _ _ _ (TwS _ _ _ _ (TwZ (Succ (Zero))) p2) p4))
+  (let ((erased (Tw (Succ (Succ (Succ (Zero)))) (Succ (Zero)) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))))) tw3)) (TwS _ _ _ _ tw2 p16))
+  (let ((erased (Bk (BFalse) (BFalse) (BTrue) (Succ (Succ (Succ (Zero)))) (bits "110111") (bits "001001001110111")) bk0))
+    (BkS _ _ _ _ _ _ (BkS _ _ _ _ _ _ (BkS _ _ _ _ _ _ (BkZ _ _ _ (bits "110111"))))))
+  (let ((erased (Bk (BFalse) (BFalse) (BTrue) (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (bits "1101001001001001110111")
+      (bits "0010010010010010011101001001001001110111")) bk1))
+    (BkS _ _ _ _ _ _ (BkS _ _ _ _ _ _ (BkS _ _ _ _ _ _ (BkS _ _ _ _ _ _ (BkS _ _ _ _ _ _ (BkS _ _ _ _ _ _ (BkZ _ _ _ (bits "1101001001001001110111")))))))))
+  (let ((erased L0) (erased V0) (erased o0) (erased dv0) (erased lz)) (lc-dg _ _ _ bk0 (Zero) (Zero) (bits "110111") (CtZ (bits "110111"))))
+  (let ((erased a0) (erased n0) (erased i0) (erased dvi) (erased la))
+    (lc-dg _ _ _ bk1 (Zero) (Zero) (bits "1101001001001001110111") (CtZ (bits "1101001001001001110111"))))
+  (let-match erased (add-fn _ (Zero) L0 _ lz (add-zero-right _)) (Refl _ _))
+  (let-match erased (add-fn _ (Zero) a0 _ la (add-zero-right _)) (Refl _ _))
+  (let ((erased s0)) (MkS6 L0 V0 _ a0 n0 (Zero) (bits "001001001110111") (bits "1101001001001001110111") (bits "0010010010010010011101001001001001110111")
+    (bits "111") (K2) o0 (UnS _ _ _ (UnS _ _ _ (UnZ _))) i0 (BkS _ _ _ (Zero) (Nil (Bool)) (Nil (Bool)) (BkZ _ _ _ (Nil (Bool))))))
+  (let ((erased e1) (erased b0) (erased s1) (erased ad0) (erased g1)) (s6-incs L0 V0 _ a0 n0 (Zero) _ s0))
+  (let-match erased ad0 (AddZero _))
+  (let ((erased qb0)) (dgv-odd _ _ n0 dvi))
+  (let ((erased qa)) (PyF _ (PyT _ (PyF _ (PyT _ (PyF _ (PyT _ (PyZ))))))))
+  (let-match erased (pow2-fn _ _ _ (dgv-pow _ V0 dv0) p8) (Refl _ _))
+  (let ((erased j0) (erased c0) (erased t0) (erased al0)) (c3-dgv _ _ V0 dv0 (Zero) (CZ) (TrZ) (BTrue) (PyT _ (PyF _ (PyT _ (PyZ))))))
+  (let-match erased al0 (AlZ))
+  (let-match erased t0 (TrS _ _ _ t0a))
+  (let-match erased t0a (TrS _ _ _ t0b))
+  (let-match erased t0b (TrO))
+  (let ((erased pX0)) (dgv-pow _ n0 dvi))
+  (let-match erased pX0 (PS _ Q5 _ pQ5 dQ5))
+  (let ((erased lq16)) (lt-le-trans _ Q5 b0 (pow2-lt (Succ (Succ (Succ (Succ (Zero))))) (Succ (Succ (Succ (Succ (Succ (Zero)))))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))))))) Q5 (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _))))) p16 pQ5)
+    (dbl-gt Q5 (Succ b0) dQ5 (pow2-pos _ Q5 pQ5))))
+  (let ((erased l15)) (lt-trans _ _ b0 (lt-succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))))))) lq16))
+  (let ((erased lo0)) (MkLo (Succ (Succ (Zero))) a0 b0 (Succ (Succ (Succ (Succ (Zero))))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))))))) tw2 (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _))))) (LtS _ _ (LtZ _)) tw3 lq16))
+  (let ((erased up0)) (MkUp L0 a0 b0 (Succ b0) (lt-weaken _ _ (lt-trans _ _ b0 (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _)))) lq16))
+    (lt-weaken _ _ (lt-trans _ _ b0 (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _))))))) lq16)) l15 (lt-weaken _ _ (lt-succ b0))))
+  (let ((erased u1) (erased a1) (erased b1) (erased e2) (erased s2) (erased t1) (erased g2) (erased qa1) (erased qb1)
+        (erased k3) (erased h2) (erased X6) (erased th) (erased ah) (erased lo1) (erased tw1) (erased up1))
+    (rounds _ (CO) V0 t0 L0 a0 b0 e1 s1 (BFalse) qa qb0 (Succ (Succ (Zero))) (Succ b0) lo0 up0))
+  (let-match erased t1 (TrO))
+  (let-match erased th (ThS _ _ th1))
+  (let-match erased th1 (ThS _ _ th2))
+  (let-match erased th2 (ThZ))
+  (let-match erased (add-fn _ _ h2 _ ah (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero (Succ (Succ (Zero))))))))))) (Refl _ _))
+  (let ((erased h3) (erased i3) (erased a2) (erased b2) (erased e3) (erased s3) (erased g3) (erased nx3) (erased pa2) (erased qa2) (erased fp3) (erased qb2)
+        (erased c3) (erased ad3) (erased ae3) (erased pb3))
+    (rsp L0 (Zero) _ a1 b1 e2 s2 (BFalse) qa1 qb1))
+  (let-match erased nx3 (NxC))
+  (let-match erased fp3 (FpC _ _ x3))
+  (let-match erased x3 (XTF))
+  (let ((erased X7) (erased D6) (erased pX7) (erased up2) (erased dd6) (erased la2)) (up-step L0 a1 b1 c3 _ a2 b2 X6 _ _ up1 nx3 ad3 ae3 pb3))
+  (let ((erased lo2)) (lo-step (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))) a1 b1 c3 a2 b2 lo1 ae3 pb3))
+  (let ((erased L2) (erased V) (erased a3) (erased n3) (erased len1) (erased V1) (erased V2) (erased e4) (erased s4) (erased g4)
+        (erased d41) (erased l41) (erased dd4) (erased d42) (erased l42) (erased d43) (erased l43)) (rst1p L0 a2 b2 e3 s3))
+  (let ((erased T10) (erased tt) (erased lV)) (lo-v (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))) a2 b2 V2 V lo2 d42))
+  (let ((erased pb43)) (dgv-pow b2 n3 d43))
+  (let ((erased X8) (erased pX8) (erased up3)) (r1-up L0 a2 b2 len1 L2 a3 n3 X7 up2 l41 l42 l43 pb43))
+  (let ((erased lo3)) (lo-step (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))) a2 b2 (Zero) a3 n3 lo2 l43 pb43))
+  (let ((erased e5) (erased b3) (erased s5) (erased ad5) (erased g5)) (s6-incs L2 V _ a3 n3 (Zero) e4 s4))
+  (let-match erased ad5 (AddZero _))
+  (let-match erased qb2 (PyT b2p _))
+  (let ((erased qb3)) (dgv-odd b2p _ n3 d43))
+  (let ((erased pL) (erased qL) (erased xL)) (pty-add _ _ L0 lz (BTrue) (BFalse) (PyT _ (PyF _ (PyT _ (PyZ)))) (PyZ)))
+  (let-match erased xL (XTF))
+  (let ((erased j41) (erased c41) (erased t41) (erased al41)) (c3-dgv _ _ V1 d41 (Zero) (CZ) (TrZ) (BFalse) (PyF L0 qL)))
+  (let-match erased al41 (AlF _))
+  (let ((erased j42) (erased c42) (erased t42) (erased db4)) (c3-dbl j41 (CZ) V1 V2 t41 dd4))
+  (let-match erased db4 (DbZ))
+  (let ((erased j43) (erased c43) (erased t43) (erased al43)) (c3-dgv _ _ V d42 j42 (CZ) t42 (BTrue) qa2))
+  (let-match erased al43 (AlZ))
+  (let ((erased pn) (erased qn) (erased xn)) (pty-add _ _ len1 l41 (BFalse) (BFalse) (PyF L0 qL) (PyZ)))
+  (let-match erased xn (XFF))
+  (let ((erased pLb) (erased qL22) (erased xL2)) (pty-add _ _ L2 l42 (BTrue) (BTrue) qa2 (PyT len1 qn)))
+  (let-match erased xL2 (XTT))
+  (let ((erased tw0)) (TwS _ _ _ _ (TwZ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))) pX0))
+  (let ((erased tw7)) (tw-add (Succ (Zero)) (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))) (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (Succ b0) X6 tw0 tw1 (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero (Succ (Zero)))))))))))
+  (let ((erased tw8)) (tw-add (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))) (Succ (Succ (Zero))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))) (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) X6 X8 tw7 (TwS _ _ _ _ (TwS _ _ _ _ (TwZ X6) pX7) pX8) (AddSucc _ _ _ (AddSucc _ _ _ (AddZero (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))
+  (let-match erased s4 (MkS6 _ _ _ _ _ _ X4 Y4 x4 R4 mk4 ox4 om4 ix4 rr4))
+  (let ((erased PL2) (erased pL2)) (pow2-ex L2))
+  (let ((erased lVP)) (ctr-lt L2 V PL2 _ _ ox4 pL2))
+  (let-match erased (add-fn _ (Zero) len1 _ l41 (add-zero-right _)) (Refl _ _))
+  (let-match erased up1 (MkUp _ _ _ _ lL1 la1 l151 lb1))
+  (let ((erased E6) (erased dE6)) (dbl-ex X6))
+  (let ((erased lDE)) (dbl-lq b1 X6 D6 E6 lb1 dd6 dE6))
+  (let ((erased la2E)) (le-tr a2 (Succ (Succ D6)) (Succ (Succ E6)) la2 (LtS _ _ (LtS _ _ lDE))))
+  (let ((erased lL2)) (add-le2 a2 (Succ (Succ E6)) (Succ (Succ (Succ (Succ (Succ (Zero)))))) (Succ (Succ (Succ (Succ (Succ (Zero)))))) L2 (Succ (Succ (Succ (Succ (Succ (Succ (Succ E6))))))) la2E (lt-succ _) l42 (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-zero-right (Succ (Succ E6))))))))))
+  (let ((erased Z7) (erased pZ7)) (pow2-ex (Succ (Succ (Succ (Succ (Succ (Succ (Succ E6)))))))))
+  (let ((erased lPZ)) (pow2-le L2 (Succ (Succ (Succ (Succ (Succ (Succ (Succ E6))))))) PL2 Z7 lL2 pL2 pZ7))
+  (let ((erased Z8) (erased dZ8)) (dbl-ex Z7))
+  (let ((erased l15E)) (lt-le-trans _ X6 E6 (lt-le-trans _ b1 X6 l151 lb1) (double-lt X6 E6 dE6)))
+  (let ((erased l19)) (lt-trans _ (Succ (Succ (Succ (Succ (Succ (Succ (Succ E6))))))) Z7 (lt-trans _ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))))))))))))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ E6))))))) (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _)))))))))))))))))))) (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ l15E)))))))) (pow2-gt _ Z7 pZ7)))
+  (let ((erased l20)) (add-le2 (Succ V) Z7 (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))))))) Z7 (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ V)))))))))))))))))))) Z8 (LtS _ _ (lt-le-trans V PL2 Z7 lVP lPZ))
+    (lt-weaken _ _ l19) (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-zero-right (Succ V))))))))))))))))))))) (dbl-add Z7 Z8 dZ8)))
+  (let ((erased Y11a) (erased ty8)) (tw-ex (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))))))
+  (let ((erased ty)) (tw-add (Succ (Succ (Succ (Zero)))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))) 11 (Succ (Zero)) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))))))) Y11a tw3 ty8 (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero (Succ (Succ (Succ (Zero)))))))))))))))
+  (let-match erased ty8 (TwS _ _ Y16 _ ty7 pY))
+  (let-match erased tw7 (TwS _ _ x6 _ tx6 px6))
+  (let-match erased ty7 (TwS _ _ y6 _ ty6 py6))
+  (let ((erased lgap)) (tw-gap (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))))))) x6 y6 tx6 ty6 (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _)))))))))))))
+  (let ((erased A2) (erased dA2)) (dbl-ex E6))
+  (let ((erased A3) (erased dA3)) (dbl-ex A2))
+  (let ((erased A4) (erased dA4)) (dbl-ex A3))
+  (let ((erased lA4)) (pow2-le (Succ (Succ (Succ (Succ x6)))) y6 A4 Y16 lgap (PS _ _ _ (PS _ _ _ (PS _ _ _ (PS _ _ _ px6 dE6) dA2) dA3) dA4) py6))
+  (let ((erased l8E)) (add-mono (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))) E6 E6 (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ E6)))))))) A2 (add-comm _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-zero-right E6)))))))))) (dbl-add E6 A2 dA2) (lt-weaken _ _ (lt-trans _ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))) E6 (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _))))))))) l15E))))
+  (let ((erased lEY)) (le-tr (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ E6)))))))) A2 Y16 l8E (le-tr A2 A3 Y16 (double-lt A2 A3 dA3) (le-tr A3 A4 Y16 (double-lt A3 A4 dA4) lA4))))
+  (let ((erased lZY)) (pow2-le (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ E6)))))))) Y16 Z8 Y11a lEY (PS _ _ _ pZ7 dZ8) pY))
+  (values L2 V a3 n3 X8 T10 Y11a j43 e5 s5 (gt-cat _ _ _ (gt _ _ (k-init p6c sg6 (Nil (Bool)) (Nil (Bool)))) $ gt-cat _ _ _ g1 $ gt-cat _ _ _ g2 $
+      gt-cat _ _ _ g3 $ gt-cat _ _ _ g4 g5)
+    qb3 lo3 up3 tw8 tt lV t43 ty (le-tr _ Z8 Y11a l20 lZY) qL22))
+
+(def-fns _ $ (erased tw16 : -> (erased (Tw (Succ (Succ (Succ (Zero)))) (Succ (Zero)) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))))) t))
+  (TwS _ _ _ _ (TwS _ _ _ _ (TwS _ _ _ _ (TwZ (Succ (Zero))) (PS _ _ _ (P0) (DS _ _ (D0)))) (PS _ _ _ (PS _ _ _ (P0) (DS _ _ (D0))) (DS _ _ (DS _ _ (D0)))))
+    (PS _ _ _ (PS _ _ _ (PS _ _ _ (PS _ _ _ (P0) (DS _ _ (D0))) (DS _ _ (DS _ _ (D0)))) (DS _ _ (DS _ _ (DS _ _ (DS _ _ (D0))))))
+      (DS _ _ (DS _ _ (DS _ _ (DS _ _ (DS _ _ (DS _ _ (DS _ _ (DS _ _ (D0))))))))))))
+
+(def-fns _ $ (erased main6 : (erased (Nat) lo hi) (erased (Tet3 10 lo) plo) (erased (Tet3 11 hi) phi) -> (erased (HaltsIn champ6 (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) lo hi) h))
+  (let ((erased L2) (erased V) (erased a3) (erased b3) (erased X8) (erased T10) (erased Y11) (erased j) (erased e5) (erased s5) (erased g5) (erased qb3)
+        (erased loi) (erased up) (erased tw8) (erased tt) (erased lV) (erased tr3) (erased ty) (erased lv2) (erased qL2)) (ph1))
+  (let ((erased pa3) (erased qa3)) (pty-ex a3))
+  (let ((erased u6) (erased a6) (erased b6) (erased e6) (erased s6) (erased t6) (erased g6) (erased qa6) (erased qb6)
+        (erased k3a) (erased h6) (erased X9) (erased tha) (erased aha) (erased lo6) (erased tw6) (erased up6))
+    (rounds j (CO) V tr3 L2 a3 b3 e5 s5 pa3 qa3 qb3 10 X8 loi up))
+  (let-match erased t6 (TrO))
+  (let ((erased h7) (erased i7) (erased a7) (erased b7) (erased e7) (erased s7) (erased g7) (erased nx7) (erased pa7) (erased qa7) (erased fp7) (erased qb7)
+        (erased c7) (erased ad7) (erased ae7) (erased pb7))
+    (rsp L2 (Zero) _ a6 b6 e6 s6 pa3 qa6 qb6))
+  (let-match erased nx7 (NxC))
+  (let ((erased X10) (erased D7) (erased pX10) (erased up7) (erased dd7) (erased la7)) (up-step L2 a6 b6 c7 _ a7 b7 X9 _ _ up6 nx7 ad7 ae7 pb7))
+  (let ((erased lo7)) (lo-step h6 a6 b6 c7 a7 b7 lo6 ae7 pb7))
+  (let ((erased L3) (erased W) (erased a8) (erased n8) (erased len8) (erased W1) (erased W2) (erased e8) (erased s8) (erased g8)
+        (erased d81) (erased l81) (erased dd8) (erased d82) (erased l82) (erased d83) (erased l83)) (rst1p L2 a7 b7 e7 s7))
+  (let ((erased TW) (erased tTW) (erased lW)) (lo-v (Succ h6) a7 b7 W2 W lo7 d82))
+  (let ((erased pb83)) (dgv-pow b7 n8 d83))
+  (let ((erased X11) (erased pX11) (erased up8)) (r1-up L2 a7 b7 len8 L3 a8 n8 X10 up7 l81 l82 l83 pb83))
+  (let ((erased lo8)) (lo-step (Succ h6) a7 b7 (Zero) a8 n8 lo7 l83 pb83))
+  (let ((erased e9) (erased bq) (erased s9) (erased ad9) (erased g9)) (s6-incs L3 W _ a8 n8 (Zero) e8 s8))
+  (let-match erased ad9 (AddZero _))
+  (let-match erased qb7 (PyT b7p _))
+  (let ((erased qb9)) (dgv-odd b7p _ n8 d83))
+  (let ((erased j81) (erased c81) (erased t81) (erased al81)) (c3-dgv _ _ W1 d81 (Zero) (CZ) (TrZ) (BTrue) (PyT L2 qL2)))
+  (let-match erased al81 (AlZ))
+  (let ((erased j82) (erased c82) (erased t82) (erased db8)) (c3-dbl j81 (CO) W1 W2 t81 dd8))
+  (let-match erased db8 (DbO))
+  (let ((erased p82) (erased q82)) (pty-ex a7))
+  (let ((erased j83) (erased c83) (erased t83) (erased al83)) (c3-dgv _ _ W d82 j82 (CT) t82 p82 q82))
+  (let-match erased (al-t p82 c83 al83) (Refl _ _))
+  (let ((erased pa9) (erased qa9)) (pty-ex a8))
+  (let ((erased u10) (erased a10) (erased b10) (erased e10) (erased s10) (erased t10) (erased g10) (erased qa10) (erased qb10)
+        (erased k3b) (erased hb) (erased Xb) (erased thb) (erased ahb) (erased lo10) (erased tw10) (erased up10))
+    (rounds j83 (CT) W t83 L3 a8 bq e9 s9 pa9 qa9 qb9 (Succ (Succ h6)) X11 lo8 up8))
+  (let-match erased t10 (TrT))
+  (let ((erased h11) (erased i11) (erased a11) (erased b11) (erased e11) (erased s11) (erased g11) (erased nx11) (erased pa11) (erased qa11) (erased fp11) (erased qb11)
+        (erased c11) (erased ad11) (erased ae11) (erased pb11))
+    (rsp L3 (Succ (Zero)) _ a10 b10 e10 s10 pa9 qa10 qb10))
+  (let-match erased nx11 (NxC))
+  (let ((erased X12) (erased D11) (erased pX12) (erased up11) (erased dd11) (erased la11)) (up-step L3 a10 b10 c11 _ a11 b11 Xb _ _ up10 nx11 ad11 ae11 pb11))
+  (let ((erased lo11)) (lo-step hb a10 b10 c11 a11 b11 lo10 ae11 pb11))
+  (let ((erased h12) (erased i12) (erased a12) (erased b12) (erased e12) (erased s12) (erased g12) (erased nx12) (erased pa12) (erased qa12) (erased fp12) (erased qb12)
+        (erased c12) (erased ad12) (erased ae12) (erased pb12))
+    (rsp L3 (Zero) _ a11 b11 e11 s11 pa11 qa11 qb11))
+  (let-match erased nx12 (NxB))
+  (let ((erased X13) (erased D12) (erased pX13) (erased up12) (erased dd12) (erased la12)) (up-step L3 a11 b11 c12 _ a12 b12 X12 _ _ up11 nx12 ad12 ae12 pb12))
+  (let ((erased lo12)) (lo-step (Succ hb) a11 b11 c12 a12 b12 lo11 ae12 pb12))
+  (let ((erased W2b) (erased W3) (erased R1) (erased g13) (erased tw2) (erased tw3) (erased tr)) (rst0h L3 a12 b12 e12 s12))
+  (let ((erased s) (erased hr)) (halts-from (bits "1101" W3) (bits "11" R1)
+    (gt-cat _ _ _ g5 $ gt-cat _ _ _ g6 $ gt-cat _ _ _ g7 $ gt-cat _ _ _ g8 $ gt-cat _ _ _ g9 $ gt-cat _ _ _ g10 $
+      gt-cat _ _ _ g11 $ gt-cat _ _ _ g12 g13)))
+  (let ((erased mL) (erased kW2) (erased thL) (erased adL) (erased lW2)) (bk-len _ _ _ (Succ L3) (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (bits "110111") W2b tw2 (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthNil _)))))))))
+  (let ((erased ma) (erased kW3) (erased tha3) (erased ada) (erased lW3)) (bk-len _ _ _ (Succ a12) (Succ (Succ (Succ kW2))) (bits "111" W2b) W3 tw3 (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ lW2)))))
+  (let ((erased mb) (erased kR) (erased thb3) (erased adb) (erased lR)) (bk-len _ _ _ b12 (Zero) (Nil (Bool)) R1 tr (LengthNil _)))
+  (let-match erased (add-fn mb (Zero) kR mb adb (add-zero-right mb)) (Refl _ _))
+  (let ((erased Sz) (erased aS)) (add-ex (Succ (Succ (Succ (Succ kW3)))) (Succ (Succ mb))))
+  (let ((erased csz)) (MkCsz 1 (bits "1101" W3) (bits "11" R1) (BTrue) (Succ (Succ (Succ (Succ kW3)))) (Succ (Succ mb)) Sz (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ lW3)))) (LengthCons _ _ _ _ (LengthCons _ _ _ _ lR)) aS))
+  (let ((erased tlo) (erased alo) (erased llo)) (hrun-lo champ6 (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) (MkConf 1 (bits "1101" W3) (BTrue) (bits "11" R1)) s hr (Zero) Sz
+    (MkCsz (Zero) (Nil (Bool)) (Nil (Bool)) (BFalse) (Zero) (Zero) (Zero) (LengthNil _) (LengthNil _) (AddZero (Zero))) csz))
+  (let-match erased alo (AddZero _))
+  (let ((erased dmb) (erased ddmb) (erased amb)) (th-add b12 mb thb3))
+  (let ((erased lbS)) (lt-le-trans b12 (Succ (Succ mb)) Sz (le-lt-trans b12 mb (Succ (Succ mb)) (add-le-left b12 dmb mb (add-comm _ _ _ amb)) (lt-weaken _ _ (lt-succ mb)))
+    (add-le-left _ _ Sz (add-comm _ _ _ aS))))
+  (let ((erased x2) (erased tx2)) (tw-ex T10 (Succ (Zero))))
+  (let ((erased lw) (erased tlo3)) (tw-ex x2 (Succ (Zero))))
+  (let ((erased tV) (erased ttV)) (tw-ex V (Succ (Zero))))
+  (let ((erased u) (erased tu) (erased au)) (tri-th j (CO) V k3a tr3 tha))
+  (let-match erased tu (TrO))
+  (let-match erased (add-fn k3a (Succ (Zero)) V (Succ k3a) au (add-succ-right _ _ _ (add-zero-right k3a))) (Refl _ _))
+  (let ((erased l1)) (tw-le-h T10 V (Succ (Zero)) x2 tV (lt-weaken _ _ lV) tx2 ttV))
+  (let ((erased l2)) (tw-le-h V (Succ (Succ h6)) (Succ (Zero)) tV TW (lt-weaken _ _ (LtS _ _ (add-le-left k3a 10 h6 aha))) ttV tTW))
+  (let ((erased lxW)) (le-lt-trans x2 tV W l1 (le-lt-trans tV TW W l2 lW)))
+  (let ((erased tWW) (erased ttW)) (tw-ex W (Succ (Zero))))
+  (let ((erased l3)) (tw-le-h x2 W (Succ (Zero)) lw tWW (lt-weaken _ _ lxW) tlo3 ttW))
+  (let ((erased u2) (erased tu2) (erased au2)) (tri-th j83 (CT) W k3b t83 thb))
+  (let-match erased tu2 (TrT))
+  (let-match erased (add-fn k3b (Succ (Succ (Zero))) W (Succ (Succ k3b)) au2 (add-succ-right _ _ _ (add-succ-right _ _ _ (add-zero-right k3b)))) (Refl _ _))
+  (let-match erased lo12 (MkLo _ _ _ TF0 TFF tF0 lF0 oF tF lF))
+  (let ((erased l4)) (tw-le-h W (Succ (Succ (Succ hb))) (Succ (Zero)) tWW TFF (lt-weaken _ _ (LtS _ _ (LtS _ _ (add-le-left k3b (Succ (Succ h6)) hb ahb)))) ttW tF))
+  (let ((erased llos)) (le-lt-trans lw TFF s (le-tr lw tWW TFF l3 l4) (lt-trans TFF b12 s lF (lt-trans b12 Sz s lbS llo))))
+  (let-match erased up12 (MkUp _ _ _ _ lL la l15 lb))
+  (let ((erased l15X)) (lt-le-trans _ b12 X13 l15 lb))
+  (let ((erased sL)) (th-sm (Succ L3) mL X13 thL (sm-of (Succ L3) X13 (LtS _ _ (le-tr L3 b12 X13 lL lb)))))
+  (let ((erased skW2)) (sm-add mL (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) kW2 (Succ (Succ X13)) sL (sm-of _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-trans _ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))) X13 (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _))))))) l15X)))))) adL))
+  (let ((erased skW2b)) (sm-add kW2 (Succ (Succ (Succ (Zero)))) (Succ (Succ (Succ kW2))) (Succ (Succ (Succ X13))) skW2 (sm-of _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-trans _ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))) X13 (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _)))) l15X))))))) (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-zero-right kW2))))))
+  (let ((erased sa)) (sm-mono ma (Succ (Succ X13)) (Succ (Succ (Succ (Succ X13)))) (lt-weaken _ _ (lt-weaken _ _ (lt-succ _))) (th-sm (Succ a12) ma X13 tha3 (sm-of (Succ a12) X13 (LtS _ _ (le-tr a12 b12 X13 la lb))))))
+  (let ((erased skW3)) (sm-add ma (Succ (Succ (Succ kW2))) kW3 (Succ (Succ (Succ (Succ X13)))) sa skW2b ada))
+  (let ((erased snl)) (sm-add kW3 (Succ (Succ (Succ (Succ (Zero))))) (Succ (Succ (Succ (Succ kW3)))) (Succ (Succ (Succ (Succ (Succ X13))))) skW3 (sm-of _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-trans _ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))) X13 (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _))))) l15X))))))))) (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-zero-right kW3)))))))
+  (let ((erased smb)) (th-sm b12 mb X13 thb3 (sm-of b12 X13 (lt-weaken _ _ lb))))
+  (let ((erased snr)) (sm-mono _ (Succ (Succ (Succ X13))) (Succ (Succ (Succ (Succ (Succ (Succ X13)))))) (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-succ _)))) (sm-add mb (Succ (Succ (Zero))) (Succ (Succ mb)) (Succ (Succ X13)) smb (sm-of _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-trans _ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))) X13 (LtS _ _ (LtS _ _ (LtZ _))) l15X)))))) (add-succ-right _ _ _ (add-succ-right _ _ _ (add-zero-right mb))))))
+  (let ((erased sS)) (sm-add _ _ Sz (Succ (Succ (Succ (Succ (Succ (Succ X13)))))) snl snr aS))
+  (let ((erased D2) (erased dD2)) (dbl-ex Sz))
+  (let ((erased sD2)) (sm-add Sz Sz D2 (Succ (Succ (Succ (Succ (Succ (Succ (Succ X13))))))) sS sS (dbl-add Sz D2 dD2)))
+  (let ((erased sD2b)) (sm-add D2 (Succ (Succ (Zero))) (Succ (Succ D2)) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ X13)))))))) sD2 (sm-of _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-trans _ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))) X13 (LtS _ _ (LtS _ _ (LtZ _))) l15X)))))))))))) (add-succ-right _ _ _ (add-succ-right _ _ _ (add-zero-right D2)))))
+  (let ((erased E1) (erased aE1)) (add-ex (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))) (Succ (Succ D2))))
+  (let ((erased sE1)) (sm-add (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))) (Succ (Succ D2)) E1 (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ X13))))))))) (sm-of _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-trans _ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))) X13 (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _))))))))))))) l15X))))))))))))) sD2b aE1))
+  (let ((erased sE)) (sm-add E1 (Succ (Succ (Succ (Succ (Succ (Zero)))))) (Succ (Succ (Succ (Succ (Succ E1))))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ X13)))))))))) sE1 (sm-of _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-trans _ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))) X13 (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _)))))) l15X)))))))))))))) (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-zero-right E1))))))))
+  (let ((erased NB) (erased pNB)) (pow2-ex (Succ (Succ (Succ (Succ (Succ E1)))))))
+  (let ((erased lsN)) (hrun-up champ6 (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) (MkConf 1 (bits "1101" W3) (BTrue) (bits "11" R1)) s hr Sz (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))) D2 E1 NB csz (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthCons _ _ _ _ (LengthNil _))))))))))))) dD2 aE1 pNB))
+  (let-match erased sE (MkSm _ _ P pP lEP))
+  (let ((erased Y1) (erased pY1)) (pow2-ex X13))
+  (let ((erased D13) (erased dD13)) (dbl-ex X13))
+  (let ((erased lc)) (pw-c X13 D13 Y1 (lt-trans _ _ X13 (l3-15) l15X) dD13 pY1))
+  (let ((erased lT)) (le-tr (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ X13))))))))))) D13 Y1 (add-mono (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))) X13 X13 (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ X13))))))))))) D13 (add-comm _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-zero-right X13))))))))))))) (dbl-add X13 D13 dD13)
+      (lt-weaken _ _ (lt-trans _ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))) X13 (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _)))))))))))) l15X))) (lt-weaken _ _ (lt-trans _ _ Y1 (lt-weaken _ _ (lt-succ _)) lc))))
+  (let ((erased Y2) (erased pY2)) (pow2-ex Y1))
+  (let ((erased Y3) (erased pY3)) (pow2-ex Y2))
+  (let ((erased lNY)) (pow2-le (Succ (Succ (Succ (Succ (Succ E1))))) Y2 NB Y3 (le-tr _ P Y2 lEP (pow2-le (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ X13))))))))))) Y1 P Y2 lT pP pY2)) pNB pY3))
+  (let ((erased hA) (erased ahA)) (add-ex k3a (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))
+  (let ((erased t9)) (tw-add (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))) k3a hA (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) X8 X9 tw8 tw6 ahA))
+  (let ((erased t11)) (tw-add hA (Succ (Succ (Zero))) (Succ (Succ hA)) (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) X9 X11 t9 (TwS _ _ _ _ (TwS _ _ _ _ (TwZ X9) pX10) pX11) (AddSucc _ _ _ (AddSucc _ _ _ (AddZero hA)))))
+  (let ((erased hC) (erased ahC)) (add-ex k3b (Succ (Succ hA))))
+  (let ((erased tb)) (tw-add (Succ (Succ hA)) k3b hC (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) X11 Xb t11 tw10 ahC))
+  (let ((erased tY3)) (tw-add hC (Succ (Succ (Succ (Succ (Succ (Zero)))))) (Succ (Succ (Succ (Succ (Succ hC))))) (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) Xb Y3 tb
+    (TwS _ _ _ _ (TwS _ _ _ _ (TwS _ _ _ _ (TwS _ _ _ _ (TwS _ _ _ _ (TwZ Xb) pX12) pX13) pY1) pY2) pY3) (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero hC))))))))
+  (let ((erased Y3b) (erased tY3b)) (tw-ex (Succ (Succ (Succ (Succ (Succ hC))))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))))))
+  (let ((erased lYY)) (tw-le-b (Succ (Succ (Succ (Succ (Succ hC))))) (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))))))) Y3 Y3b (lt-weaken _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _)))))))) tY3 tY3b))
+  (let ((erased tH)) (tw-add (Succ (Succ (Succ (Zero)))) (Succ (Succ (Succ (Succ (Succ hC))))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ hC)))))))) (Succ (Zero)) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))))))) Y3b (tw16) tY3b (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-zero-right (Succ (Succ (Succ (Succ (Succ hC)))))))))))
+  (let ((erased y2) (erased ty2)) (tw-ex Y11 (Succ (Zero))))
+  (let ((erased hi0) (erased thi)) (tw-ex y2 (Succ (Zero))))
+  (let-match erased s8 (MkS6 _ _ _ _ _ _ X8a Y8a x8a R8a mk8 ox8 om8 ix8 rr8))
+  (let ((erased PL3) (erased pL3)) (pow2-ex L3))
+  (let ((erased lWP)) (ctr-lt L3 W PL3 _ _ ox8 pL3))
+  (let-match erased up8 (MkUp _ _ _ _ lL8 la8 l158 lb8))
+  (let ((erased Xw) (erased pXw)) (pow2-ex X11))
+  (let ((erased lWX)) (lt-le-trans W PL3 Xw lWP (pow2-le L3 X11 PL3 Xw (le-tr L3 n8 X11 lL8 lb8) pL3 pXw)))
+  (let ((erased Tm) (erased tTm)) (tw-ex (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ hA)))))))))) (Succ (Zero))))
+  (let ((erased Xw16) (erased tXw16)) (tw-ex (Succ (Succ (Succ hA))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))))))
+  (let ((erased lXw)) (tw-le-b (Succ (Succ (Succ hA))) (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))))))) Xw Xw16 (lt-weaken _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _)))))))) (TwS _ _ _ _ t11 pXw) tXw16))
+  (let ((erased lXT)) (tw-le-h (Succ (Succ (Succ (Succ (Succ (Succ hA)))))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ hA)))))))))) (Succ (Zero)) Xw16 Tm (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-weaken _ _ (lt-succ _)))))
+    (tw-add (Succ (Succ (Succ (Zero)))) (Succ (Succ (Succ hA))) (Succ (Succ (Succ (Succ (Succ (Succ hA)))))) (Succ (Zero)) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))))))) Xw16 (tw16) tXw16 (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-zero-right (Succ (Succ (Succ hA)))))))) tTm))
+  (let ((erased lkT)) (le-tr k3b W Tm (lt-weaken _ _ (lt-trans k3b (Succ k3b) W (lt-succ _) (lt-succ _))) (le-tr W Xw16 Tm (lt-weaken _ _ (lt-le-trans W Xw Xw16 lWX lXw)) lXT)))
+  (let ((erased lhT0)) (tw-gt-h (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ hA)))))))))) Tm tTm))
+  (let ((erased DT) (erased dDT)) (dbl-ex Tm))
+  (let ((erased Tn) (erased pTn)) (pow2-ex Tm))
+  (let ((erased l5T)) (lt-trans _ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ hA)))))))))) Tm (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _)))) lhT0))
+  (let ((erased lHn)) (le-lt-trans (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ hC)))))))) (Succ (Succ DT)) Tn
+    (lt-weaken _ _ (lt-weaken _ _ (add-le2 k3b Tm (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ hA)))))))))) Tm (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ hC)))))))) DT lkT (lt-weaken _ _ lhT0) (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ ahC)))))))) (dbl-add Tm DT dDT)))) (pw-c Tm DT Tn l5T dDT pTn)))
+  (let-match erased (add-fn k3a (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))) hA (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ k3a))))))))) ahA (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-zero-right k3a))))))))))) (Refl _ _))
+  (let ((erased lhY)) (le-tr (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ k3a)))))))))))))))))))) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ k3a))))))))))))))))))))) Y11 (lt-weaken _ _ (lt-succ _)) lv2))
+  (let-match erased (tet3-fn 10 lw lo (MkTet3 10 T10 x2 lw tt tx2 tlo3) plo) (Refl _ _))
+  (let-match erased (tet3-fn 11 hi0 hi (MkTet3 11 Y11 y2 hi0 ty ty2 thi) phi) (Refl _ _))
+  (values (MkHI champ6 (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) lw hi0 s (hrun-halts champ6 (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) (MkConf 1 (bits "1101" W3) (BTrue) (bits "11" R1)) s hr) llos
+    (le-lt-trans s NB hi0 lsN (le-lt-trans NB Y3 hi0 lNY (le-lt-trans Y3 Y3b hi0 lYY (tw-lt-h (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ hC)))))))) y2 (Succ (Zero)) Y3b hi0
+      (lt-le-trans _ Tn y2 lHn (tw-le-h (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ hA))))))))))) Y11 (Succ (Zero)) Tn y2 lhY (TwS _ _ _ _ tTm pTn) ty2)) tH thi)))))))
+
+(let ((erased (Nat) lo) (erased (Tet3 10 lo) lo-def)) (tet3-ex 10))
+(let ((erased (Nat) hi) (erased (Tet3 11 hi) hi-def)) (tet3-ex 11))
+
+(goal erased (HaltsIn champ6 (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) lo hi))
+(qed (main6 lo hi lo-def hi-def))
