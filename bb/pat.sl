@@ -146,6 +146,42 @@
   (EC x a3 b3 (eqz-cat d1 a b a3 b3 c1 c3 e)))
 
 (def-adts
+  ((CEz : ((Conf) c) ((Conf) d) -> Type)
+    enum
+    (many MkCEz : (erased (Nat) q) (erased (List (Bool)) l r l2 r2) (erased (Bool) h) (erased (Eqz l l2) el) (erased (Eqz r r2) er)
+       -> (CEz (MkConf q l h r) (MkConf q l2 h r2)))))
+
+(def-fns _ $ (erased pull-eqz : (erased (List (Bool)) x x2 y) (erased (Bool) h) (erased (Pull x h y) pp) (erased (Eqz x x2) e)
+    -> (erased (List (Bool)) y2) (erased (Pull x2 h y2) pp2) (erased (Eqz y y2) e2))
+  (match erased e _
+    ((EC b a1 b1 e1) (let-match erased pp (PullCons _ _)) (values b1 (PullCons b b1) e1))
+    ((EZ _ _ za zb)
+      (match erased za _
+        ((ZN) (let-match erased pp (PullNil))
+          (match erased zb _ ((ZN) (values (Nil (Bool)) (PullNil) (EZ _ _ (ZN) (ZN)))) ((ZC b1 z1) (values b1 (PullCons _ b1) (EZ _ _ (ZN) z1)))))
+        ((ZC x1 z1) (let-match erased pp (PullCons _ _))
+          (match erased zb _ ((ZN) (values (Nil (Bool)) (PullNil) (EZ _ _ z1 (ZN)))) ((ZC b1 zb1) (values b1 (PullCons _ b1) (EZ _ _ z1 zb1)))))))))
+
+(def-fns _ $ (erased stp-eqz : (erased (List (Tr)) m) (erased (Conf) c c2 d) (erased (Stp m c d) st) (erased (CEz c c2) ce)
+    -> (erased (Conf) d2) (erased (Stp m c2 d2) st2) (erased (CEz d d2) ce2))
+  (let-match erased ce (MkCEz q l r l1 r1 h el er))
+  (match erased st _
+    ((StepL _ _ q2 _ _ l2 _ w h2 lk pp)
+      (let ((erased l3) (erased pp2) (erased e2)) (pull-eqz l l1 l2 h2 pp el))
+      (values (MkConf q2 l3 h2 (Cons (Bool) w r1)) (StepL m q q2 l1 r1 l3 h w h2 lk pp2) (MkCEz q2 l2 _ l3 _ h2 e2 (EC w r r1 er))))
+    ((StepR _ _ q2 _ _ r2 _ w h2 lk pp)
+      (let ((erased r3) (erased pp2) (erased e2)) (pull-eqz r r1 r2 h2 pp er))
+      (values (MkConf q2 (Cons (Bool) w l1) h2 r3) (StepR m q q2 l1 r1 r3 h w h2 lk pp2) (MkCEz q2 _ r2 _ r3 h2 (EC w l l1 el) e2)))))
+
+(def-fns _ $ (erased halts-eqz : (erased (List (Tr)) m) (erased (Conf) c c2) (erased (Nat) s) (subterm erased (HaltsAt m c s) hs) (erased (CEz c c2) ce)
+    -> (erased (HaltsAt m c2 s) hs2))
+  (match erased hs _
+    ((HStop _ q l r h lk) (let-match erased ce (MkCEz _ _ _ l2 r2 _ _ _)) (HStop m q l2 r2 h lk))
+    ((HMove _ _ d s1 st rest)
+      (let ((erased d2) (erased st2) (erased ce2)) (stp-eqz m c c2 d st ce))
+      (HMove m c2 d2 s1 st2 (halts-eqz m d d2 s1 rest ce2)))))
+
+(def-adts
   ((IWd : ((It) i) ((List (Bool)) w) -> Type)
     enum
     (many WdW : (erased (List (Bool)) w) -> (IWd (IW w) w))
