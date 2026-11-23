@@ -77,7 +77,10 @@ _build/release/slc std/list.sl std/immediate.sl bb/tm.sl bb/sim.sl bb/cert.sl bb
 ```
 
 It prints `--goal proved: PASS`; in one measurement on a 4-core
-container this took about 10 minutes, nearly all of it the compiled run.
+container this took about 8 minutes, nearly all of it the compiled run.
+`bb/l3bound.sl` replaced by `bb/l3bound2.sl` in the same command proves
+10^15568 by the same argument with a longer run; in one measurement this
+took about 44 minutes.
 The bound counts no steps. A run under `native-compute` reaches a
 configuration whose tape, trimmed of trailing blanks, holds more than N
 cells, and a step adds at most one cell (`bb/space.sl`), so any halt
