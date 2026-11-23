@@ -356,7 +356,8 @@
   (let-match many z2 (Zero) ((Succ _) (NoPX)))
   (MkPX (Nil (Tk)) (Tt0011) rest))
 
-(def-fns _ $ (many parse : (many (Nat) z) (subterm many (List (Rn)) R) -> (many (PX) p))
+(def-fns _ $ (many parse : (many (Nat) fuel) (many (Nat) z) (subterm many (List (Rn)) R) -> (many (PX) p))
+  (let-match many fuel (Succ f) ((Zero) (MkPX (Nil (Tk)) (TtE) R)))
   (let-match many (lt-dec 3 z) (No _ _ _ _ _) ((Yes _ _ _ _ _) (NoPX)))
   (let-match many R (Cons _ rn R1) ((Nil _) (NoPX)))
   (let-match many rn (MkRn b L))
@@ -370,7 +371,7 @@
   (let-match many rn2 (MkRn _ a))
   (let-match many (lt-dec 3 a) (No _ _ _ _ _) ((Yes _ _ _ _ _) (MkPX toks (TtE) R1)))
   (let-match many R2 (Cons _ _ _) ((Nil _) (MkPX toks (TtE) R1)))
-  (pcons toks (notail $ parse a R2)))
+  (pcons toks (notail $ parse f a R2)))
 
 (def-fns _ $ (many try-round : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
   (let-match many e (MkRq q L h R))
@@ -378,7 +379,7 @@
   (let-match many rn (MkRn b a0))
   (let-match many b (BFalse) ((BTrue) (RsNo l3 c0 e ch)))
   (let-match many a0 (Succ a) ((Zero) (RsNo l3 c0 e ch)))
-  (let-match many (parse a R1) (MkPX X T _) ((NoPX) (RsNo l3 c0 e ch)))
+  (let-match many (parse 1000000000 a R1) (MkPX X T _) ((NoPX) (RsNo l3 c0 e ch)))
   (let-match many (rd-run X T) (RdOk _ _ Y T2 c rd) ((RdNo _ _) (RsNo l3 c0 e ch)))
   (apply-rdk c0 e ch (Succ (Zero)) c X Y T T2 (RkS (Zero) c (Zero) c X Y Y T T2 T2 rd (RkZ Y T2) (add-zero-right c))))
 
