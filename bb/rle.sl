@@ -312,3 +312,241 @@
   (let-match many fuel (Succ f) ((Zero) (values e ch)))
   (let-match many (rstep m c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ e1 ch1) (values e1 ch1)))
   (tail $ rrun m c0 f e1 ch1))
+
+(def-adts
+  ((TRun : ((List (Tr)) m) ((Conf) c) ((Conf) d) -> Type)
+    enum
+    (many TR0 : (erased (List (Tr)) m) (erased (Conf) c) -> (TRun m c c))
+    (many TRL : (erased (List (Tr)) m) (erased (Nat) q q2) (erased (List (Bool)) l r) (erased (Bool) h h2 w) (erased (Conf) d)
+       (erased (Look m q h (Mov w (DL) q2)) lk) (erased (TRun m (MkConf q2 l h2 (Cons (Bool) w r)) d) p)
+       -> (TRun m (MkConf q (Cons (Bool) h2 l) h r) d))
+    (many TRR : (erased (List (Tr)) m) (erased (Nat) q q2) (erased (List (Bool)) l r) (erased (Bool) h h2 w) (erased (Conf) d)
+       (erased (Look m q h (Mov w (DR) q2)) lk) (erased (TRun m (MkConf q2 (Cons (Bool) w l) h2 r) d) p)
+       -> (TRun m (MkConf q l h (Cons (Bool) h2 r)) d))))
+
+(def-adts
+  ((Fr : ((List (Bool)) L R) ((Conf) c) ((Conf) d) -> Type)
+    enum
+    (many MkFr : (erased (List (Bool)) L R l r l2 r2) (erased (Nat) q) (erased (Bool) h) (erased (Cat (Bool) l L l2) cl) (erased (Cat (Bool) r R r2) cr)
+       -> (Fr L R (MkConf q l h r) (MkConf q l2 h r2)))))
+
+(def-fns _ $ (erased run-pre : (erased (List (Tr)) m) (erased (Conf) a b c) (erased (Nat) t) (erased (Stp m a b) st) (subterm erased (Run m b t c) r)
+    -> (erased (Run m a (Succ t) c) r2))
+  (let-match erased r (RSnoc _ _ c1 _ t1 r1 st1) ((RNil _ _) (RSnoc m a a b (Zero) (RNil m a) st)))
+  (RSnoc m a c1 c (Succ t1) (run-pre m a b c1 t1 st r1) st1))
+
+(def-fns _ $ (erased trun-frame : (erased (List (Tr)) m) (erased (List (Bool)) L R) (erased (Conf) c d c2) (subterm erased (TRun m c d) p) (erased (Fr L R c c2) f)
+    -> (erased (Conf) d2) (erased (Nat) t) (erased (Run m c2 t d2) r) (erased (Fr L R d d2) f2))
+  (match erased p _
+    ((TR0 _ _) (values c2 (Zero) (RNil m c2) f))
+    ((TRL _ q q2 l r h h2 w _ lk p1)
+      (let-match erased f (MkFr _ _ _ _ _ _ _ _ cl cr))
+      (let-match erased cl (CatC _ _ _ _ l3 cl1))
+      (let ((erased d2) (erased t) (erased r1) (erased f2)) (trun-frame m L R _ d _ p1 (MkFr L R l (Cons (Bool) w r) l3 _ q2 h2 cl1 (CatC _ w r R _ cr))))
+      (values d2 (Succ t) (run-pre m c2 _ d2 t (StepL m q q2 (Cons (Bool) h2 l3) _ l3 h w h2 lk (PullCons h2 l3)) r1) f2))
+    ((TRR _ q q2 l r h h2 w _ lk p1)
+      (let-match erased f (MkFr _ _ _ _ _ _ _ _ cl cr))
+      (let-match erased cr (CatC _ _ _ _ r3 cr1))
+      (let ((erased d2) (erased t) (erased r1) (erased f2)) (trun-frame m L R _ d _ p1 (MkFr L R (Cons (Bool) w l) r _ r3 q2 h2 (CatC _ w l L _ cl) cr1)))
+      (values d2 (Succ t) (run-pre m c2 _ d2 t (StepR m q q2 _ (Cons (Bool) h2 r3) r3 h w h2 lk (PullCons h2 r3)) r1) f2))))
+
+(def-adts
+  ((TSim : ((List (Tr)) m) ((Nat) q) ((Bool) h) ((Conf) c) -> Type)
+    enum
+    (many TSOk : (erased (List (Tr)) m) (erased (Nat) q) (erased (Bool) h) (erased (Conf) c) (many (List (Bool)) v)
+       (erased (TRun m c (MkConf q (Nil (Bool)) h v)) p) -> (TSim m q h c))
+    (many TSNo : (erased (List (Tr)) m) (erased (Nat) q) (erased (Bool) h) (erased (Conf) c) -> (TSim m q h c))))
+
+(def-adts
+  ((Stop : ((Nat) q0) ((Bool) h0) ((Nat) q) ((List (Bool)) l) ((Bool) h) -> Type)
+    enum
+    (many MkStop : (erased (Nat) q) (erased (Bool) h) -> (Stop q h q (Nil (Bool)) h))))
+
+(def-fns _ $ (many stop-at : (many (Nat) q0) (many (Bool) h0) (many (Nat) q) (many (List (Bool)) l) (many (Bool) h)
+    -> (many (ErasedMaybe (Stop q0 h0 q l h)) r))
+  (let-match many l (Nil _) ((Cons _ _ _) (ENone _)))
+  (let-match many (eq-nat q q0) (ESome _ e1) ((ENone _) (ENone _)))
+  (let-match many (eq-bit h h0) (ESome _ e2) ((ENone _) (ENone _)))
+  (let-match erased e1 (Refl _ _))
+  (let-match erased e2 (Refl _ _))
+  (ESome _ (MkStop q h)))
+
+(def-fns _ $ (many tsim : (many (List (Tr)) m) (many (Nat) q0) (many (Bool) h0) (subterm many (Nat) fuel) (many (Nat) q) (many (List (Bool)) l) (many (Bool) h)
+    (many (List (Bool)) r) -> (many (TSim m q0 h0 (MkConf q l h r)) s))
+  (let-match many fuel (Succ f) ((Zero) (TSNo m q0 h0 _)))
+  (let-match many (tlook m q h) (LkOk _ _ _ tr lk) ((LkNo _ _ _) (TSNo m q0 h0 _)))
+  (let-match many tr (Mov w d q2) ((Hlt) (TSNo m q0 h0 _)))
+  (match many d _
+    ((DL)
+      (let-match many l (Cons _ h2 l2) ((Nil _) (TSNo m q0 h0 _)))
+      (let ((many c2)) (MkConf q2 l2 h2 (Cons (Bool) w r)))
+      (let-match many (stop-at q0 h0 q2 l2 h2) (ESome _ e)
+        ((ENone _)
+          (let-match many (notail $ tsim m q0 h0 f q2 l2 h2 (Cons (Bool) w r)) (TSOk _ _ _ _ v p) ((TSNo _ _ _ _) (TSNo m q0 h0 _)))
+          (TSOk m q0 h0 _ v (TRL m q q2 l2 r h h2 w _ lk p))))
+      (let-match erased e (MkStop _ _))
+      (TSOk m q0 h0 _ (Cons (Bool) w r) (TRL m q q2 l2 r h h2 w _ lk (TR0 m c2))))
+    ((DR)
+      (let-match many r (Cons _ h2 r2) ((Nil _) (TSNo m q0 h0 _)))
+      (let-match many (notail $ tsim m q0 h0 f q2 (Cons (Bool) w l) h2 r2) (TSOk _ _ _ _ v p) ((TSNo _ _ _ _) (TSNo m q0 h0 _)))
+      (TSOk m q0 h0 _ v (TRR m q q2 l r2 h h2 w _ lk p)))))
+
+(def-adts
+  ((Pw : ((List (Bool)) v) ((Nat) n) ((List (Bool)) R y) -> Type)
+    enum
+    (many PwZ : (erased (List (Bool)) v R) -> (Pw v (Zero) R R))
+    (many PwS : (erased (List (Bool)) v R vR y) (erased (Nat) n) (erased (Cat (Bool) v R vR) c) (erased (Pw v n vR y) p) -> (Pw v (Succ n) R y))))
+
+(def-fns _ $ (erased shift-run : (erased (List (Tr)) m) (erased (Nat) q) (erased (Bool) h b) (erased (List (Bool)) v)
+    (erased (TRun m (MkConf q (Cons (Bool) b (Nil (Bool))) h (Nil (Bool))) (MkConf q (Nil (Bool)) h v)) w)
+    (erased (Nat) n) (erased (List (Bool)) L x R y) (subterm erased (Rp b n L x) p) (erased (Pw v n R y) pw)
+    -> (erased (Nat) t) (erased (Run m (MkConf q x h R) t (MkConf q L h y)) r))
+  (let-match erased p (RpS _ n1 _ x1 p1) ((RpZ _ _) (let-match erased pw (PwZ _ _)) (values (Zero) (RNil m _))))
+  (let-match erased pw (PwS _ _ vR _ _ cv pw1))
+  (let ((erased d2) (erased t1) (erased r1) (erased f2))
+    (trun-frame m x1 R _ _ _ w (MkFr x1 R (Cons (Bool) b (Nil (Bool))) (Nil (Bool)) _ R q h (CatC _ b _ x1 x1 (CatN _ x1)) (CatN _ R))))
+  (let-match erased f2 (MkFr _ _ _ _ l2 r2 _ _ cl cr))
+  (let-match erased cl (CatN _ _))
+  (let-match erased (cat-fn (Bool) v R r2 vR cr cv) (Refl _ _))
+  (let ((erased t2) (erased r2b)) (shift-run m q h b v w n1 L x1 vR y p1 pw1))
+  (run-cat m _ _ _ t1 t2 r1 r2b))
+
+(def-fns _ $ (erased rp-shift : (erased (Bool) c) (erased (Nat) n) (erased (List (Bool)) R y) (subterm erased (Rp c (Succ n) R y) p)
+    -> (erased (Rp c n (Cons (Bool) c R) y) q))
+  (let-match erased p (RpS _ _ _ y1 p1))
+  (let-match erased p1 (RpS _ n2 _ y2 p2) ((RpZ _ _) (RpZ c (Cons (Bool) c R))))
+  (RpS c n2 (Cons (Bool) c R) y1 (rp-shift c n2 R y1 p1)))
+
+(def-fns _ $ (erased rp-pw : (erased (Bool) c) (subterm erased (Nat) n) (erased (List (Bool)) R y) (erased (Rp c n R y) p)
+    -> (erased (Pw (Cons (Bool) c (Nil (Bool))) n R y) q))
+  (let-match erased n (Succ n1) ((Zero) (let-match erased p (RpZ _ _)) (PwZ _ R)))
+  (PwS _ R (Cons (Bool) c R) y n1 (CatC _ c _ R R (CatN _ R)) (rp-pw c n1 (Cons (Bool) c R) y (rp-shift c n1 R y p))))
+
+(def-fns _ $ (erased rp-add : (erased (Bool) c) (erased (Nat) n k s) (erased (List (Bool)) t x y) (subterm erased (Rp c n x y) p) (erased (Rp c k t x) q)
+    (erased (Add n k s) a) -> (erased (Rp c s t y) r))
+  (let-match erased p (RpS _ n1 _ y1 p1) ((RpZ _ _) (let-match erased a (AddZero _)) q))
+  (let-match erased a (AddSucc _ _ s1 a1))
+  (RpS c s1 t y1 (rp-add c n1 k s1 t x y1 p1 q a1)))
+
+(def-fns _ $ (many pushrun : (many (Bool) c) (many (Nat) n) (many (List (Rn)) R) (erased (List (Bool)) x) (erased (Den R x) d)
+    -> (many (List (Rn)) R2) (erased (List (Bool)) y) (erased (Rp c n x y) p) (erased (Den R2 y) d2))
+  (let ((erased y0) (erased p0)) (rp-ex c n x))
+  (let ((many fresh)) (Cons _ (MkRn c n) R))
+  (let-match many R (Cons _ rn R1) ((Nil _) (values fresh y0 p0 (DeC c n R x y0 d p0))))
+  (let-match many rn (MkRn b k))
+  (let-match many (eq-bit c b) (ESome _ eq) ((ENone _) (values fresh y0 p0 (DeC c n R x y0 d p0))))
+  (let-match erased eq (Refl _ _))
+  (let-match erased d (DeC _ _ _ t _ d1 q))
+  (let ((many s) (erased a)) (add n k))
+  (values (Cons _ (MkRn c s) R1) y0 p0 (DeC c s R1 t y0 d1 (rp-add c n k s t x y0 p0 q a))))
+
+(def-adts
+  ((MirT : ((Tr) a) ((Tr) b) -> Type)
+    enum
+    (many MtH : -> (MirT (Hlt) (Hlt)))
+    (many MtL : (erased (Bool) w) (erased (Nat) q) -> (MirT (Mov w (DL) q) (Mov w (DR) q)))
+    (many MtR : (erased (Bool) w) (erased (Nat) q) -> (MirT (Mov w (DR) q) (Mov w (DL) q)))))
+
+(def-adts
+  ((MirM : ((List (Tr)) m) ((List (Tr)) m2) -> Type)
+    enum
+    (many MmN : -> (MirM (Nil (Tr)) (Nil (Tr))))
+    (many MmC : (erased (Tr) a b) (erased (List (Tr)) m m2) (erased (MirT a b) t) (erased (MirM m m2) p) -> (MirM (Cons (Tr) a m) (Cons (Tr) b m2)))))
+
+(def-adts
+  ((MirC : ((Conf) c) ((Conf) d) -> Type)
+    enum
+    (many MkMirC : (erased (Nat) q) (erased (List (Bool)) l r) (erased (Bool) h) -> (MirC (MkConf q l h r) (MkConf q r h l)))))
+
+(def-fns _ $ (many mirm : (subterm many (List (Tr)) m) -> (many (List (Tr)) m2) (erased (MirM m m2) p) (erased (MirM m2 m) p2))
+  (let-match many m (Cons _ a m1) ((Nil _) (values (Nil (Tr)) (MmN) (MmN))))
+  (let ((many m3) (erased p) (erased p2)) (notail $ mirm m1))
+  (let-match many a (Mov w d q) ((Hlt) (values (Cons _ (Hlt) m3) (MmC _ _ m1 m3 (MtH) p) (MmC _ _ m3 m1 (MtH) p2))))
+  (match many d _
+    ((DL) (values (Cons _ (Mov w (DR) q) m3) (MmC _ _ m1 m3 (MtL w q) p) (MmC _ _ m3 m1 (MtR w q) p2)))
+    ((DR) (values (Cons _ (Mov w (DL) q) m3) (MmC _ _ m1 m3 (MtR w q) p) (MmC _ _ m3 m1 (MtL w q) p2)))))
+
+(def-fns _ $ (erased mir-look : (erased (List (Tr)) m m2) (erased (Nat) q) (erased (Bool) b) (erased (Tr) t) (erased (MirM m m2) mm)
+    (subterm erased (Look m q b t) lk) -> (erased (Tr) t2) (erased (Look m2 q b t2) lk2) (erased (MirT t t2) mt))
+  (match erased lk _
+    ((Look0 t0 t1 rest)
+      (let-match erased mm (MmC _ u0 _ m3 mt0 mm1))
+      (let-match erased mm1 (MmC _ u1 _ m4 _ _))
+      (values u0 (Look0 u0 u1 m4) mt0))
+    ((Look1 t0 t1 rest)
+      (let-match erased mm (MmC _ u0 _ m3 _ mm1))
+      (let-match erased mm1 (MmC _ u1 _ m4 mt1 _))
+      (values u1 (Look1 u0 u1 m4) mt1))
+    ((LookS t0 t1 rest q1 _ _ lk1)
+      (let-match erased mm (MmC _ u0 _ m3 _ mm1))
+      (let-match erased mm1 (MmC _ u1 _ m4 _ mm2))
+      (let ((erased t2) (erased lk2) (erased mt)) (mir-look rest m4 q1 b t mm2 lk1))
+      (values t2 (LookS u0 u1 m4 q1 b t2 lk2) mt))))
+
+(def-fns _ $ (erased mir-stp : (erased (List (Tr)) m m2) (erased (Conf) c d c2) (erased (MirM m m2) mm) (erased (Stp m c d) st) (erased (MirC c c2) mc)
+    -> (erased (Conf) d2) (erased (Stp m2 c2 d2) st2) (erased (MirC d d2) md))
+  (match erased st _
+    ((StepL _ q q2 l r l2 h w h2 lk pp)
+      (let ((erased t2) (erased lk2) (erased mt)) (mir-look m m2 q h _ mm lk))
+      (let-match erased mt (MtL _ _))
+      (let-match erased mc (MkMirC _ _ _ _))
+      (values (MkConf q2 (Cons (Bool) w r) h2 l2) (StepR m2 q q2 r l l2 h w h2 lk2 pp) (MkMirC q2 l2 (Cons (Bool) w r) h2)))
+    ((StepR _ q q2 l r r2 h w h2 lk pp)
+      (let ((erased t2) (erased lk2) (erased mt)) (mir-look m m2 q h _ mm lk))
+      (let-match erased mt (MtR _ _))
+      (let-match erased mc (MkMirC _ _ _ _))
+      (values (MkConf q2 r2 h2 (Cons (Bool) w l)) (StepL m2 q q2 r l r2 h w h2 lk2 pp) (MkMirC q2 (Cons (Bool) w l) r2 h2)))))
+
+(def-fns _ $ (erased mir-run : (erased (List (Tr)) m m2) (erased (Conf) c d c2) (erased (Nat) t) (erased (MirM m m2) mm) (subterm erased (Run m c t d) r)
+    (erased (MirC c c2) mc) -> (erased (Conf) d2) (erased (Run m2 c2 t d2) r2) (erased (MirC d d2) md))
+  (let-match erased r (RSnoc _ _ c1 _ t1 r1 st) ((RNil _ _) (values c2 (RNil m2 c2) mc)))
+  (let ((erased e1) (erased q1) (erased m1)) (mir-run m m2 c c1 c2 t1 mm r1 mc))
+  (let ((erased d2) (erased st2) (erased md)) (mir-stp m m2 c1 d e1 mm st m1))
+  (values d2 (RSnoc m2 c2 e1 d2 t1 q1 st2) md))
+
+(def-fns _ $ (erased pw-nil : (subterm erased (Nat) n) (erased (List (Bool)) R) -> (erased (Pw (Nil (Bool)) n R R) p))
+  (let-match erased n (Succ n1) ((Zero) (PwZ _ R)))
+  (PwS _ R R R n1 (CatN _ R) (pw-nil n1 R)))
+
+(def-adts
+  ((Sh : ((List (Tr)) m) ((Nat) q) ((Bool) h) ((List (Bool)) s o) -> Type)
+    enum
+    (many ShOk : (erased (List (Tr)) m) (erased (Nat) q) (erased (Bool) h) (erased (List (Bool)) s o s2 o2) (many (List (Rn)) S2 O2)
+       (erased (Den S2 s2) ds) (erased (Den O2 o2) do) (erased (Nat) t) (erased (Run m (MkConf q s h o) t (MkConf q s2 h o2)) r) -> (Sh m q h s o))
+    (many ShNo : (erased (List (Tr)) m) (erased (Nat) q) (erased (Bool) h) (erased (List (Bool)) s o) -> (Sh m q h s o))))
+
+(def-fns _ $ (many shcore : (many (List (Tr)) m) (many (Nat) q) (many (Bool) h) (many (Nat) fuel) (many (List (Rn)) S) (erased (List (Bool)) s) (erased (Den S s) ds)
+    (many (List (Rn)) O) (erased (List (Bool)) o) (erased (Den O o) do) -> (many (Sh m q h s o) r))
+  (let-match many S (Cons _ rn S1) ((Nil _) (ShNo m q h s o)))
+  (let-match many rn (MkRn b n))
+  (let-match erased ds (DeC _ _ _ t _ d1 p))
+  (let-match many (tsim m q h fuel q (Cons (Bool) b (Nil (Bool))) h (Nil (Bool))) (TSOk _ _ _ _ v w) ((TSNo _ _ _ _) (ShNo m q h s o)))
+  (let-match many v (Cons _ c v1) ((Nil _)
+    (let ((erased t1) (erased r1)) (shift-run m q h b v w n t s o o p (pw-nil n o)))
+    (ShOk m q h s o t o S1 O d1 do t1 r1)))
+  (let-match many v1 (Nil _) ((Cons _ _ _) (ShNo m q h s o)))
+  (let ((many O2) (erased y) (erased py) (erased dy)) (pushrun c n O o do))
+  (let ((erased t1) (erased r1)) (shift-run m q h b v w n t s o y p (rp-pw c n o y py)))
+  (ShOk m q h s o t y S1 O2 d1 dy t1 r1))
+
+(def-fns _ $ (many rshift : (many (List (Tr)) m m2) (erased (MirM m2 m) mm) (many (Nat) fuel) (erased (Conf) c0) (many (Rq) e) (erased (Rch m c0 e) ch)
+    -> (many (Rs m c0) r))
+  (let-match erased ch (MkRch _ _ a c _ t0 r0 dc z))
+  (let-match many e (MkRq q L h R))
+  (let-match erased dc (MkDc _ _ _ _ l r dl dr))
+  (let-match many (shcore m q h fuel L l dl R r dr) (ShNo _ _ _ _ _)
+    ((ShOk _ _ _ _ _ l2 r2 L2 R2 dl2 dr2 t1 r1) (RsOk m c0 (MkRq q L2 h R2) (rch-run m c0 c _ e _ t1 ch dc r1 (MkDc q L2 R2 h l2 r2 dl2 dr2)))))
+  (let-match many (shcore m2 q h fuel R r dr L l dl) (ShOk _ _ _ _ _ r2 l2 R2 L2 dr2 dl2 t1 r1) ((ShNo _ _ _ _ _) (RsNo m c0 e ch)))
+  (let ((erased d2) (erased r3) (erased md)) (mir-run m2 m (MkConf q r h l) (MkConf q r2 h l2) c t1 mm r1 (MkMirC q r l h)))
+  (let-match erased md (MkMirC _ _ _ _))
+  (RsOk m c0 (MkRq q L2 h R2) (rch-run m c0 c _ e _ t1 ch dc r3 (MkDc q L2 R2 h l2 r2 dl2 dr2))))
+
+(def-fns _ $ (many rmove : (many (List (Tr)) m m2) (erased (MirM m2 m) mm) (erased (Conf) c0) (many (Rq) e) (erased (Rch m c0 e) ch) -> (many (Rs m c0) r))
+  (let-match many (rshift m m2 mm 64 c0 e ch) (RsNo _ _ e1 ch1) ((RsOk _ _ e1 ch1) (RsOk m c0 e1 ch1)))
+  (rstep m c0 e1 ch1))
+
+(def-fns _ $ (many mrun : (many (List (Tr)) m m2) (erased (MirM m2 m) mm) (erased (Conf) c0) (subterm many (Nat) fuel) (many (Rq) e) (erased (Rch m c0 e) ch)
+    -> (many (Rq) e2) (erased (Rch m c0 e2) ch2))
+  (let-match many fuel (Succ f) ((Zero) (values e ch)))
+  (let-match many (rmove m m2 mm c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ e1 ch1) (values e1 ch1)))
+  (tail $ mrun m m2 mm c0 f e1 ch1))
