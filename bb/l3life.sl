@@ -112,7 +112,17 @@
     ((GLen g0) (let ((many g3) (many _) (erased _) (erased _) (erased _) (erased _)) (divmod g0 (Succ (Succ (Succ (Zero)))) (LtZ _))) (values g3 (BFalse)))))
   (jump-k c0 e ch F s n ok mx bn X T ph ex a1 b1 ra1 tb1 ae1 front (min-nat g s) (Succ (Succ (Succ (Succ (Zero)))))))
 
+(def-fns _ $ (many lmom : (many (Nat) q) (many (Bool) h) (many (List (Rn)) L) -> (many (Bool) b))
+  (let-match many h (BTrue) ((BFalse) (BFalse)))
+  (let-match many (nat-eq q 2) (Equal _ _ _) (else (BFalse)))
+  (let-match many L (Cons _ rn _) ((Nil _) (BFalse)))
+  (let-match many rn (MkRn b n))
+  (let-match many b (BFalse) ((BTrue) (BFalse)))
+  (match many (lt-dec 1 n) _ ((Yes _ _ _ _ _) (BTrue)) ((No _ _ _ _ _) (BFalse))))
+
 (def-fns _ $ (many l3move2 : (many (List (Tr)) m2) (erased (MirM m2 l3) mm) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) r))
+  (let-match many e (MkRq q L h R))
+  (let-match many (lmom q h L) (BTrue) ((BFalse) (rmove l3 m2 mm c0 e ch)))
   (let-match many (try-jump c0 e ch) (RsNo _ _ e1 ch1) ((RsOk _ _ e1 ch1) (RsOk l3 c0 e1 ch1)))
   (l3move m2 mm c0 e1 ch1))
 
