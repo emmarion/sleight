@@ -139,7 +139,7 @@
   (values (Cons _ (MkRn b (Succ n)) L1) (DeC b (Succ n) L1 t (Cons (Bool) w x) d1 (RpS b n t x p))))
 
 (def-fns _ $ (many rpop : (subterm many (List (Rn)) L) (erased (List (Bool)) x) (erased (Den L x) d) ->
-    (many (Bool) h) (many (List (Rn)) L2) (erased (List (Bool)) y) (erased (Pull x h y) pp) (erased (Den L2 y) d2))
+    (many (Bool) h) (many (List (Rn)) L2) (erased (List (Bool)) y) (many (Pull x h y) pp) (erased (Den L2 y) d2))
   (let-match many L (Cons _ rn L1) ((Nil _) (let-match erased d (DeN)) (values (BFalse) L (Nil (Bool)) (PullNil) (DeN))))
   (let-match many rn (MkRn b n))
   (let-match erased d (DeC _ _ _ t _ d1 p))
@@ -550,3 +550,62 @@
   (let-match many fuel (Succ f) ((Zero) (values e ch)))
   (let-match many (rmove m m2 mm c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ e1 ch1) (values e1 ch1)))
   (tail $ mrun m m2 mm c0 f e1 ch1))
+
+(def-fns _ $ (erased rp-split : (erased (Bool) b) (erased (Nat) c u w) (erased (List (Bool)) r x) (subterm erased (Add c u w) a) (erased (Rp b w r x) p)
+    -> (erased (List (Bool)) y) (erased (Rp b u r y) q) (erased (Rp b c y x) q2))
+  (let-match erased a (AddSucc c1 _ w1 a1) ((AddZero _) (values x p (RpZ b x))))
+  (let-match erased p (RpS _ _ _ x1 p1))
+  (let ((erased y) (erased q) (erased q2)) (rp-split b c1 u w1 r x1 a1 p1))
+  (values y q (RpS b c1 y x1 q2)))
+
+(def-adts
+  ((Strip : ((List (Bool)) u x) -> Type)
+    enum
+    (many StOk : (erased (List (Bool)) u x y) (many (List (Rn)) L) (erased (Den L y) d) (erased (Cat (Bool) u y x) c) -> (Strip u x))
+    (many StNo : (erased (List (Bool)) u x) -> (Strip u x))))
+
+(def-fns _ $ (many strip : (subterm many (List (Bool)) u) (many (List (Rn)) L) (erased (List (Bool)) x) (erased (Den L x) d) -> (many (Strip u x) s))
+  (let-match many u (Cons _ b u1) ((Nil _) (StOk u x x L d (CatN _ x))))
+  (let-match many L (Cons _ _ _) ((Nil _) (StNo u x)))
+  (let ((many h) (many L1) (erased x1) (many pp) (erased d1)) (rpop L x d))
+  (let-match many pp (PullCons _ _) ((PullNil) (StNo u x)))
+  (let-match many (eq-bit b h) (ESome _ e) ((ENone _) (StNo u x)))
+  (let-match erased e (Refl _ _))
+  (let-match many (notail $ strip u1 L1 x1 d1) (StOk _ _ y L2 d2 c) ((StNo _ _) (StNo u x)))
+  (StOk u x y L2 d2 (CatC _ b u1 y x1 c)))
+
+(def-adts
+  ((StripZ : ((Nat) w) ((List (Bool)) x) -> Type)
+    enum
+    (many SzOk : (erased (Nat) w) (erased (List (Bool)) x y) (many (List (Rn)) L) (erased (Den L y) d) (erased (Rp (BFalse) w y x) p) -> (StripZ w x))
+    (many SzNo : (erased (Nat) w) (erased (List (Bool)) x) -> (StripZ w x))))
+
+(def-fns _ $ (many stripz : (many (Nat) w) (subterm many (List (Rn)) L) (erased (List (Bool)) x) (erased (Den L x) d) -> (many (StripZ w x) s))
+  (let-match many (nat-zero-dec w) (IsSucc _) ((IsZero) (SzOk w x x L d (RpZ _ x))))
+  (let-match many L (Cons _ rn L1) ((Nil _) (SzNo w x)))
+  (let-match many rn (MkRn b n))
+  (let-match erased d (DeC _ _ _ t _ d1 p))
+  (let-match many b (BFalse) ((BTrue) (SzNo w x)))
+  (let-match many (nat-cmp w n) (CGt _ _ _ _ gt)
+    ((CEq _ _ _) (SzOk w x t L1 d1 p))
+    ((CLt _ _ _ _ lt)
+      (let ((many k) (erased a)) (sub n w (lt-weaken w n lt)))
+      (let ((erased y) (erased q2) (erased q1)) (rp-split (BFalse) w k n t x a p))
+      (SzOk w x y (Cons _ (MkRn (BFalse) k) L1) (DeC (BFalse) k L1 t y d1 q2) q1)))
+  (let ((many k) (erased a)) (sub w n (lt-weaken n w gt)))
+  (let-match many (notail $ stripz k L1 t d1) (SzOk _ _ y L2 d2 q) ((SzNo _ _) (SzNo w x)))
+  (SzOk w x y L2 d2 (rp-add (BFalse) n k w y t x p q a)))
+
+(def-fns _ $ (many pushbits : (subterm many (List (Bool)) u) (many (List (Rn)) L) (erased (List (Bool)) r) (erased (Den L r) d)
+    -> (many (List (Rn)) L2) (erased (List (Bool)) x) (erased (Den L2 x) d2) (erased (Cat (Bool) u r x) c))
+  (let-match many u (Cons _ b u1) ((Nil _) (values L r d (CatN _ r))))
+  (let ((many L1) (erased x1) (erased d1) (erased c1)) (notail $ pushbits u1 L r d))
+  (let ((many L2) (erased d2)) (push b L1 x1 d1))
+  (values L2 (Cons (Bool) b x1) d2 (CatC _ b u1 r x1 c1)))
+
+(def-fns _ $ (many ones : (many (List (Rn)) L) (erased (List (Bool)) x) (erased (Den L x) d) -> (many (Nat) n) (erased (List (Bool)) t) (erased (Rp (BTrue) n t x) p))
+  (let-match many L (Cons _ rn L1) ((Nil _) (values (Zero) x (RpZ _ x))))
+  (let-match many rn (MkRn b n))
+  (let-match many b (BTrue) ((BFalse) (values (Zero) x (RpZ _ x))))
+  (let-match erased d (DeC _ _ _ t _ d1 p))
+  (values n t p))
