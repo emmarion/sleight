@@ -15,20 +15,20 @@
     (many DeC : (erased (Bool) b) (erased (Nat) n) (erased (List (Rn)) L) (erased (List (Bool)) t x) (erased (Den L t) d) (erased (Rp b n t x) p)
        -> (Den (Cons (Rn) (MkRn b n) L) x))))
 
-(def-adts $ (Rc : -> Type)
+(def-adts $ (Rq : -> Type)
   enum
-  (many MkRc : (many (Nat) q) (many (List (Rn)) L) (many (Bool) h) (many (List (Rn)) R) -> (Rc)))
+  (many MkRq : (many (Nat) q) (many (List (Rn)) L) (many (Bool) h) (many (List (Rn)) R) -> (Rq)))
 
 (def-adts
-  ((Dc : ((Rc) e) ((Conf) c) -> Type)
+  ((Dc : ((Rq) e) ((Conf) c) -> Type)
     enum
     (many MkDc : (erased (Nat) q) (erased (List (Rn)) L R) (erased (Bool) h) (erased (List (Bool)) l r) (erased (Den L l) dl) (erased (Den R r) dr)
-       -> (Dc (MkRc q L h R) (MkConf q l h r)))))
+       -> (Dc (MkRq q L h R) (MkConf q l h r)))))
 
 (def-adts
-  ((Rch : ((List (Tr)) m) ((Conf) c0) ((Rc) e) -> Type)
+  ((Rch : ((List (Tr)) m) ((Conf) c0) ((Rq) e) -> Type)
     enum
-    (many MkRch : (erased (List (Tr)) m) (erased (Conf) c0 a c) (erased (Rc) e) (erased (Nat) t) (erased (Run m c0 t a) r) (erased (Dc e c) d)
+    (many MkRch : (erased (List (Tr)) m) (erased (Conf) c0 a c) (erased (Rq) e) (erased (Nat) t) (erased (Run m c0 t a) r) (erased (Dc e c) d)
        (erased (CEz c a) z) -> (Rch m c0 e))))
 
 (def-adts
@@ -65,8 +65,8 @@
 (def-adts
   ((Rs : ((List (Tr)) m) ((Conf) c0) -> Type)
     enum
-    (many RsOk : (erased (List (Tr)) m) (erased (Conf) c0) (many (Rc) e) (erased (Rch m c0 e) ch) -> (Rs m c0))
-    (many RsNo : (erased (List (Tr)) m) (erased (Conf) c0) (many (Rc) e) (erased (Rch m c0 e) ch) -> (Rs m c0))))
+    (many RsOk : (erased (List (Tr)) m) (erased (Conf) c0) (many (Rq) e) (erased (Rch m c0 e) ch) -> (Rs m c0))
+    (many RsNo : (erased (List (Tr)) m) (erased (Conf) c0) (many (Rq) e) (erased (Rch m c0 e) ch) -> (Rs m c0))))
 
 (def-adts
   ((Last1 : ((List (Bool)) x) -> Type)
@@ -95,7 +95,7 @@
       (let-match erased (den-fn L1 t t2 p1 q1) (Refl _ _))
       (rp-fn b n t x y r1 r2))))
 
-(def-fns _ $ (erased dc-fn : (erased (Rc) e) (erased (Conf) c d) (erased (Dc e c) p) (erased (Dc e d) q) -> (erased (Eq (Conf) c d) r))
+(def-fns _ $ (erased dc-fn : (erased (Rq) e) (erased (Conf) c d) (erased (Dc e c) p) (erased (Dc e d) q) -> (erased (Eq (Conf) c d) r))
   (let-match erased p (MkDc q0 L R h l r dl dr))
   (let-match erased q (MkDc _ _ _ _ l2 r2 dl2 dr2))
   (let-match erased (den-fn L l l2 dl dl2) (Refl _ _))
@@ -115,7 +115,7 @@
   (let ((erased u1) (erased p1)) (run-cat m c0 a b1 t s1 r1 q1))
   (values (Succ u1) (RSnoc m c0 b1 b u1 p1 st)))
 
-(def-fns _ $ (erased rch-run : (erased (List (Tr)) m) (erased (Conf) c0 c d) (erased (Rc) e e2) (erased (Nat) s)
+(def-fns _ $ (erased rch-run : (erased (List (Tr)) m) (erased (Conf) c0 c d) (erased (Rq) e e2) (erased (Nat) s)
     (erased (Rch m c0 e) ch) (erased (Dc e c) dc) (erased (Run m c s d) r) (erased (Dc e2 d) dc2) -> (erased (Rch m c0 e2) ch2))
   (let-match erased ch (MkRch _ _ a c1 _ t r0 dc1 z))
   (let-match erased (dc-fn e c c1 dc dc1) (Refl _ _))
@@ -123,7 +123,7 @@
   (let ((erased u) (erased r3)) (run-cat m c0 a a2 t s r0 r2))
   (MkRch m c0 a2 d e2 u r3 dc2 z2))
 
-(def-fns _ $ (erased rch-stp : (erased (List (Tr)) m) (erased (Conf) c0 c d) (erased (Rc) e e2)
+(def-fns _ $ (erased rch-stp : (erased (List (Tr)) m) (erased (Conf) c0 c d) (erased (Rq) e e2)
     (erased (Rch m c0 e) ch) (erased (Dc e c) dc) (erased (Stp m c d) st) (erased (Dc e2 d) dc2) -> (erased (Rch m c0 e2) ch2))
   (rch-run m c0 c d e e2 (Succ (Zero)) ch dc (RSnoc m c c d (Zero) (RNil m c) st) dc2))
 
@@ -138,35 +138,35 @@
   (let-match erased d (DeC _ _ _ t _ d1 p))
   (values (Cons _ (MkRn b (Succ n)) L1) (DeC b (Succ n) L1 t (Cons (Bool) w x) d1 (RpS b n t x p))))
 
-(def-fns _ $ (many pop : (subterm many (List (Rn)) L) (erased (List (Bool)) x) (erased (Den L x) d) ->
+(def-fns _ $ (many rpop : (subterm many (List (Rn)) L) (erased (List (Bool)) x) (erased (Den L x) d) ->
     (many (Bool) h) (many (List (Rn)) L2) (erased (List (Bool)) y) (erased (Pull x h y) pp) (erased (Den L2 y) d2))
   (let-match many L (Cons _ rn L1) ((Nil _) (let-match erased d (DeN)) (values (BFalse) L (Nil (Bool)) (PullNil) (DeN))))
   (let-match many rn (MkRn b n))
   (let-match erased d (DeC _ _ _ t _ d1 p))
   (match many n _
-    ((Zero) (let-match erased p (RpZ _ _)) (tail $ pop L1 x d1))
+    ((Zero) (let-match erased p (RpZ _ _)) (tail $ rpop L1 x d1))
     ((Succ n1)
       (let-match erased p (RpS _ _ _ x1 p1))
       (let-match many (nat-zero-dec n1) (IsZero) ((IsSucc _) (values b (Cons _ (MkRn b n1) L1) x1 (PullCons b x1) (DeC b n1 L1 t x1 d1 p1))))
       (let-match erased p1 (RpZ _ _))
       (values b L1 x1 (PullCons b x1) d1))))
 
-(def-fns _ $ (many rstep : (many (List (Tr)) m) (erased (Conf) c0) (many (Rc) e) (erased (Rch m c0 e) ch) -> (many (Rs m c0) r))
+(def-fns _ $ (many rstep : (many (List (Tr)) m) (erased (Conf) c0) (many (Rq) e) (erased (Rch m c0 e) ch) -> (many (Rs m c0) r))
   (let-match erased ch (MkRch _ _ a c _ t r0 dc z))
-  (let-match many e (MkRc q L h R))
+  (let-match many e (MkRq q L h R))
   (let-match erased dc (MkDc _ _ _ _ l r dl dr))
   (let-match many (tlook m q h) (LkOk _ _ _ tr lk) ((LkNo _ _ _) (RsNo m c0 e ch)))
   (let-match many tr (Mov w d q2) ((Hlt) (RsNo m c0 e ch)))
   (match many d _
     ((DR)
       (let ((many L2) (erased dl2)) (push w L l dl))
-      (let ((many h2) (many R2) (erased r2) (erased pp) (erased dr2)) (pop R r dr))
-      (let ((many e2)) (MkRc q2 L2 h2 R2))
+      (let ((many h2) (many R2) (erased r2) (erased pp) (erased dr2)) (rpop R r dr))
+      (let ((many e2)) (MkRq q2 L2 h2 R2))
       (RsOk m c0 e2 (rch-stp m c0 c _ e e2 ch dc (StepR m q q2 l r r2 h w h2 lk pp) (MkDc q2 L2 R2 h2 (Cons (Bool) w l) r2 dl2 dr2))))
     ((DL)
       (let ((many R2) (erased dr2)) (push w R r dr))
-      (let ((many h2) (many L2) (erased l2) (erased pp) (erased dl2)) (pop L l dl))
-      (let ((many e2)) (MkRc q2 L2 h2 R2))
+      (let ((many h2) (many L2) (erased l2) (erased pp) (erased dl2)) (rpop L l dl))
+      (let ((many e2)) (MkRq q2 L2 h2 R2))
       (RsOk m c0 e2 (rch-stp m c0 c _ e e2 ch dc (StepL m q q2 l r l2 h w h2 lk pp) (MkDc q2 L2 R2 h2 l2 (Cons (Bool) w r) dl2 dr2))))))
 
 (def-fns _ $ (erased rp-ex : (erased (Bool) b) (subterm erased (Nat) n) (erased (List (Bool)) t) -> (erased (List (Bool)) x) (erased (Rp b n t x) p))
@@ -213,17 +213,17 @@
     ((L1H) (let-match erased lx1 (LengthNil _)) (LtS (Zero) (Succ k1) (LtZ k1))))
   (LtS n1 (Succ k1) (eqz-len x1 y1 n1 k1 e1 l1 lx1 ly1)))
 
-(def-fns _ $ (erased trim-len : (erased (List (Bool)) x y) (erased (Nat) n k) (erased (Eqz x y) e) (erased (Trim x) tr)
+(def-fns _ $ (erased rtrim-len : (erased (List (Bool)) x y) (erased (Nat) n k) (erased (Eqz x y) e) (erased (Trim x) tr)
     (erased (Length (Bool) x n) lx) (erased (Length (Bool) y k) ly) -> (erased (Lt n (Succ k)) r))
   (let-match erased tr (TrL _ l) ((TrN) (let-match erased lx (LengthNil _)) (LtZ k)))
   (eqz-len x y n k e l lx ly))
 
-(def-fns _ $ (many trim : (subterm many (List (Rn)) L) (erased (List (Bool)) x) (erased (Den L x) d) ->
+(def-fns _ $ (many rtrim : (subterm many (List (Rn)) L) (erased (List (Bool)) x) (erased (Den L x) d) ->
     (many (List (Rn)) L2) (erased (List (Bool)) y) (erased (Den L2 y) d2) (erased (Eqz x y) ez) (many (Trim y) tr))
   (let-match many L (Cons _ rn L1) ((Nil _) (let-match erased d (DeN)) (values L (Nil (Bool)) (DeN) (EZ _ _ (ZN) (ZN)) (TrN))))
   (let-match many rn (MkRn b n))
   (let-match erased d (DeC _ _ _ t _ d1 p))
-  (let ((many L3) (erased y1) (erased d3) (erased e1) (many tr1)) (notail $ trim L1 t d1))
+  (let ((many L3) (erased y1) (erased d3) (erased e1) (many tr1)) (notail $ rtrim L1 t d1))
   (let ((erased y) (erased py)) (rp-ex b n y1))
   (let ((many keep)) (Cons _ rn L3))
   (let ((erased dk)) (DeC b n L3 y1 y d3 py))
@@ -279,14 +279,14 @@
     (many SpOk : (erased (List (Tr)) m) (erased (Conf) c0) (erased (Nat) n) (erased (Span m c0 n) sp) -> (SpanR m c0 n))
     (many SpLow : (erased (List (Tr)) m) (erased (Conf) c0) (erased (Nat) n) (many (Nat) got) -> (SpanR m c0 n))))
 
-(def-fns _ $ (many span-check : (erased (List (Tr)) m) (many (Nat) N) (many (Rc) e) (erased (Rch m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) e) ch)
+(def-fns _ $ (many span-check : (erased (List (Tr)) m) (many (Nat) N) (many (Rq) e) (erased (Rch m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) e) ch)
     -> (many (SpanR m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) N) r))
   (let-match erased ch (MkRch _ c0 a c _ t r0 dc z))
-  (let-match many e (MkRc q L h R))
+  (let-match many e (MkRq q L h R))
   (let-match erased dc (MkDc _ _ _ _ l r dl dr))
   (let-match erased z (MkCEz _ _ _ la ra _ el er))
-  (let ((many L2) (erased yl) (erased dl2) (erased e1) (many t1)) (trim L l dl))
-  (let ((many R2) (erased yr) (erased dr2) (erased e2) (many t2)) (trim R r dr))
+  (let ((many L2) (erased yl) (erased dl2) (erased e1) (many t1)) (rtrim L l dl))
+  (let ((many R2) (erased yr) (erased dr2) (erased e2) (many t2)) (rtrim R r dr))
   (let ((many nl) (erased ll)) (rsum L2 yl dl2))
   (let ((many nr) (erased lr)) (rsum R2 yr dr2))
   (let ((many n) (erased an)) (add nl nr))
@@ -296,19 +296,19 @@
   (let ((erased S) (erased aS)) (add-ex kl kr))
   (let ((erased S2) (erased z2) (erased le2)) (run-csz m c0 a t r0 (MkCsz (Zero) (Nil (Bool)) (Nil (Bool)) (BFalse) (Zero) (Zero) (Zero) (LengthNil _) (LengthNil _) (AddZero (Zero)))))
   (let-match erased (csz-fn a S S2 (MkCsz q la ra h kl kr S lla lra aS) z2) (Refl _ _))
-  (let ((erased gl)) (trim-len yl la nl kl (eqz-trans yl l la (eqz-sym l yl e1) el) t1 ll lla))
-  (let ((erased gr)) (trim-len yr ra nr kr (eqz-trans yr r ra (eqz-sym r yr e2) er) t2 lr lra))
+  (let ((erased gl)) (rtrim-len yl la nl kl (eqz-trans yl l la (eqz-sym l yl e1) el) t1 ll lla))
+  (let ((erased gr)) (rtrim-len yr ra nr kr (eqz-trans yr r ra (eqz-sym r yr e2) er) t2 lr lra))
   (let ((erased M) (erased aM)) (add-ex kl nr))
   (let ((erased gn)) (le-tr n M S (add-mono nl kl nr n M an aM gl) (add-mono nr kr kl M S (add-comm kl nr M aM) (add-comm kl kr S aS) gr)))
   (SpOk m c0 N (MkSpan m c0 a N t r0 (le-tr N n t big (le-tr n S t gn le2)))))
 
-(def-fns _ $ (erased rch0 : (erased (List (Tr)) m) -> (erased (Rch m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) (MkRc (Zero) (Nil (Rn)) (BFalse) (Nil (Rn)))) ch))
+(def-fns _ $ (erased rch0 : (erased (List (Tr)) m) -> (erased (Rch m (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) (MkRq (Zero) (Nil (Rn)) (BFalse) (Nil (Rn)))) ch))
   (let ((erased c0)) (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))))
   (MkRch m c0 c0 c0 _ (Zero) (RNil m c0) (MkDc (Zero) (Nil (Rn)) (Nil (Rn)) (BFalse) (Nil (Bool)) (Nil (Bool)) (DeN) (DeN))
     (MkCEz (Zero) (Nil (Bool)) (Nil (Bool)) (Nil (Bool)) (Nil (Bool)) (BFalse) (EZ _ _ (ZN) (ZN)) (EZ _ _ (ZN) (ZN)))))
 
-(def-fns _ $ (many rrun : (many (List (Tr)) m) (erased (Conf) c0) (subterm many (Nat) fuel) (many (Rc) e) (erased (Rch m c0 e) ch)
-    -> (many (Rc) e2) (erased (Rch m c0 e2) ch2))
+(def-fns _ $ (many rrun : (many (List (Tr)) m) (erased (Conf) c0) (subterm many (Nat) fuel) (many (Rq) e) (erased (Rch m c0 e) ch)
+    -> (many (Rq) e2) (erased (Rch m c0 e2) ch2))
   (let-match many fuel (Succ f) ((Zero) (values e ch)))
   (let-match many (rstep m c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ e1 ch1) (values e1 ch1)))
   (tail $ rrun m c0 f e1 ch1))
