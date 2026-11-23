@@ -101,7 +101,7 @@
   (let-match many rn (MkRn b a0))
   (let-match many b (BFalse) ((BTrue) (RsNo l3 c0 e ch)))
   (let-match many a0 (Succ a) ((Zero) (RsNo l3 c0 e ch)))
-  (let-match many (parse 1000000000 a R1) (MkPX X0 T0 rest) ((NoPX) (RsNo l3 c0 e ch)))
+  (let-match many (parse 10000000 1000000000 a R1) (MkPX X0 T0 rest) ((NoPX) (RsNo l3 c0 e ch)))
   (let ((many g) (many front)) (match many (gap-of rest) (((Nat) g) ((Bool) f)) ((GFront) (values 0 (BTrue))) ((GLen g0) (values g0 (BFalse)))))
   (let-match many (jump-room front g) (BTrue) ((BFalse) (RsNo l3 c0 e ch)))
   (let-match many (decode X0 T0) (DecOk F s) ((DecNo) (RsNo l3 c0 e ch)))
