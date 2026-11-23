@@ -64,6 +64,42 @@ machine. `bb/champ6.sl` then bounds S from below and above by towers of 2s,
 tracking only the parities and residues mod 3 of the counter values, not
 the values themselves.
 
+## A lower bound for the BB(6) holdout L3
+
+`bb/l3bound.sl` proves that the machine
+`1RB1RF_0RC1RD_1LC1LA_0LE1RE_1RA0RB_---0LC`, a BB(6) holdout, does not
+halt within 10^6000 steps from the blank tape. The goal is
+`NoHaltBelow l3 c0 N` with N written out: every k with `HaltsAt l3 c0 k`
+has N < k. With a release slc, from the repository root:
+
+```sh
+_build/release/slc std/list.sl std/immediate.sl bb/tm.sl bb/sim.sl bb/cert.sl bb/perm.sl bb/cyc.sl bb/tree.sl bb/tnf.sl bb/sym.sl bb/vec.sl bb/search.sl bb/far.sl bb/wfar.sl bb/pat.sl std/macro.sl bb/skelet.sl bb/space.sl bb/sk17.sl bb/rle.sl bb/l3.sl bb/l3tok.sl bb/l3round.sl bb/l3jump.sl bb/l3phi.sl bb/l3dec.sl bb/l3life.sl bb/l3walk.sl bb/l3bound.sl --goal proved
+```
+
+It prints `--goal proved: PASS`; in one measurement on a 4-core
+container this took about 10 minutes, nearly all of it the compiled run.
+The bound counts no steps. A run under `native-compute` reaches a
+configuration whose tape, trimmed of trailing blanks, holds more than N
+cells, and a step adds at most one cell (`bb/space.sl`), so any halt
+comes later (`span-bound` in `bb/rle.sl`).
+
+- `bb/rle.sl`, for any machine: run-length tapes with `Nat` run lengths,
+  the invariant `Rch` (a configuration reached from c0 equals the
+  tape's denotation up to trailing blanks), single steps, block shifts
+  checked by window simulation, and the span argument.
+- `bb/l3tok.sl`, `bb/l3round.sl`: L3's register round as relations, and
+  its soundness on the machine (cell rules by `sk-family`).
+- `bb/l3phi.sl`: the canonical register states phi and their
+  conjugacy with one round. `bb/l3jump.sl`, `bb/l3life.sl`: chains of
+  rounds on the tape, and the life jump from phi(s) to phi(s-k).
+- `bb/l3walk.sl`: sweep and walk macros for rounds that touch other
+  tape contents.
+- `bb/l3dec.sl` and the token parser propose what a macro should try;
+  they carry no proof, and each proposal is checked against the tape.
+
+These follow the Rocq development of the same machine in
+busycoq-L3 (`verify/lin3*.v`), whose analysis they port.
+
 ## The Skelet #1 runners
 
 Two runners for the Skelet #1 job sit side by side and run the same
