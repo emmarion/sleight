@@ -74,7 +74,7 @@
 (def-fns _ $ (many fam-of : (many (Bool) v2) (many (Bool) odd) (many (Nat) P) (many (Tt) T) -> (many (Fam) F))
   (match many v2 _
     ((BFalse) (match many odd _ ((BFalse) (FE P T)) ((BTrue) (FO P T))))
-    ((BTrue) (match many odd _ ((BFalse) (FVE P)) ((BTrue) (FVO P))))))
+    ((BTrue) (match many odd _ ((BFalse) (FVE (Succ P))) ((BTrue) (FVO (Succ P)))))))
 
 (def-fns _ $ (many dec-pairs : (many (Bool) v2) (many (List (Nat)) B) (many (List (Nat)) E) (many (Tt) T) -> (many (Dec) r))
   (let ((many n) (many par) (erased _) (erased _) (erased _) (erased _)) (divmod (nlen B) (Succ (Succ (Zero))) (LtZ _)))

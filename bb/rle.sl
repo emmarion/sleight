@@ -629,3 +629,10 @@
   (let-match erased z (MkCEz _ _ _ la ra _ el er))
   (let ((many R2) (erased y) (erased d2) (erased ez)) (padr R w r dr))
   (values (MkRq q L h R2) (MkRch m c0 a _ _ t r0 (MkDc q L R2 h l y dl d2) (MkCEz q l y la ra h el (eqz-trans y r ra (eqz-sym r y ez) er)))))
+
+(def-fns _ $ (erased den-ex : (subterm erased (List (Rn)) L) -> (erased (List (Bool)) x) (erased (Den L x) d))
+  (let-match erased L (Cons _ rn L1) ((Nil _) (values (Nil (Bool)) (DeN))))
+  (let-match erased rn (MkRn b n))
+  (let ((erased t) (erased d1)) (den-ex L1))
+  (let ((erased x) (erased p)) (rp-ex b n t))
+  (values x (DeC b n L1 t x d1 p)))
