@@ -302,7 +302,7 @@
 
 (def-adts $ (PX : -> Type)
   enum
-  (many MkPX : (many (List (Tk)) X) (many (Tt) T) -> (PX))
+  (many MkPX : (many (List (Tk)) X) (many (Tt) T) (many (List (Rn)) rest) -> (PX))
   (many NoPX : -> (PX)))
 
 (def-fns _ $ (many dig : (many (Nat) z) (many (List (Tk)) R) -> (many (List (Tk)) X))
@@ -319,14 +319,14 @@
   (Cons _ a (notail $ tk-app A1 X)))
 
 (def-fns _ $ (many pcons : (many (List (Tk)) A) (many (PX) p) -> (many (PX) r))
-  (let-match many p (MkPX X T) ((NoPX) (NoPX)))
-  (MkPX (tk-app A X) T))
+  (let-match many p (MkPX X T rest) ((NoPX) (NoPX)))
+  (MkPX (tk-app A X) T rest))
 
-(def-fns _ $ (many tail-of : (many (Nat) z) -> (many (PX) p))
+(def-fns _ $ (many tail-of : (many (Nat) z) (many (List (Rn)) rest) -> (many (PX) p))
   (let-match many z (Succ z1) ((Zero) (NoPX)))
-  (let-match many z1 (Succ z2) ((Zero) (MkPX (Nil (Tk)) (Tt011))))
+  (let-match many z1 (Succ z2) ((Zero) (MkPX (Nil (Tk)) (Tt011) rest)))
   (let-match many z2 (Zero) ((Succ _) (NoPX)))
-  (MkPX (Nil (Tk)) (Tt0011)))
+  (MkPX (Nil (Tk)) (Tt0011) rest))
 
 (def-fns _ $ (many parse : (many (Nat) z) (subterm many (List (Rn)) R) -> (many (PX) p))
   (let-match many (lt-dec 3 z) (No _ _ _ _ _) ((Yes _ _ _ _ _) (NoPX)))
@@ -335,13 +335,13 @@
   (let-match many b (BTrue) ((BFalse) (NoPX)))
   (let-match many (lt-dec L 1000) (Yes _ _ _ _ _) ((No _ _ _ _ _) (NoPX)))
   (let ((many j) (many rm) (erased _) (erased _) (erased _) (erased _)) (divmod L (Succ (Succ (Succ (Zero)))) (LtZ _)))
-  (let-match many j (Succ j1) ((Zero) (let-match many (nat-eq rm 2) (Equal _ _ _) (else (NoPX))) (tail-of z)))
+  (let-match many j (Succ j1) ((Zero) (let-match many (nat-eq rm 2) (Equal _ _ _) (else (NoPX))) (tail-of z R1)))
   (let ((many toks)) (dig z (t0s j1 (Nil (Tk)))))
-  (let-match many rm (Zero) ((Succ rm1) (let-match many rm1 (Zero) ((Succ _) (MkPX toks (Tt11)))) (MkPX toks (Tt1))))
-  (let-match many R1 (Cons _ rn2 R2) ((Nil _) (MkPX toks (TtE))))
+  (let-match many rm (Zero) ((Succ rm1) (let-match many rm1 (Zero) ((Succ _) (MkPX toks (Tt11) R1))) (MkPX toks (Tt1) R1)))
+  (let-match many R1 (Cons _ rn2 R2) ((Nil _) (MkPX toks (TtE) R1)))
   (let-match many rn2 (MkRn _ a))
-  (let-match many (lt-dec 3 a) (No _ _ _ _ _) ((Yes _ _ _ _ _) (MkPX toks (TtE))))
-  (let-match many R2 (Cons _ _ _) ((Nil _) (MkPX toks (TtE))))
+  (let-match many (lt-dec 3 a) (No _ _ _ _ _) ((Yes _ _ _ _ _) (MkPX toks (TtE) R1)))
+  (let-match many R2 (Cons _ _ _) ((Nil _) (MkPX toks (TtE) R1)))
   (pcons toks (notail $ parse a R2)))
 
 (def-fns _ $ (many try-round : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
@@ -350,7 +350,7 @@
   (let-match many rn (MkRn b a0))
   (let-match many b (BFalse) ((BTrue) (RsNo l3 c0 e ch)))
   (let-match many a0 (Succ a) ((Zero) (RsNo l3 c0 e ch)))
-  (let-match many (parse a R1) (MkPX X T) ((NoPX) (RsNo l3 c0 e ch)))
+  (let-match many (parse a R1) (MkPX X T _) ((NoPX) (RsNo l3 c0 e ch)))
   (let-match many (rd-run X T) (RdOk _ _ Y T2 c rd) ((RdNo _ _) (RsNo l3 c0 e ch)))
   (apply-rdk c0 e ch (Succ (Zero)) c X Y T T2 (RkS (Zero) c (Zero) c X Y Y T T2 T2 rd (RkZ Y T2) (add-zero-right c))))
 

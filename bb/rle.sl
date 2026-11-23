@@ -519,6 +519,7 @@
     (many (List (Rn)) O) (erased (List (Bool)) o) (erased (Den O o) do) -> (many (Sh m q h s o) r))
   (let-match many S (Cons _ rn S1) ((Nil _) (ShNo m q h s o)))
   (let-match many rn (MkRn b n))
+  (let-match many (lt-dec 2 n) (Yes _ _ _ _ _) ((No _ _ _ _ _) (ShNo m q h s o)))
   (let-match erased ds (DeC _ _ _ t _ d1 p))
   (let-match many (tsim m q h fuel q (Cons (Bool) b (Nil (Bool))) h (Nil (Bool))) (TSOk _ _ _ _ v w) ((TSNo _ _ _ _) (ShNo m q h s o)))
   (let-match many v (Cons _ c v1) ((Nil _)
