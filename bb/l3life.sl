@@ -63,7 +63,7 @@
 
 (def-fns _ $ (many jump-room : (many (Bool) front) (many (Nat) g) -> (many (Bool) b))
   (let-match many front (BFalse) ((BTrue) (BTrue)))
-  (match many (lt-dec 2 g) _ ((Yes _ _ _ _ _) (BTrue)) ((No _ _ _ _ _) (BFalse))))
+  (match many (lt-dec 192 g) _ ((Yes _ _ _ _ _) (BTrue)) ((No _ _ _ _ _) (BFalse))))
 
 (def-fns _ $ (many min-nat : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
   (match many (lt-dec a b) _ ((Yes _ _ _ _ _) a) ((No _ _ _ _ _) b)))
