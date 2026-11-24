@@ -54,20 +54,21 @@
      (erased (Pow x (Succ (Succ m)) xp) px) (erased (Mul c xp r) cr) (erased (Lt l (Succ r)) le)
      -> (MertensBelow q a m c x)))
 
-; L, M: levels of the outer function and of the bound it returns.
-(def-adts $ (MertensAPBound : ((Nat) q) ((Nat) a) -> Type)
-  enum
-  (many MkMertensAPBound : (erased (Nat) q a) (erased (Level) L)
-     (erased (Fn L (erased (Nat) m) -> (erased (Nat) c) (erased (Level) M)
-                 (erased (Fn M (erased (Nat) x) -> (erased (MertensBelow q a (Succ m) c x) b)) bound)) f)
-     -> (MertensAPBound q a)))
-
+; L: the level of pick and bound; C q a m c: c is the constant pick chose for q, a and m.
 (def-adts $ (GRH : -> Type)
   enum
-  (many MkGRH : (erased (Level) L)
-     (erased (Fn L (erased (Nat) q a) (erased (Lt a (Succ q)) r) (erased (Gcd a (Succ q) (Succ (Zero))) g)
-                -> (erased (MertensAPBound (Succ q) a) h)) f) -> (GRH)))
+  (many MkGRH : (erased (Level) L) (erased (TyCtor ((Nat) q) ((Nat) a) ((Nat) m) ((Nat) c) -> Type) C)
+     (erased (Fn L (erased (Nat) q a m) (erased (Lt a (Succ q)) r) (erased (Gcd a (Succ q) (Succ (Zero))) g)
+                -> (erased (Nat) c) (erased (C q a m c) h)) pick)
+     (erased (Fn L (erased (Nat) q a m c x) (erased (Lt a (Succ q)) r) (erased (Gcd a (Succ q) (Succ (Zero))) g)
+                (erased (C q a m c) h) -> (erased (MertensBelow (Succ q) a (Succ m) c x) b)) bound)
+     -> (GRH)))
 
+; L: the level of pick and bound; C m c: c is the constant pick chose for m.
 (def-adts $ (RHMertens : -> Type)
   enum
-  (many MkRHMertens : (erased (MertensAPBound (Succ (Zero)) (Zero)) h) -> (RHMertens)))
+  (many MkRHMertens : (erased (Level) L) (erased (TyCtor ((Nat) m) ((Nat) c) -> Type) C)
+     (erased (Fn L (erased (Nat) m) -> (erased (Nat) c) (erased (C m c) h)) pick)
+     (erased (Fn L (erased (Nat) m c x) (erased (C m c) h)
+                -> (erased (MertensBelow (Succ (Zero)) (Zero) (Succ m) c x) b)) bound)
+     -> (RHMertens)))
