@@ -9,3 +9,5 @@ Status:
 - SWEEP3: proven (start3 cell episode + c-sw0 trips); 769/769 match.
 - ITER, IDENT: proven (RdK chains via rd-run, c-apply; IDENT adds wtk/tokz re-tokenization); 641/641 and 168/168.
 - CONTACT: proven (contact-round cell episodes c-m1, c-m11*, c-m011* + l3round merge/tturn/sw-push/desc/walk); 805/805.
+- CONTACT0 (never fires: mcontact _ _ 0 = None), BIGJ, BIGJC: proven by construction (guards + c-move9 + try-contact); 0 instances in moves 1..40035.
+- Negative check (hm2, all indices): no implemented macro fires where Rocq chose an earlier entry or a later one, 40035 moves.
