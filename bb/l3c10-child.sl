@@ -841,7 +841,7 @@
 (def-fns _ $ (many fe-cert : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Bool) child) (many (LmC) lc) (many (Maybe (Nat)) mp) (many (Nat) rho)
     -> (many (Rs l3 c0) res))
   (match many child _
-    ((BTrue) (c-certify c0 e ch 20000 (m-child lc mp rho)))
+    ((BTrue) (c-certify c0 e ch 1000000 (m-child lc mp rho)))
     ((BFalse) (c-certify c0 e ch 64 (m-bcovf lc mp rho)))))
 
 (def-fns _ $ (many try-fe : (many (Bool) child) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
@@ -859,7 +859,7 @@
   (RsOk l3 c0 e2 ch2))
 
 (def-fns _ $ (many try-death : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
-  (c-certify c0 e ch 100000 (m-death (lmc e))))
+  (c-certify c0 e ch 1000000 (m-death (lmc e))))
 
 (def-fns _ $ (many try-beven : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
   (c-certify c0 e ch 100000 (m-beven (lmc e))))
