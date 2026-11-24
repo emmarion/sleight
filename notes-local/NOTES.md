@@ -7,3 +7,4 @@ Scratch: /tmp/claude-0/local (drvL in oc/, bld.sh, hm.txt = `drvL hm 0 40035 hm.
 Status:
 - L0, AX, FRAME: framed simulator (sim6 port) + certificates by native-compute; 3141/3141 in-situ instances match.
 - SWEEP3: proven (start3 cell episode + c-sw0 trips); 769/769 match.
+- ITER, IDENT: proven (RdK chains via rd-run, c-apply; IDENT adds wtk/tokz re-tokenization); 641/641 and 168/168.
