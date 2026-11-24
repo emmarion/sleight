@@ -400,3 +400,25 @@
 
 (def-fns _ $ (many mac-absorb : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
   (c-train (BTrue) c0 e ch))
+
+(def-fns _ $ (many runs-eq : (subterm many (List (Rn)) A) (many (List (Rn)) B) -> (many (Bool) r))
+  (let-match many A (Cons _ ra A1) ((Nil _) (match many B _ ((Nil _) (BTrue)) (else (BFalse)))))
+  (let-match many B (Cons _ rb B1) ((Nil _) (BFalse)))
+  (let-match many ra (MkRn x m))
+  (let-match many rb (MkRn y k))
+  (let-match many (eq-bit x y) (ESome _ _) ((ENone _) (BFalse)))
+  (let-match many (nat-eq m k) (Equal _ _ _) (else (BFalse)))
+  (tail $ runs-eq A1 B1))
+
+(def-fns _ $ (many rq-eq : (many (Rq) e f) -> (many (Bool) r))
+  (let-match many e (MkRq q L h R))
+  (let-match many f (MkRq q2 L2 h2 R2))
+  (let-match many (nat-eq q q2) (Equal _ _ _) (else (BFalse)))
+  (let-match many (eq-bit h h2) (ESome _ _) ((ENone _) (BFalse)))
+  (let-match many (runs-eq L L2) (BTrue) ((BFalse) (BFalse)))
+  (runs-eq R R2))
+
+(def-fns _ $ (many c10-mac : (many (Nat) idx) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
+  (match many (nat-eq idx 9) _
+    ((Equal _ _ _) (mac-chain c0 e ch))
+    (else (match many (nat-eq idx 23) _ ((Equal _ _ _) (mac-absorb c0 e ch)) (else (RsNo l3 c0 e ch))))))

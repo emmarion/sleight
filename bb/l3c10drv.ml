@@ -38,6 +38,8 @@ let sdiff o n =
   let b = Buffer.create 64 in
   Buffer.add_string b (string_of_int (lo - common)); Buffer.add_char b ' '; side b (taken (ln - common) n); Buffer.contents b
 let diff (((_, l0), _), r0) (((q, l1), s), r1) = Printf.sprintf "2 %d %d\n%s%s" (qi q) (si s) (sdiff l0 l1) (sdiff r0 r1)
+let chk = match Sys.getenv_opt "C10CHK" with
+  | Some v when v <> "" -> List.map int_of_string (String.split_on_char ',' v) | _ -> []
 let writef f s = let oc = open_out f in output_string oc s; close_out oc
 let () = match Sys.argv.(1) with
   | "trace" ->
@@ -73,6 +75,8 @@ let () = match Sys.argv.(1) with
         let (((q, ll), s), rr) = c1 in
         let fr = function [] -> "2 0" | (b, n) :: _ -> Printf.sprintf "%d %s" (si b) (Z.to_string n) in
         Printf.fprintf oc "1 %d %d %d %s %s\n" cls (qi q) (si s) (fr ll) (fr rr)
+      else if List.mem i chk && not all then
+        (let d = diff c0 c1 in Printf.fprintf oc "3 %d %s" i (String.sub d 2 (String.length d - 2)))
       else output_string oc (diff c0 c1);
       c := c1
     done;
