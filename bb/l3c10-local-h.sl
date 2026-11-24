@@ -5,6 +5,7 @@
   (let-match many (nat-eq idx 22) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BTrue) (try-sweep3 c0 e ch))))
   (let-match many (nat-eq idx 20) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BTrue) (try-iterG c0 e ch))))
   (let-match many (nat-eq idx 21) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BTrue) (try-identG c0 e ch))))
+  (let-match many (nat-eq idx 18) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BTrue) (try-contact c0 e ch))))
   (values (BFalse) (RsNo l3 c0 e ch)))
 
 (def-fns _ $ (many m-rep : (subterm many (Nat) k) (many (Nat) idx) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Bool) has) (many (Rs l3 c0) res))

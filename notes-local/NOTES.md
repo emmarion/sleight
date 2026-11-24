@@ -8,3 +8,4 @@ Status:
 - L0, AX, FRAME: framed simulator (sim6 port) + certificates by native-compute; 3141/3141 in-situ instances match.
 - SWEEP3: proven (start3 cell episode + c-sw0 trips); 769/769 match.
 - ITER, IDENT: proven (RdK chains via rd-run, c-apply; IDENT adds wtk/tokz re-tokenization); 641/641 and 168/168.
+- CONTACT: proven (contact-round cell episodes c-m1, c-m11*, c-m011* + l3round merge/tturn/sw-push/desc/walk); 805/805.

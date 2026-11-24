@@ -96,7 +96,8 @@ let () = match Sys.argv.(1) with
         Printf.fprintf oc "1 %d %d %d %s %s\n" cls (qi q) (si s) (fr ll) (fr rr) end
       else begin
         let d = diff c0 c1 in
-        if List.mem i mine then Printf.fprintf oc "3 %d %s" i (String.sub d 2 (String.length d - 2))
+        let i = if cls >= 0 then 26 else i in
+        if i = 26 || List.mem i mine then Printf.fprintf oc "3 %d %s" i (String.sub d 2 (String.length d - 2))
         else output_string oc d end;
       c := c1
     done;
