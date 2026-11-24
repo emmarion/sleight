@@ -12,11 +12,11 @@ is used. Rocq certifies AEND through the A-end theory (`aendChk`,
 same run and certifies each part with proven pieces:
 
 - the climb over the walked death debris, one marker `1^6` at a time,
-  is `aend-loop`, a copy of `l3c10-chain.sl`'s `ms-loop` that picks the
-  contact by the gap the jump leaves: 2 blanks take `ct-absorb` (Rocq's
-  `mcontact`), any other gap takes `ct-chain` (the identity re-read of
-  the marker as two `T0` tokens) followed by `stride`'s rounds; the
-  jump is `ms-jk`. On the sampled instances the gaps were 2 and 0, as
+  is `l3c10-chain.sl`'s `ms-loop` with its `mix` flag set, which picks
+  the contact by the gap the jump leaves: 2 blanks take `ct-absorb`
+  (Rocq's `mcontact`), any other gap takes `ct-chain` (the identity
+  re-read of the marker as two `T0` tokens) followed by `stride`'s
+  rounds; the jump is `ms-jk`. On the sampled instances the gaps were 2 and 0, as
   `lin3d28_climb` seems to predict;
 - the Ddeath contact (`lin3d28_dd.ddcontact`) is `ct-dd`: the gadget,
   the sweep to the end, `merge` on `1 00`, a sweep over the four `T0`
@@ -33,6 +33,9 @@ an odd family at `s = max - 2` (`memOK`'s fresh member). Rocq's
 `aendChk` is not recomputed; the run itself is checked.
 
 ## Changes outside this file
+
+`bb/l3c10-chain.sl`: `ms-loop` takes a second flag `mix`; with it
+unset (as `c-train` passes it) the loop is as before.
 
 `bb/l3c10-desc.sl`: `dprop` dispatches index 11 to `c-aend`, so
 `bb/l3c10-aend.sl` is loaded after `bb/l3c10-chain.sl` and
@@ -52,5 +55,5 @@ which `c-aend` fires.
 7.2 s of user time; Rocq's own time for them is about 7.6 s. A
 callgrind profile of one large instance (243 markers) puts about two
 thirds of `c-aend` in `phi-run`, one call in the jump and one in
-`ident` per marker, and much of the rest in the garbage collector, so
+`ident` per marker in the usual case, and much of the rest in the garbage collector, so
 the cost per marker is O(P) like Rocq's `climbChk`.
