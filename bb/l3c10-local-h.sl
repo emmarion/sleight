@@ -10,6 +10,7 @@
   (let-match many (nat-eq idx 1) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BTrue) (try-bigj c0 e ch))))
   (let-match many (nat-eq idx 19) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BTrue) (try-contact0 c0 e ch))))
   (let-match many (nat-eq idx 15) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BTrue) (try-train c0 e ch))))
+  (let-match many (nat-eq idx 16) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BTrue) (try-traing c0 e ch))))
   (values (BFalse) (RsNo l3 c0 e ch)))
 
 (def-fns _ $ (many neg-ok : (subterm many (List (Nat)) js) (many (Nat) idx) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Nat) bad))
@@ -19,7 +20,7 @@
   (let-match many r (RsNo _ _ _ _) ((RsOk _ _ _ _) (Succ j)))
   (tail $ neg-ok js1 idx c0 e ch))
 
-(let ((many mine)) (Cons _ 0 $ Cons _ 1 $ Cons _ 12 $ Cons _ 13 $ Cons _ 14 $ Cons _ 18 $ Cons _ 19 $ Cons _ 20 $ Cons _ 21 $ Cons _ 22 $ Nil (Nat)))
+(let ((many mine)) (Cons _ 0 $ Cons _ 1 $ Cons _ 12 $ Cons _ 13 $ Cons _ 14 $ Cons _ 15 $ Cons _ 16 $ Cons _ 18 $ Cons _ 19 $ Cons _ 20 $ Cons _ 21 $ Cons _ 22 $ Nil (Nat)))
 
 (def-fns _ $ (many m-rep : (subterm many (Nat) k) (many (Nat) idx) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Bool) has) (many (Rs l3 c0) res))
   (let ((many has) (many r)) (local-mac idx c0 e ch))
