@@ -110,7 +110,7 @@
   (rns-eq R Rb))
 
 (let ((many ret-kA) (many _)) (rd-side "24 0 1 1 2 0 1 1 580281974 0 1 1 2 0 1 1 539584118 0 1 1 2 0 1 1 537040502 0 1 1 2 0 1 1 536881526 0 1 1 2 0 1 1 536871590 0 1 1 2 0 1 1 516174180" (Nil (Rn))))
-(let ((many ret-L0) (many _)) (rd-side "1 0 2 1 156" (Nil (Rn))))
+(let ((many ret-L0) (many _)) (rd-side "2 0 2 1 156" (Nil (Rn))))
 (let ((many ret-pre) (many _)) (rd-side "46 0 3 1 6 0 1 1 6 0 1 1 3 0 1 1 3 0 1 1 9 0 1 1 12 0 1 1 6 0 1 1 3 0 1 1 3 0 1 1 3 0 1 1 6 0 2 1 3 0 1 1 6 0 1 1 3 0 2 1 3 0 1 1 3 0 2 1 10 0 516173960 1 6 0 536871588 1 6 0 536881524 1 6 0 537040500 1 6 0 539584116 1 6 0 580281972 1 6" (Nil (Rn))))
 
 (def-fns _ $ (many rn-pushm : (many (Bool) b) (many (Nat) n) (many (List (Rn)) L) -> (many (List (Rn)) L2))
@@ -161,12 +161,19 @@
   (let-match many K (Cons _ _ _) ((Nil _) (None _)))
   (Some _ (MkRq 2 Lr (BTrue) (rn-pushm (BFalse) 2 (ret-v K (rn-pushm (BFalse) a2 Rz))))))
 
+(def-fns _ $ (many parse-top : (subterm many (Nat) fuel) (many (List (Rn)) L) -> (many (Maybe (List (Nat))) K))
+  (let-match many fuel (Succ f) ((Zero) (None _)))
+  (let-match many (rns-eq L ret-kA) (BFalse) ((BTrue) (Some _ (Nil (Nat)))))
+  (let ((many t) (many L2)) (tok-pair L))
+  (let-match many t (Some _ k) ((None _) (None _)))
+  (let-match many (notail $ parse-top f L2) (Some _ K) ((None _) (None _)))
+  (Some _ (Cons _ k K)))
+
 (def-fns _ $ (many c-ret : (many (Rq) e) -> (many (Maybe (Rq)) r))
   (let ((many a) (many Rz)) (walk-in e))
   (let-match many a (Some _ a2) ((None _) (None _)))
   (let-match many e (MkRq _ L _ _))
-  (let ((many K) (many Lr)) (parse-toks 1000000000 L))
-  (let-match many (rns-eq Lr ret-kA) (BTrue) ((BFalse) (None _)))
+  (let-match many (parse-top 1000000000 L) (Some _ K) ((None _) (None _)))
   (Some _ (MkRq 2 ret-L0 (BTrue) (rn-app ret-pre (ret-v K (rn-pushm (BFalse) a2 Rz))))))
 
 (def-fns _ $ (many dprop : (many (Nat) idx) (many (Rq) e) -> (many (Maybe (Maybe (Rq))) r))
