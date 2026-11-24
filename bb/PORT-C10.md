@@ -50,9 +50,9 @@ M9 is itself a chain: at an L-moment (`at_lm9`) the phi jump
 (`try_jump9`, JUMP), one round (`try_round`, ROUND) or a sweep
 (`try_sweep`, SWEEP); otherwise `walk_move` (WALK); otherwise, when
 `is_wc`, Rocq's `macro` (WIPE, CHAIN-W or one step); otherwise `shift`
-(SHIFT), and failing that `macro`. Of the 28,486 M9 moves among moves 1
-to 38,513 the trace shows 21,879 single steps, 2,054 CHAIN-W, 1,901
-ROUND, 1,322 WIPE, 1,088 JUMP and 242 SWEEP, and no WALK or SHIFT: the
+(SHIFT), and failing that `macro`. Of the 29,657 M9 moves among moves 1
+to 40,035 the trace shows 22,645 single steps, 2,110 CHAIN-W, 2,084
+ROUND, 1,363 WIPE, 1,201 JUMP and 254 SWEEP, and no WALK or SHIFT: the
 configurations they would take seem to be taken earlier in the list.
 
 ## The Sleight side
