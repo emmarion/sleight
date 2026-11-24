@@ -10,3 +10,9 @@
   bb/l3c10h.sl hloop kind 3 runs c10-mac (bb/l3c10-chain.sl) and requires the result equal Rocq's (HBad 6 = no fire,
   7 = differs). Load order: ... bb/l3c10.sl bb/l3c10-chain.sl bb/l3c10h.sl main.sl.
   Hint streams: /tmp/claude-0/rocqsim/H/h1.txt (0-22268), h2.txt (22268-40035); driver build /tmp/claude-0/rocqsim/ocH.
+- Results (7792caa5): 76/76 dump instances MATCH (34 CHAIN, 42 ABSORB); in-situ hint streams 1-22268 and
+  22269-40035 OK with end configs equal to Rocq's. Big moves, OCAMLRUNPARAM=s=32M, single runs, input parse included
+  (39956's parse alone is ~16 s): 22262 2.1 s (Rocq 15 s), 38259 5.9 s (11 s), 38507 14.7 s (121-127 s),
+  39019 8.2 s (21 s), 39739 7.3 s (23 s), 39956 84 s (403-481 s).
+- Next for speed: each marker still costs two phi computations (jump target and identification) plus sweeps;
+  lin3s8's snoc/decrement laws would remove them but are not ported.
