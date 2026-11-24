@@ -71,5 +71,3 @@
 (def-adts $ (RHMertens : -> Type)
   enum
   (many MkRHMertens : (erased (MertensAPBound (Succ (Zero)) (Zero)) h) -> (RHMertens)))
-
-(goal erased (GRH))
