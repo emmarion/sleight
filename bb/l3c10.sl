@@ -431,7 +431,7 @@
   (let-match erased (ls-fn _ K x2 x3 ls2 ls3) (Refl _ _))
   (RsOk l3 c0 (MkRq 1 Lc h2 R4) (rch-z l3 c0 _ _ _ _ e _ tr ch dc (cez-refl _) run (MkDc 1 Lc R4 h2 x3 u2 dLc d4) (cez-refl _))))
 
-(def-fns _ $ (many c-walk : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
+(def-fns _ $ (many c-walk-n : (many (Nat) depth) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
   (let ((many no)) (RsNo l3 c0 e ch))
   (let-match erased ch (MkRch _ _ a0 c _ t0 r0 dc z))
   (let-match many e (MkRq q L h R))
@@ -447,7 +447,7 @@
   (let-match erased dr (DeC _ _ _ rt _ drr pa))
   (let-match erased pa (RpS _ _ _ r1 pa1))
   (let-match erased pa1 (RpS _ _ _ r2 pa2))
-  (let-match many (stk-parse 1000000000 L x dl) (MkStk _ l K L3 ls d3))
+  (let-match many (stk-parse depth L x dl) (MkStk _ l K L3 ls d3))
   (let-match many K (Cons _ _ _) ((Nil _) no))
   (let ((many W)) (Cons _ (Tp) (Nil (Tk))))
   (let-match many (wk-run K W) (WkOk _ _ Y wk) ((WkNo _ _) no))
@@ -464,6 +464,9 @@
   (RsOk l3 c0 (MkRq 2 L3 (BTrue) Ro)
     (rch-z l3 c0 c c (MkConf 2 l (BTrue) (bits "0" yb)) _ e _ tr ch dc (cez-refl c) run (MkDc 2 L3 Ro (BTrue) l (Cons (Bool) (BFalse) w) d3 dRo)
       (MkCEz 2 l (bits "0" yb) l (bits "0" w) (BTrue) (eqz-refl l) (EC (BFalse) yb w (eqz-sym w yb (xb-eqz Y y2 r2 w yb xbw xb ez)))))))
+
+(def-fns _ $ (many c-walk : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
+  (c-walk-n 1000000000 c0 e ch))
 
 (def-adts
   ((RSim : ((List (Tr)) m) ((Conf) c) -> Type)
