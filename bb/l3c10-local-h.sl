@@ -1,11 +1,9 @@
 (def-fns _ $ (many local-mac : (many (Nat) idx) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Bool) has) (many (Rs l3 c0) res))
-  (match many (nat-eq idx 12) _
-    ((Equal _ _ _) (values (BTrue) (frame-tbl tbl-l0 c0 e ch)))
-    (else (match many (nat-eq idx 13) _
-      ((Equal _ _ _) (values (BTrue) (frame-tbl tbl-ax c0 e ch)))
-      (else (match many (nat-eq idx 14) _
-        ((Equal _ _ _) (values (BTrue) (frame-tbl tbl-frame c0 e ch)))
-        (else (values (BFalse) (RsNo l3 c0 e ch)))))))))
+  (let-match many (nat-eq idx 12) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BTrue) (frame-tbl tbl-l0 c0 e ch))))
+  (let-match many (nat-eq idx 13) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BTrue) (frame-tbl tbl-ax c0 e ch))))
+  (let-match many (nat-eq idx 14) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BTrue) (frame-tbl tbl-frame c0 e ch))))
+  (let-match many (nat-eq idx 22) (Unequal _ _ _ _ _) ((Equal _ _ _) (values (BTrue) (try-sweep3 c0 e ch))))
+  (values (BFalse) (RsNo l3 c0 e ch)))
 
 (def-fns _ $ (many m-rep : (subterm many (Nat) k) (many (Nat) idx) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Bool) has) (many (Rs l3 c0) res))
   (let ((many has) (many r)) (local-mac idx c0 e ch))
