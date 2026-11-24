@@ -129,6 +129,39 @@
   (let-match many (fd-level c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ e1 ch1) (RsNo l3 c0 e1 ch1)))
   (tail $ fd-levels k1 c0 e1 ch1))
 
+(def-fns _ $ (many fd-greedy : (subterm many (Nat) k) (many (Nat) done) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch)
+    -> (many (Nat) d) (many (Rq) e2) (erased (Rch l3 c0 e2) ch2))
+  (let-match many k (Succ k1) ((Zero) (values done e ch)))
+  (let-match many (fd-level c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ _ _) (values done e ch)))
+  (tail $ fd-greedy k1 (Succ done) c0 e1 ch1))
+
+(def-adts $ (VOk : -> Type)
+  enum
+  (many VYes : (many (Nat) q) (many (Bool) front) -> (VOk))
+  (many VNo : -> (VOk)))
+
+(def-fns _ $ (many v-check : (many (Rq) e) (erased (Conf) c) (erased (Dc e c) dc) -> (many (VOk) r))
+  (let-match many (c-lm e c dc) (LmOk _ _ _ _ _ _ _ _ _ _ X T _ R1 _ _ _) ((LmNo _) (VNo)))
+  (let-match many (decode X T) (DecOk F s) ((DecNo) (VNo)))
+  (let-match many F (FVO q) (else (VNo)))
+  (let-match many (lt-dec 1 q) (Yes _ _ _ _ _) ((No _ _ _ _ _) (VNo)))
+  (let-match many (famok F) (FkOk _ ok) ((FkNo _) (VNo)))
+  (let ((many nm) (erased mx)) (maxs-run F))
+  (let-match many (lt-dec s (Succ nm)) (Yes _ _ _ _ bn) ((No _ _ _ _ _) (VNo)))
+  (let ((many Xs) (many Ts) (erased _)) (phi-run F s nm ok mx bn))
+  (let-match many (tks-eq Xs X) (ESome _ _) ((ENone _) (VNo)))
+  (let-match many (tt-eq Ts T) (ESome _ _) ((ENone _) (VNo)))
+  (VYes q (match many R1 _ ((Nil _) (BTrue)) (else (BFalse)))))
+
+(def-fns _ $ (many c-vdesc : (many (Bool) all) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) r))
+  (let ((many no)) (RsNo l3 c0 e ch))
+  (let-match erased ch (MkRch _ _ _ c _ _ _ dc _))
+  (let-match many (v-check e c dc) (VYes q front) ((VNo) no))
+  (let ((many k)) (monus q 1))
+  (let-match many all (BFalse) ((BTrue) (match many front _ ((BTrue) (fd-levels k c0 e ch)) ((BFalse) no))))
+  (let ((many d) (many e2) (erased ch2)) (fd-greedy k 0 c0 e ch))
+  (match many d _ ((Zero) no) (else (RsOk l3 c0 e2 ch2))))
+
 (def-fns _ $ (many fd-tail-ok : (many (Tt) T) -> (many (Bool) b))
   (match many T _ ((TtE) (BTrue)) ((Tt1) (BTrue)) (else (BFalse))))
 
@@ -352,6 +385,8 @@
 (def-fns _ $ (many dprop : (many (Nat) idx) (many (Rq) e) -> (many (Maybe (Maybe (Rq))) r))
   (let ((erased c0) (erased ch)) (rch-self l3 e))
   (let-match many (nat-eq idx 17) (Unequal _ _ _ _ _) ((Equal _ _ _) (Some _ (rs-opt c0 (c-fdesc c0 e ch)))))
+  (let-match many (nat-eq idx 3) (Unequal _ _ _ _ _) ((Equal _ _ _) (Some _ (rs-opt c0 (c-vdesc (BTrue) c0 e ch)))))
+  (let-match many (nat-eq idx 25) (Unequal _ _ _ _ _) ((Equal _ _ _) (Some _ (rs-opt c0 (c-vdesc (BFalse) c0 e ch)))))
   (let-match many (nat-eq idx 2) (Unequal _ _ _ _ _) ((Equal _ _ _) (Some _ (rs-opt c0 (c-wr (BTrue) c0 e ch)))))
   (let-match many (nat-eq idx 4) (Unequal _ _ _ _ _) ((Equal _ _ _) (Some _ (rs-opt c0 (c-wr (BFalse) c0 e ch)))))
   (None _))
