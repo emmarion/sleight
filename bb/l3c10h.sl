@@ -122,3 +122,9 @@
     ((HBad k why e2) (values (show-cfg e2) (sp (sp (RStr "BAD") k) why)))))
   (let ((many o) (erased _)) (flatten (RCat r (RCat tl (RChar #\newline)))))
   o)
+
+(def-fns _ $ (many smain : (many (String) in) -> (many (String) out))
+  (let ((many n) (many _)) (tok in))
+  (let ((many left) (many e) (erased _)) (c10run _ n (MkRq (Zero) (Nil (Rn)) (BFalse) (Nil (Rn))) (rch0 l3)))
+  (let ((many o) (erased _)) (flatten (RCat (show-cfg e) (RCat (sp (RStr "LEFT") left) (RChar #\newline)))))
+  o)
