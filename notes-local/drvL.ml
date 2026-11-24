@@ -113,6 +113,26 @@ let () = match Sys.argv.(1) with
     writef (dir ^ "/preB.txt") (txt (((C, lL0), S1), preB));
     writef (dir ^ "/l0aout.txt") (txt (((C, lL0), S1), outAO (Z.add nWN (Z.of_int 4)) []));
     writef (dir ^ "/nums.txt") (Printf.sprintf "%s %s %s\n" (Z.to_string nBN) (Z.to_string nWN) (Z.to_string aXcap))
+  | "tm" ->
+    let reps = int_of_string Sys.argv.(2) in
+    let mine = List.map int_of_string (String.split_on_char ',' Sys.argv.(3)) in
+    let tt = Hashtbl.create 16 and tc = Hashtbl.create 16 and cnt = Hashtbl.create 16 in
+    let add h k v = Hashtbl.replace h k (v +. try Hashtbl.find h k with Not_found -> 0.0) in
+    let c = ref rc0 in
+    for _ = 1 to 40035 do
+      let c0 = !c in
+      let ta = Unix.gettimeofday () in
+      let (i, (c1, _)) = match moveC10 c0 with Some r -> r | None -> failwith "stuck" in
+      let dt = Unix.gettimeofday () -. ta in
+      if List.mem i mine then begin
+        add tc i dt; add cnt i 1.0;
+        let f = List.nth msB10 i in
+        let tb = Unix.gettimeofday () in
+        for _ = 1 to reps do ignore (f c0) done;
+        add tt i ((Unix.gettimeofday () -. tb) /. float reps) end;
+      c := c1
+    done;
+    List.iter (fun i -> if Hashtbl.mem cnt i then Printf.printf "%s n=%.0f macro_alone=%.4fs moveC10=%.4fs\n" (nm i) (Hashtbl.find cnt i) (Hashtbl.find tt i) (Hashtbl.find tc i)) mine
   | "sim9" ->
     let n = int_of_string Sys.argv.(2) in
     let c = ref rc0 in

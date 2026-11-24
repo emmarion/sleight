@@ -10,4 +10,5 @@ Status:
 - ITER, IDENT: proven (RdK chains via rd-run, c-apply; IDENT adds wtk/tokz re-tokenization); 641/641 and 168/168.
 - CONTACT: proven (contact-round cell episodes c-m1, c-m11*, c-m011* + l3round merge/tturn/sw-push/desc/walk); 805/805.
 - CONTACT0 (never fires: mcontact _ _ 0 = None), BIGJ, BIGJC: proven by construction (guards + c-move9 + try-contact); 0 instances in moves 1..40035.
+- TRAIN: proposal = Rocq twalk arithmetic (konst via SW(P) closed forms, UoN via phi cells), certified by replaying the proven framed simulator to the proposed configuration (f-cert); 789/789.
 - Negative check (hm2, all indices): no implemented macro fires where Rocq chose an earlier entry or a later one, 40035 moves.
