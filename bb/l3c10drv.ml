@@ -56,7 +56,7 @@ let () = match Sys.argv.(1) with
       if List.mem m cks then (flush tr; writef (Printf.sprintf "%s/c_%d.txt" dir m) (txt !c))
     done; close_out tr
   | "hints" ->
-    let a = int_of_string Sys.argv.(2) and b = int_of_string Sys.argv.(3) and out = Sys.argv.(4) and all = Sys.argv.(5) = "all" in
+    let a = int_of_string Sys.argv.(2) and b = int_of_string Sys.argv.(3) and out = Sys.argv.(4) and all = Sys.argv.(5) = "all" and idx = Sys.argv.(5) = "idx" in
     let c = ref rc0 in
     for _ = 1 to a do (match moveC10 !c with Some (_, (c', _)) -> c := c' | None -> failwith "stuck") done;
     let oc = open_out out in
@@ -69,7 +69,8 @@ let () = match Sys.argv.(1) with
       let cls = if nm i = "M9" then m9code c0 else -1 in
       if cls >= 0 then begin
         let ta = Unix.gettimeofday () in ignore (move9 c0); t9 := !t9 +. (Unix.gettimeofday () -. ta); incr n9 end;
-      if cls >= 0 && cls < 6 && not all then
+      if idx then output_string oc (Printf.sprintf "4 %d " (if cls >= 0 then 26 else i) ^ String.sub (diff c0 c1) 2 (String.length (diff c0 c1) - 2))
+      else if cls >= 0 && cls < 6 && not all then
         let (((q, ll), s), rr) = c1 in
         let fr = function [] -> "2 0" | (b, n) :: _ -> Printf.sprintf "%d %s" (si b) (Z.to_string n) in
         Printf.fprintf oc "1 %d %d %d %s %s\n" cls (qi q) (si s) (fr ll) (fr rr)
