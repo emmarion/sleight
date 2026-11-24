@@ -110,11 +110,13 @@
   (let ((many L1)) (nat-shr (monus L 1) 2))
   (Cons _ (MkRn (BTrue) 6) (Cons _ (MkRn (BFalse) (nat-mul 6 L)) (notail $ death-tail q1 L1 R))))
 
+(def-fns _ $ (many death-fin : (many (Nat) g) (many (List (Rn)) Rt) -> (many (List (Rn)) R))
+  (Cons _ (MkRn (BTrue) 6) $ Cons _ (MkRn (BFalse) 6) $ Cons _ (MkRn (BTrue) 12) $ Cons _ (MkRn (BFalse) 1) $
+    Cons _ (MkRn (BTrue) 2) (rpushn (BFalse) g Rt)))
+
 (def-fns _ $ (many death-runs : (many (Nat) P n g) (many (List (Rn)) Rt) -> (many (List (Rn)) R))
   (let ((many L)) (lpf P))
-  (let ((many fin)) (Cons _ (MkRn (BTrue) 6) $ Cons _ (MkRn (BFalse) 6) $ Cons _ (MkRn (BTrue) 12) $ Cons _ (MkRn (BFalse) 1) $
-    Cons _ (MkRn (BTrue) 2) (rpushn (BFalse) g Rt)))
-  (Cons _ (MkRn (BFalse) (nat-add (nat-mul 6 L) n)) (death-tail (monus P 1) (nat-shr (monus L 1) 2) fin)))
+  (Cons _ (MkRn (BFalse) (nat-add (nat-mul 6 L) n)) (death-tail (monus P 1) (nat-shr (monus L 1) 2) (death-fin g Rt))))
 
 (def-fns _ $ (many mem-ok : (many (Nat) P) (many (List (Nat)) D) -> (many (Bool) b))
   (let-match many P (Succ _) ((Zero) (BFalse)))
@@ -516,6 +518,84 @@
   (let-match many (nle need Gr) (BTrue) ((BFalse) (None _)))
   (Some _ (lm-out L0 (nat-add inc n) (c-enc (phio P2 s2)) (Tt1) (rpushn (BFalse) (monus Gr need) Rt))))
 
+(def-adts $ (Zi : -> Type)
+  enum
+  (many ZP : (many (Nat) n) -> (Zi))
+  (many ZM : (many (Nat) n) -> (Zi)))
+
+(def-fns _ $ (many zneg : (many (Zi) a) -> (many (Zi) r))
+  (match many a _ ((ZP n) (ZM n)) ((ZM n) (ZP n))))
+
+(def-fns _ $ (many zdiff : (many (Nat) a b) -> (many (Zi) r))
+  (match many (nle b a) _ ((BTrue) (ZP (monus a b))) ((BFalse) (ZM (monus b a)))))
+
+(def-fns _ $ (many zadd : (many (Zi) a b) -> (many (Zi) r))
+  (match many a _
+    ((ZP x) (match many b _ ((ZP y) (ZP (nat-add x y))) ((ZM y) (zdiff x y))))
+    ((ZM x) (match many b _ ((ZP y) (zdiff y x)) ((ZM y) (ZM (nat-add x y)))))))
+
+(def-fns _ $ (many zsub : (many (Zi) a b) -> (many (Zi) r))
+  (zadd a (zneg b)))
+
+(def-fns _ $ (many zmul : (many (Nat) k) (many (Zi) a) -> (many (Zi) r))
+  (match many a _ ((ZP x) (ZP (nat-mul k x))) ((ZM x) (ZM (nat-mul k x)))))
+
+(def-fns _ $ (many znn : (many (Zi) a) -> (many (Bool) b))
+  (match many a _ ((ZP _) (BTrue)) ((ZM x) (neqb x 0))))
+
+(def-fns _ $ (many zle : (many (Zi) a b) -> (many (Bool) r))
+  (znn (zsub b a)))
+
+(def-fns _ $ (many zton : (many (Zi) a) -> (many (Nat) n))
+  (match many a _ ((ZP x) x) ((ZM _) 0)))
+
+(def-fns _ $ (many zmag : (many (Zi) a) -> (many (Nat) n))
+  (match many a _ ((ZP x) x) ((ZM x) x)))
+
+(def-fns _ $ (many pw2 : (many (Nat) p) -> (many (Nat) n))
+  (nat-shl 1 (nat-add (nat-mul 2 p) 3)))
+
+(def-fns _ $ (many dsw : (many (Nat) p) -> (many (Zi) d))
+  (zdiff (nat-add 2 (swf (Succ p))) (swf p)))
+
+(def-fns _ $ (many c1n : (many (Nat) p) -> (many (Nat) c))
+  (nat-add (nat-add (nat-mul 2 p) (swf p)) 4))
+
+(def-fns _ $ (many can : (many (Nat) p) -> (many (Zi) c))
+  (zsub (dsw p) (zdiff (nat-add (c1n (Succ p)) 4) (nat-mul 4 (c1n p)))))
+
+(def-fns _ $ (many m-beven : (many (LmC) lc) -> (many (Maybe (Rq)) r))
+  (let-match many lc (LcOk n L0 D X T R1) ((LcNo) (None _)))
+  (let-match many T (Tt1) (else (None _)))
+  (let ((many P)) (memp D))
+  (let-match many (mem-ok P D) (BTrue) ((BFalse) (None _)))
+  (let-match many R1 (Cons _ ra R2) ((Nil _) (None _)))
+  (let-match many ra (MkRn ba G))
+  (let-match many ba (BFalse) ((BTrue) (None _)))
+  (let-match many R2 (Cons _ rb R3) ((Nil _) (None _)))
+  (let-match many rb (MkRn bb m6))
+  (let-match many bb (BTrue) ((BFalse) (None _)))
+  (let-match many R3 (Cons _ rc Rt) ((Nil _) (None _)))
+  (let-match many rc (MkRn bc H))
+  (let-match many bc (BFalse) ((BTrue) (None _)))
+  (let-match many (neqb m6 6) (BTrue) ((BFalse) (None _)))
+  (let-match many (nle 3 P) (BTrue) ((BFalse) (None _)))
+  (let ((many p1)) (monus P 1))
+  (let ((many U1)) (ZP (uon p1)))
+  (let ((many e)) (zsub (zdiff G (uon P)) (zsub (ZP (pw2 p1)) (dsw p1))))
+  (let ((many st)) (zadd (zadd (zmul 4 e) (zdiff H (pw2 p1))) (can p1)))
+  (let ((many K)) (ZP (kdf p1)))
+  (let-match many (znn (zadd e U1)) (BTrue) ((BFalse) (None _)))
+  (let-match many (zle e (ZM (monus (nat-add (nat-add (nat-mul 3 p1) 2) (swf p1)) p1))) (BTrue) ((BFalse) (None _)))
+  (let ((many par) (erased _)) (nat-and (zmag e) 1))
+  (let-match many par (Zero) ((Succ _) (None _)))
+  (let-match many (znn (zadd st U1)) (BTrue) ((BFalse) (None _)))
+  (let-match many (zle K st) (BTrue) ((BFalse) (None _)))
+  (let ((many mm)) (zton (zsub (zsub (zdiff (pw2 p1) 1) (can p1)) (zmul 3 e))))
+  (let ((many L)) (lpf P))
+  (Some _ (MkRq 2 L0 (BTrue) (Cons _ (MkRn (BFalse) (nat-add (nat-mul 6 L) n)) $ Cons _ (MkRn (BTrue) 6) $ Cons _ (MkRn (BFalse) (Succ mm))
+    (death-tail p1 (nat-shr (monus L 1) 2) (death-fin (zton (zsub st K)) Rt))))))
+
 (def-fns _ $ (many m-resume : (many (Rq) e) -> (many (Maybe (Rq)) r))
   (let-match many e (MkRq q _ h R))
   (let-match many (neqb q 2) (BTrue) ((BFalse) (None _)))
@@ -554,6 +634,7 @@
   (let-match many (neqb j 10) (BFalse) ((BTrue) (m-death lc)))
   (let-match many (neqb j 5) (BFalse) ((BTrue) (m-child lc)))
   (let-match many (neqb j 24) (BFalse) ((BTrue) (m-resume e)))
+  (let-match many (neqb j 8) (BFalse) ((BTrue) (m-beven lc)))
   (None _))
 
 (def-fns _ $ (many chk : (subterm many (List (Nat)) js) (many (Nat) i mv) (many (Rq) e e2) (many (LmC) lc) (many (List (Nat)) cnt) (many (Rope) log)
