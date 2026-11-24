@@ -643,7 +643,6 @@
 
 (let ((erased n1)) (Succ (Zero)))
 (let ((erased n4)) (Succ n3))
-(let ((erased n6)) (Succ (Succ n4)))
 
 (def-adts
   ((V2 : ((Tt) T) ((Nat) g) ((List (Tk)) W) ((Tt) T2) ((Nat) c) -> Type)
