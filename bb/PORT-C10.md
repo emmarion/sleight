@@ -108,7 +108,15 @@ fingerprint, applies the other moves' changes, restarting `Rch` from the
 patched configuration, and prints the final configuration; `smain` runs
 `c10run` from the blank tape. Both are built with slc's `--build`, from
 a one-line file holding `hmain` or `smain`, and need `ulimit -s
-unlimited`.
+unlimited`. From the repository root, with `main.sl` holding `hmain`:
+
+```sh
+_build/release/slc std/list.sl std/immediate.sl bb/tm.sl bb/sim.sl bb/cert.sl bb/perm.sl bb/cyc.sl bb/tree.sl bb/tnf.sl bb/sym.sl bb/vec.sl bb/search.sl bb/far.sl bb/wfar.sl bb/pat.sl std/macro.sl bb/skelet.sl bb/space.sl bb/sk17.sl bb/rle.sl bb/l3.sl bb/l3tok.sl bb/l3round.sl bb/l3jump.sl bb/l3phi.sl bb/l3dec.sl bb/l3life.sl bb/l3walk.sl bb/l3train.sl bb/l3c10.sl bb/l3c10h.sl main.sl --build h
+(echo 1; cat hints.txt) | ./h
+```
+
+The same files with `bb/l3c10smoke.sl` in place of the last two, under
+`--goal proved`, check the smoke goal.
 
 ## Measurements
 
