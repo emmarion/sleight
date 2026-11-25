@@ -324,7 +324,7 @@
     (tail $ rv-run K1 k21 R2 (po-tpr m R1 R2 tp) r s V4 v4 d4 u4 c4 x2))
   (values W w dw u2 cw Y (WkC m K1 R R1 R2 Y tl tp wk) py xy))
 
-(def-fns _ $ (many c-wr : (many (Bool) ret) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
+(def-fns _ $ (many c-wr-n : (many (Nat) depth) (many (Bool) ret) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
   (let ((many no)) (RsNo l3 c0 e ch))
   (let-match erased ch (MkRch _ _ a0 c _ t0 r0 dc z))
   (let-match many e (MkRq q L h R))
@@ -341,7 +341,7 @@
   (let-match erased pa (RpS _ _ _ r1 pa1))
   (let-match erased pa1 (RpS _ _ _ r2 pa2))
   (let ((many stop)) (match many ret (((Maybe (List (Rn))) m)) ((BTrue) (Some _ ret-kA)) ((BFalse) (None _))))
-  (let-match many (stk-all 1000000000 stop L x dl) (MkStkA _ l K L3 ls d3 k2))
+  (let-match many (stk-all depth stop L x dl) (MkStkA _ l K L3 ls d3 k2))
   (let-match many (match many K (((Bool) k)) ((Cons _ _ _) (BTrue)) ((Nil _) ret)) (BTrue) ((BFalse) no))
   (let ((many V0) (erased v0) (erased p0) (erased dv0)) (rpushm (BFalse) ga2 Rrs rt drr))
   (let-match erased (rp-fn (BFalse) ga2 rt v0 r2 p0 pa2) (Refl _ _))
@@ -378,6 +378,9 @@
   (let-match erased (cat-fn (Bool) le-rr x1 ro y3 c2 cy3) (Refl _ _))
   (let ((erased tr) (erased run)) (go-run 2 2 _ _ _ _ _ _ (go-cat _ _ _ g1 (go-cat _ _ _ g2 g3))))
   (RsOk l3 c0 (MkRq 2 le-LL (BTrue) Ro) (rch-run l3 c0 c _ e _ tr ch dc run (MkDc 2 le-LL Ro (BTrue) le-ll ro le-dLL dRo))))
+
+(def-fns _ $ (many c-wr : (many (Bool) ret) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
+  (c-wr-n 1000000000 ret c0 e ch))
 
 (def-fns _ $ (many rs-opt : (erased (Conf) c0) (many (Rs l3 c0) r) -> (many (Maybe (Rq)) m))
   (match many r _ ((RsOk _ _ e _) (Some _ e)) ((RsNo _ _ _ _) (None _))))
