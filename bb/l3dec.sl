@@ -49,7 +49,8 @@
 
 (def-adts $ (Rho : -> Type)
   enum
-  (many MkRho : (many (Nat) r) (many (Nat) m) -> (Rho)))
+  (many MkRho : (many (Nat) r) (many (Nat) m) -> (Rho))
+  (many RhoNo : -> (Rho)))
 
 (def-fns _ $ (many ps-d : (many (Ps) x) -> (many (Nat) d))
   (match many x _ ((PrDp) 0) ((PrD) 0) ((PrC) 1) ((PrBp) 2) ((PrB) 2) ((PrA) 3)))
@@ -71,12 +72,16 @@
   (let ((many q) (erased _) (erased _) (erased _) (erased _) (erased _)) (div (monus (nat-shl v (nat-add e e)) S) (Succ (Succ (Succ (Zero)))) (LtZ _)))
   (MkRho (nat-add q C) m))
 
-(def-fns _ $ (many rho-b : (subterm many (List (Ps)) w) (many (List (Vl)) cs) (many (Nat) S C a m) -> (many (Rho) r))
-  (let-match many w (Cons _ _ w1) ((Nil _) (rho-fin cs S C a m)))
-  (tail $ rho-b w1 cs S C a (Succ m)))
+(def-fns _ $ (many rho-b : (subterm many (List (Nat)) Q) (many (List (Vl)) cs) (many (Nat) S C a m) -> (many (Rho) r))
+  (let-match many Q (Cons _ h Q1) ((Nil _) (rho-fin cs S C a m)))
+  (let-match many Q1 (Cons _ l Q2) ((Nil _) (RhoNo)))
+  (let-match many (pair-of h l) (Some _ _) ((None _) (RhoNo)))
+  (tail $ rho-b Q2 cs S C a (Succ m)))
 
-(def-fns _ $ (many rho-a : (subterm many (List (Ps)) w) (many (Nat) v k) (many (List (Vl)) cs) (many (Nat) S C a) -> (many (Rho) r))
-  (let-match many w (Cons _ x w1) ((Nil _) (rho-fin (Cons _ (MkVl v k) cs) S C a a)))
+(def-fns _ $ (many rho-a : (subterm many (List (Nat)) Q) (many (Nat) v k) (many (List (Vl)) cs) (many (Nat) S C a) -> (many (Rho) r))
+  (let-match many Q (Cons _ h Q1) ((Nil _) (rho-fin (Cons _ (MkVl v k) cs) S C a a)))
+  (let-match many Q1 (Cons _ l w1) ((Nil _) (RhoNo)))
+  (let-match many (pair-of h l) (Some _ x) ((None _) (RhoNo)))
   (let ((many d)) (ps-d x))
   (let ((many v1)) (nat-add (nat-add v v) (nat-add v v)))
   (let ((many v2)) (nat-add v1 d))
@@ -90,11 +95,18 @@
       ((Equal _ _ _) (tail $ rho-a w1 0 0 (Cons _ (MkVl v2 31) cs) S1 C1 a1))
       (else (tail $ rho-a w1 v2 (Succ k) cs S1 C1 a1))))))
 
-(def-fns _ $ (many rho-scan : (many (List (Ps)) w) -> (many (Rho) r))
-  (rho-a w 0 0 (Nil (Vl)) 0 0 0))
+(def-fns _ $ (many rho-q : (many (List (Nat)) Q) -> (many (Rho) r))
+  (rho-a Q 0 0 (Nil (Vl)) 0 0 0))
+
+(def-fns _ $ (many ps-digits : (subterm many (List (Ps)) w) -> (many (List (Nat)) Q))
+  (let-match many w (Cons _ x w1) ((Nil _) (Nil (Nat))))
+  (let ((many Q1)) (notail $ ps-digits w1))
+  (match many x _
+    ((PrA) (Cons _ 1 (Cons _ 0 Q1))) ((PrB) (Cons _ 1 (Cons _ 1 Q1))) ((PrBp) (Cons _ 1 (Cons _ 2 Q1)))
+    ((PrC) (Cons _ 0 (Cons _ 0 Q1))) ((PrD) (Cons _ 0 (Cons _ 1 Q1))) ((PrDp) (Cons _ 0 (Cons _ 2 Q1)))))
 
 (def-fns _ $ (many odd-s : (many (Nat) h) (many (Rho) rho) -> (many (Nat) s))
-  (let-match many rho (MkRho r m))
+  (let-match many rho (MkRho r m) ((RhoNo) (Zero)))
   (let-match many h (Succ h1) ((Zero) (Succ (nat-add r (g4 (Succ m))))))
   (let-match many h1 (Succ _) ((Zero) (Succ r)))
   (Zero))
@@ -134,12 +146,12 @@
   (let-match many (nat-eq d0 2) (Equal _ _ _) (else (DecNo)))
   (let ((many n) (many par) (erased _) (erased _) (erased _) (erased _)) (divmod (monus m 2) (Succ (Succ (Zero))) (LtZ _)))
   (let-match many par (Succ _) ((Zero)
-    (let-match many (pairs Q) (Some _ w) ((None _) (DecNo)))
-    (let-match many (rho-scan w) (MkRho r _))
+    (let-match many (rho-q Q) (MkRho r _) ((RhoNo) (DecNo)))
     (DecOk (fam-of v2 (BFalse) n T) r)))
   (let-match many Q (Cons _ h Q1) ((Nil _) (DecNo)))
-  (let-match many (pairs Q1) (Some _ w) ((None _) (DecNo)))
-  (DecOk (fam-of v2 (BTrue) n T) (odd-s h (rho-scan w))))
+  (let ((many rho)) (rho-q Q1))
+  (let-match many rho (MkRho _ _) ((RhoNo) (DecNo)))
+  (DecOk (fam-of v2 (BTrue) n T) (odd-s h rho)))
 
 (def-fns _ $ (many decode : (many (List (Tk)) X) (many (Tt) T) -> (many (Dec) r))
   (let-match many (tdg 0 X (Nil (Nat)) 0) (TdOk RD m) ((TdNo) (DecNo)))

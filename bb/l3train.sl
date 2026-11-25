@@ -220,7 +220,7 @@
   (let ((many m4) (erased _)) (mul s 4))
   (let ((many fast)) (phi-at P (monus m4 (dlt-sum 0 (Cons _ x w))) h w D Z g en))
   (let-match many fast (NxNo _ _ _ _ _) (else fast))
-  (phi-at P (odd-s h (rho-scan (ps-snoc w))) h w D Z g en))
+  (phi-at P (odd-s h (rho-q (ps-digits (ps-snoc w)))) h w D Z g en))
 
 (def-adts
   ((TrS : ((Nat) P s) ((List (Tk)) X) ((List (Bool)) xr x0) -> Type)
