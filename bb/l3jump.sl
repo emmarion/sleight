@@ -338,26 +338,37 @@
     (many WkNo : (erased (List (Nat)) K) (erased (List (Tk)) R) -> (WkR K R))))
 
 (def-adts
-  ((Tl0R : ((List (Tk)) R) -> Type)
+  ((WkP : ((List (Nat)) K0) ((List (Tk)) R0) ((List (Nat)) K) ((List (Tk)) R) -> Type)
     enum
-    (many MkTl0R : (erased (List (Tk)) R) (many (List (Tk)) R1) (erased (Tl0 R R1) p) -> (Tl0R R))))
+    (many WpN : (erased (List (Nat)) K) (erased (List (Tk)) R) -> (WkP K R K R))
+    (many WpS : (erased (List (Nat)) K0) (erased (List (Tk)) R0) (erased (Nat) m) (erased (List (Nat)) K) (erased (List (Tk)) R R1 R2)
+       (erased (WkP K0 R0 (Cons (Nat) (Succ (Succ m)) K) R) p) (erased (Tl0 R R1) tl) (erased (TpR m (Cons (Tk) (T1) R1) R2) tp) -> (WkP K0 R0 K R2))))
 
-(def-fns _ $ (many tl0-run : (many (List (Tk)) R) -> (many (Maybe (Tl0R R)) r))
-  (let-match many R (Cons _ x R2) ((Nil _) (Some _ (MkTl0R R R (Tl0N)))))
-  (match many x _
-    ((Tp) (Some _ (MkTl0R R R2 (Tl0P R2))))
-    ((T1) (Some _ (MkTl0R R (Cons _ (T0) R2) (Tl01 R2))))
-    ((T0) (None _))))
+(def-fns _ $ (erased wk-path : (erased (List (Nat)) K0 K) (erased (List (Tk)) R0 R Y) (subterm erased (WkP K0 R0 K R) p) (erased (Wk K R Y) w) -> (erased (Wk K0 R0 Y) w2))
+  (match erased p _
+    ((WpN _ _) w)
+    ((WpS _ _ m K1 R1 R2 _ p1 tl tp) (wk-path K0 (Cons (Nat) (Succ (Succ m)) K1) R0 R1 Y p1 (WkC m K1 R1 R2 R Y tl tp w)))))
 
-(def-fns _ $ (many wk-run : (subterm many (List (Nat)) K) (many (List (Tk)) R) -> (many (WkR K R) r))
-  (let-match many K (Cons _ t K1) ((Nil _) (WkOk K R R (WkN R))))
-  (let-match many t (Succ t1) ((Zero) (WkNo K R)))
-  (let-match many t1 (Succ m) ((Zero) (WkNo K R)))
-  (let-match many (tl0-run R) (Some _ pr) ((None _) (WkNo K R)))
-  (let-match many pr (MkTl0R _ R1 tl))
-  (let ((many R2) (erased tp)) (tpr m (Cons _ (T1) R1)))
-  (let-match many (notail $ wk-run K1 R2) (WkOk _ _ Y w) ((WkNo _ _) (WkNo K R)))
-  (WkOk K R Y (WkC m K1 R R1 R2 Y tl tp w)))
+(def-fns _ $ (many wk-go : (subterm many (List (Nat)) K) (many (List (Tk)) R) (erased (List (Nat)) K0) (erased (List (Tk)) R0) (erased (WkP K0 R0 K R) p)
+    -> (many (WkR K0 R0) r))
+  (let-match many K (Cons _ t K1) ((Nil _) (WkOk K0 R0 R (wk-path K0 K R0 R R p (WkN R)))))
+  (let-match many t (Succ t1) ((Zero) (WkNo K0 R0)))
+  (let-match many t1 (Succ m) ((Zero) (WkNo K0 R0)))
+  (match many R _
+    ((Nil _)
+      (let ((many R2) (erased tp)) (tpr m (Cons _ (T1) R)))
+      (tail $ wk-go K1 R2 K0 R0 (WpS K0 R0 m K1 R R R2 p (Tl0N) tp)))
+    ((Cons _ x R3) (match many x _
+      ((Tp)
+        (let ((many R2) (erased tp)) (tpr m (Cons _ (T1) R3)))
+        (tail $ wk-go K1 R2 K0 R0 (WpS K0 R0 m K1 R R3 R2 p (Tl0P R3) tp)))
+      ((T1)
+        (let ((many R2) (erased tp)) (tpr m (Cons _ (T1) (Cons _ (T0) R3))))
+        (tail $ wk-go K1 R2 K0 R0 (WpS K0 R0 m K1 R (Cons (Tk) (T0) R3) R2 p (Tl01 R3) tp)))
+      ((T0) (WkNo K0 R0))))))
+
+(def-fns _ $ (many wk-run : (many (List (Nat)) K) (many (List (Tk)) R) -> (many (WkR K R) r))
+  (wk-go K R K R (WpN K R)))
 
 (def-adts
   ((EnR : ((List (Nat)) K) ((Tt) T) -> Type)
