@@ -1,0 +1,11 @@
+(def-fns _ $ (many kmain : (many (String) in) -> (many (String) out))
+  (let ((many idx) (many s0)) (tok in))
+  (let ((many e) (many s1)) (rd-cfg s0))
+  (let ((many f) (many _)) (rd-cfg s1))
+  (let ((erased c0) (erased ch)) (rch-self l3 e))
+  (let ((many r)) (match many (c10-mac idx c0 e ch) (((Rope) r))
+    ((RsOk _ _ e2 _) (match many (rq-eq e2 f) _ ((BTrue) (RStr "MATCH")) ((BFalse) (RCat (RStr "DIFF\n") (show-cfg e2)))))
+    ((RsNo _ _ _ _) (RStr "NOFIRE"))))
+  (let ((many o) (erased _)) (flatten (RCat r (RChar #\newline))))
+  o)
+

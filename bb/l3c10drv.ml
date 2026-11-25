@@ -38,6 +38,11 @@ let sdiff o n =
   let b = Buffer.create 64 in
   Buffer.add_string b (string_of_int (lo - common)); Buffer.add_char b ' '; side b (taken (ln - common) n); Buffer.contents b
 let diff (((_, l0), _), r0) (((q, l1), s), r1) = Printf.sprintf "2 %d %d\n%s%s" (qi q) (si s) (sdiff l0 l1) (sdiff r0 r1)
+let chk = match Sys.getenv_opt "C10CHK" with
+  | Some v when v <> "" -> List.map int_of_string (String.split_on_char ',' v) | _ -> []
+let mtab = [ (17, try_fdescK); (3, try_vdescS); (25, try_vdesc2); (11, try_aend4); (2, try_retS); (4, try_walkNS) ]
+let mine = List.map fst mtab
+let tm = Array.make 26 0.0 and cn = Array.make 26 0
 let writef f s = let oc = open_out f in output_string oc s; close_out oc
 let () = match Sys.argv.(1) with
   | "trace" ->
@@ -56,7 +61,7 @@ let () = match Sys.argv.(1) with
       if List.mem m cks then (flush tr; writef (Printf.sprintf "%s/c_%d.txt" dir m) (txt !c))
     done; close_out tr
   | "hints" ->
-    let a = int_of_string Sys.argv.(2) and b = int_of_string Sys.argv.(3) and out = Sys.argv.(4) and all = Sys.argv.(5) = "all" and idx = Sys.argv.(5) = "idx" in
+    let a = int_of_string Sys.argv.(2) and b = int_of_string Sys.argv.(3) and out = Sys.argv.(4) and all = Sys.argv.(5) = "all" and idx = Sys.argv.(5) = "idx" and mo = Sys.argv.(5) = "mine" in
     let c = ref rc0 in
     for _ = 1 to a do (match moveC10 !c with Some (_, (c', _)) -> c := c' | None -> failwith "stuck") done;
     let oc = open_out out in
@@ -70,15 +75,23 @@ let () = match Sys.argv.(1) with
       if cls >= 0 then begin
         let ta = Unix.gettimeofday () in ignore (move9 c0); t9 := !t9 +. (Unix.gettimeofday () -. ta); incr n9 end;
       if idx then output_string oc (Printf.sprintf "4 %d " (if cls >= 0 then 26 else i) ^ String.sub (diff c0 c1) 2 (String.length (diff c0 c1) - 2))
-      else if cls >= 0 && cls < 6 && not all then
+      else if cls >= 0 && cls < 6 && not all && not mo then
         let (((q, ll), s), rr) = c1 in
         let fr = function [] -> "2 0" | (b, n) :: _ -> Printf.sprintf "%d %s" (si b) (Z.to_string n) in
         Printf.fprintf oc "1 %d %d %d %s %s\n" cls (qi q) (si s) (fr ll) (fr rr)
-      else output_string oc (diff c0 c1);
+      else if List.mem i chk && not all then
+        (let d = diff c0 c1 in Printf.fprintf oc "3 %d %s" i (String.sub d 2 (String.length d - 2)))
+      else if all || cls >= 0 || not mo || not (List.mem i mine) then output_string oc (diff c0 c1)
+      else begin
+        let f = List.assoc i mtab in
+        let ta = Unix.gettimeofday () in ignore (f c0); let dt = Unix.gettimeofday () -. ta in
+        tm.(i) <- tm.(i) +. dt; cn.(i) <- cn.(i) + 1;
+        let d = diff c0 c1 in output_string oc (Printf.sprintf "3 %d%s" i (String.sub d 1 (String.length d - 1))) end;
       c := c1
     done;
     output_string oc "0\n"; close_out oc;
     writef (out ^ ".end") (txt !c);
+    List.iter (fun i -> Printf.printf "%s alone: %d moves %.3f s\n" (nm i) cn.(i) tm.(i)) mine;
     Printf.printf "move9 alone: %d moves %.3f s\n" !n9 !t9
   | "sim9" ->
     let n = int_of_string Sys.argv.(2) in
