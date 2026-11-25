@@ -17,7 +17,9 @@ statement and no axiom is used:
 | 3 | VDESC | `c-vdesc (BTrue)` | `vdescCS` |
 | 25 | VDESC2 | `c-vdesc (BFalse)` | `try_vdesc2` |
 
-AEND (#11) is not ported.
+AEND (#11) is `c-aend` in `bb/l3c10-aend.sl` (notes in
+`bb/PORT-C10-aend-notes.md`); `dprop` below dispatches to it, so that
+file is loaded before this one.
 
 - WALKN and RET: `stk-all` parses the left token stack with no cap on
   the token sizes, keeping an erased `K2` proof that every token is at
@@ -40,10 +42,11 @@ AEND (#11) is not ported.
 
 ## Checking
 
-`dmain` reads `hints mine` output and checks every kind-3 record of the
-six indices against Rocq; `tmain` takes `IDX REPS` first and repeats
-that macro REPS times, for timing. On moves 1 to 40,035 all 2,425
-records match: 544 RET, 853 WALKN, 1,012 FDESC, 2 VDESC and 14 VDESC2.
+`dmain` reads `hints mine` output and checks every kind-3 record of
+these indices and AEND's against Rocq; `tmain` takes `IDX REPS` first and repeats
+that macro REPS times, for timing. On moves 1 to 40,035 all 3,066
+records match: 544 RET, 853 WALKN, 1,012 FDESC, 2 VDESC, 14 VDESC2 and
+641 AEND.
 
 ## Timings (one shared 4-core container, noisy)
 

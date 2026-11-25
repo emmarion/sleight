@@ -389,6 +389,7 @@
   (let-match many (nat-eq idx 25) (Unequal _ _ _ _ _) ((Equal _ _ _) (Some _ (rs-opt c0 (c-vdesc (BFalse) c0 e ch)))))
   (let-match many (nat-eq idx 2) (Unequal _ _ _ _ _) ((Equal _ _ _) (Some _ (rs-opt c0 (c-wr (BTrue) c0 e ch)))))
   (let-match many (nat-eq idx 4) (Unequal _ _ _ _ _) ((Equal _ _ _) (Some _ (rs-opt c0 (c-wr (BFalse) c0 e ch)))))
+  (let-match many (nat-eq idx 11) (Unequal _ _ _ _ _) ((Equal _ _ _) (Some _ (rs-opt c0 (c-aend c0 e ch)))))
   (None _))
 
 (def-fns _ $ (many drep : (subterm many (Nat) n) (many (Nat) idx) (many (Rq) e) -> (many (Maybe (Maybe (Rq))) r))
