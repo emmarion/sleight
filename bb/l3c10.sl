@@ -900,13 +900,13 @@
 (def-adts
   ((FQ : ((Fam) F) ((Nat) Q) -> Type)
     enum
-    (many FqE : (erased (Nat) P) -> (FQ (FE P (Tt1)) P))
-    (many FqO : (erased (Nat) P) -> (FQ (FO P (Tt1)) (Succ P)))))
+    (many FqE : (erased (Nat) P) (erased (Tt) T) -> (FQ (FE P T) P))
+    (many FqO : (erased (Nat) P) (erased (Tt) T) -> (FQ (FO P T) (Succ P)))))
 
 (def-fns _ $ (many fq-next : (many (Fam) F) (erased (Nat) Q) (erased (FQ F Q) fq) -> (many (Fam) F2) (erased (FQ F2 (Succ Q)) fq2))
   (match many F _
-    ((FE P T) (let-match erased fq (FqE _)) (values (FE (Succ P) T) (FqE (Succ P))))
-    ((FO P T) (let-match erased fq (FqO _)) (values (FO (Succ P) T) (FqO (Succ P))))
+    ((FE P T) (let-match erased fq (FqE _ _)) (values (FE (Succ P) T) (FqE (Succ P) T)))
+    ((FO P T) (let-match erased fq (FqO _ _)) (values (FO (Succ P) T) (FqO (Succ P) T)))
     (absurd (FVE P) (match erased fq _))
     (absurd (FVO P) (match erased fq _))))
 

@@ -108,7 +108,7 @@
   (let ((many ex) (erased a1) (erased b1) (erased ra1) (erased tbn1) (erased ae1)) (cells X T))
   (let ((erased v) (erased tb) (erased xb)) (xt-cat X T u y xr px cu))
   (let-match many (ms-loop 100000 (BTrue) (BTrue) F s nb ok mx bn X T ph ex a1 b1 ra1 tbn1 ae1 R1 y v xr d1 tb xb n lz x0 p0 ex ex (Zero))
-    (MkMsL _ _ _ _ _ _ F2 s2 X2 T2 ph2 Rt rc2 v2 xr2 dr2 tb2 xb2 M st x3 pm t run))
+    (MkMsL _ _ _ _ _ _ F2 s2 X2 T2 ph2 Rt rc2 v2 xr2 dr2 tb2 xb2 M st x3 pm t run _ _ _))
   (let-match many (ct-dd X2 T2 Rt rc2 v2 xr2 x3 dr2 tb2 xb2) (KtOk _ _ _ _ _ _ Y T4 R5 r5 u5 yr d5 tb5 yb m2 x4 p2 t2 run2) ((KtNo _ _ _ _ _ _) no))
   (let ((many M2) (erased aM)) (add m2 M))
   (let ((many sc) (erased as)) (add M2 n))
