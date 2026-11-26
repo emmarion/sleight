@@ -887,3 +887,27 @@
   (let-match many fuel (Succ f) ((Zero) (values fuel e ch)))
   (let-match many (c-move9 c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ e1 ch1) (values fuel e1 ch1)))
   (tail $ c10run c0 f e1 ch1))
+
+(def-adts
+  ((FeR : ((Fam) F) -> Type)
+    enum
+    (many FeOk : (erased (Fam) F) (many (Nat) P) (many (Tt) T) (erased (Eq (Fam) F (FE P T)) e) -> (FeR F))
+    (many FeNo : (erased (Fam) F) -> (FeR F))))
+
+(def-fns _ $ (many fam-e : (many (Fam) F) -> (many (FeR F) r))
+  (match many F _ ((FE P T) (FeOk F P T (Refl _ F))) (else (FeNo F))))
+
+(def-adts
+  ((FQ : ((Fam) F) ((Nat) Q) -> Type)
+    enum
+    (many FqE : (erased (Nat) P) -> (FQ (FE P (Tt1)) P))
+    (many FqO : (erased (Nat) P) -> (FQ (FO P (Tt1)) (Succ P)))))
+
+(def-fns _ $ (many fq-next : (many (Fam) F) (erased (Nat) Q) (erased (FQ F Q) fq) -> (many (Fam) F2) (erased (FQ F2 (Succ Q)) fq2))
+  (match many F _
+    ((FE P T) (let-match erased fq (FqE _)) (values (FE (Succ P) T) (FqE (Succ P))))
+    ((FO P T) (let-match erased fq (FqO _)) (values (FO (Succ P) T) (FqO (Succ P))))
+    (absurd (FVE P) (match erased fq _))
+    (absurd (FVO P) (match erased fq _))))
+
+(let ((erased RndW)) Rnd)

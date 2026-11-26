@@ -23,7 +23,7 @@
   (let-match many (nat-eq i 20) (Unequal _ _ _ _ _) ((Equal _ _ _) (try-iterG c0 e ch)))
   (let-match many (nat-eq i 21) (Unequal _ _ _ _ _) ((Equal _ _ _) (try-identG c0 e ch)))
   (let-match many (nat-eq i 22) (Unequal _ _ _ _ _) ((Equal _ _ _) (try-sweep3 c0 e ch)))
-  (let-match many (nat-eq i 23) (Unequal _ _ _ _ _) ((Equal _ _ _) (mac-absorb c0 e ch)))
+  (let-match many (nat-eq i 23) (Unequal _ _ _ _ _) ((Equal _ _ _) (mac-absorb2 c0 e ch)))
   (let-match many (nat-eq i 24) (Unequal _ _ _ _ _) ((Equal _ _ _) (try-resume-c c0 e ch)))
   (let-match many (nat-eq i 25) (Unequal _ _ _ _ _) ((Equal _ _ _) (c-vdesc-u (BFalse) c0 e ch)))
   (c-move9-at c0 e ch lm))
