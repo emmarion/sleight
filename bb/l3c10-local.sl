@@ -40,6 +40,68 @@
       (let ((erased t) (erased run)) (go-run 2 2 _ _ _ _ _ _ g))
       (values t y q run))))
 
+(def-adts
+  ((Tw : ((Nat) k) ((List (Bool)) l lo) -> Type)
+    enum
+    (many TwZ : (erased (List (Bool)) l) -> (Tw (Zero) l l))
+    (many TwS : (erased (Nat) k) (erased (List (Bool)) l lo) (erased (Tw k (bits "011" l) lo) p) -> (Tw (Succ k) l lo))))
+
+(def-fns _ $ (erased tw-snoc : (erased (Nat) k) (erased (List (Bool)) l lo) (subterm erased (Tw k l lo) p) -> (erased (Tw (Succ k) l (bits "011" lo)) q))
+  (match erased p _
+    ((TwZ _) (TwS (Zero) l (bits "011" l) (TwZ (bits "011" l))))
+    ((TwS k1 _ _ p1) (TwS (Succ k1) l (bits "011" lo) (tw-snoc k1 (bits "011" l) lo p1)))))
+
+(def-fns _ $ (erased trip-step : (erased (Nat) k a) (erased (List (Bool)) l r x lo) (erased (Mul k n3 a) mk) (erased (Rp (BTrue) a r x) p)
+    (erased (Tw k (bits "011" l) lo) tw) (erased (Go (MkTc 1 (DR) (bits "011" l) x) (MkTc 1 (DR) lo r)) g)
+    -> (erased (Nat) a2) (erased (Mul (Succ k) n3 a2) mk2) (erased (Rp (BTrue) a2 r (bits "111" x)) p2) (erased (Tw (Succ k) l lo) tw2)
+    (erased (Go (MkTc 1 (DR) l (bits "111" x)) (MkTc 1 (DR) lo r)) g2))
+  (values (Succ (Succ (Succ a)))
+    (MulSucc k n3 a _ mk (add-comm n3 a _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero a))))))
+    (RpS _ _ _ _ (RpS _ _ _ _ (RpS _ _ _ _ p))) (TwS k l lo tw) (go-cat _ _ _ (go _ _ (c-sw0 p3 sg3 l x)) g)))
+
+(def-fns _ $ (erased trips : (subterm erased (Nat) k) (erased (List (Bool)) l r)
+    -> (erased (Nat) a) (erased (Mul k n3 a) mk) (erased (List (Bool)) x lo) (erased (Rp (BTrue) a r x) p) (erased (Tw k l lo) tw)
+    (erased (Go (MkTc 1 (DR) l x) (MkTc 1 (DR) lo r)) g))
+  (let-match erased k (Succ k1) ((Zero) (values (Zero) (MulZero n3) r l (RpZ _ r) (TwZ l) (go-refl _))))
+  (let ((erased a1) (erased m1) (erased x1) (erased lo) (erased p1) (erased tw1) (erased g1)) (trips k1 (bits "011" l) r))
+  (let ((erased a2) (erased m2) (erased p2) (erased tw2) (erased g2)) (trip-step k1 a1 l r x1 lo m1 p1 tw1 g1))
+  (values a2 m2 (bits "111" x1) lo p2 tw2 g2))
+
+(def-fns _ $ (erased tw-fn : (erased (Nat) k) (erased (List (Bool)) l a b) (subterm erased (Tw k l a) p) (erased (Tw k l b) q) -> (erased (Eq (List (Bool)) a b) e))
+  (match erased p _
+    ((TwZ _) (let-match erased q (TwZ _)) (Refl _ a))
+    ((TwS k1 _ _ p1) (let-match erased q (TwS _ _ _ q1)) (tw-fn k1 (bits "011" l) a b p1 q1))))
+
+(def-fns _ $ (erased blk3 : (erased (Nat) m) (erased (List (Bool)) l t)
+    -> (erased (Nat) a) (erased (Mul (Succ m) n3 a) mk) (erased (List (Bool)) x lo) (erased (Rp (BTrue) a t x) p) (erased (Tw (Succ m) (Cons (Bool) (BTrue) l) lo) tw)
+    (erased (Go (MkTc 1 (DR) l (Cons (Bool) (BFalse) x)) (MkTc 1 (DR) lo t)) g))
+  (let ((erased a1) (erased m1) (erased x1) (erased lo) (erased p1) (erased tw1) (erased g1)) (trips m (bits "0111" l) t))
+  (let ((erased a2) (erased m2) (erased p2) (erased tw2) (erased g2)) (trip-step m a1 (bits "1" l) t x1 lo m1 p1 tw1 g1))
+  (values a2 m2 (bits "111" x1) lo p2 tw2 (go-cat _ _ _ (go _ _ (c-st3 p3 sg5 l (bits "11" x1))) g2)))
+
+(def-adts
+  ((S3w : ((List (Bool)) l r lo z) -> Type)
+    enum
+    (many S3N : (erased (List (Bool)) l r) -> (S3w l r l r))
+    (many S3C : (erased (Nat) m a) (erased (List (Bool)) l t r lo lo2 z) (erased (Mul (Succ m) n3 a) mk) (erased (Rp (BTrue) a (Cons (Bool) (BFalse) t) r) p)
+       (erased (Tw (Succ m) (Cons (Bool) (BTrue) l) lo) tw) (erased (S3w lo t lo2 z) w) -> (S3w l r lo2 z))))
+
+(def-fns _ $ (erased s3-go : (erased (List (Bool)) l r lo z) (subterm erased (S3w l r lo z) w) (erased (List (Bool)) X rX) (erased (Cat (Bool) r X rX) c)
+    -> (erased (List (Bool)) zX) (erased (Cat (Bool) z X zX) c2) (erased (Go (MkTc 1 (DR) l (Cons (Bool) (BFalse) rX)) (MkTc 1 (DR) lo (Cons (Bool) (BFalse) zX))) g))
+  (let-match erased w (S3C m a _ t _ lo1 _ _ mk p tw w1) ((S3N _ _) (values rX c (go-refl _))))
+  (let ((erased tX1) (erased c1) (erased q)) (rp-catx (BTrue) a (Cons (Bool) (BFalse) t) r X rX p c))
+  (let-match erased c1 (CatC _ _ _ _ tX ct))
+  (let ((erased a2) (erased mk2) (erased x2) (erased lob) (erased p2) (erased tw2) (erased g1)) (blk3 m l (Cons (Bool) (BFalse) tX)))
+  (let-match erased (mul-fn (Succ m) n3 a a2 mk mk2) (Refl _ _))
+  (let-match erased (rp-fn (BTrue) a tX1 rX x2 q p2) (Refl _ _))
+  (let-match erased (tw-fn (Succ m) _ lo1 lob tw tw2) (Refl _ _))
+  (let ((erased zX) (erased c2) (erased g2)) (s3-go lo1 t lo z w1 X tX ct))
+  (values zX c2 (go-cat _ _ _ g1 g2)))
+
+(def-fns _ $ (erased cat-nilr : (erased Type A) (subterm erased (List A) x) -> (erased (Cat A x (Nil A) x) c))
+  (let-match erased x (Cons _ a x1) ((Nil _) (CatN A (Nil A))))
+  (CatC A a x1 (Nil A) x1 (cat-nilr A x1)))
+
 (def-lvl LF)
 
 (def-adts
@@ -370,45 +432,6 @@
   (let-match many (frame-one fe c0 e ch) (RsNo _ _ _ _) ((RsOk _ _ e1 ch1) (RsOk l3 c0 e1 ch1)))
   (tail $ frame-tbl fs1 c0 e ch))
 
-(def-adts
-  ((Tw : ((Nat) k) ((List (Bool)) l lo) -> Type)
-    enum
-    (many TwZ : (erased (List (Bool)) l) -> (Tw (Zero) l l))
-    (many TwS : (erased (Nat) k) (erased (List (Bool)) l lo) (erased (Tw k (bits "011" l) lo) p) -> (Tw (Succ k) l lo))))
-
-(def-fns _ $ (erased tw-snoc : (erased (Nat) k) (erased (List (Bool)) l lo) (subterm erased (Tw k l lo) p) -> (erased (Tw (Succ k) l (bits "011" lo)) q))
-  (match erased p _
-    ((TwZ _) (TwS (Zero) l (bits "011" l) (TwZ (bits "011" l))))
-    ((TwS k1 _ _ p1) (TwS (Succ k1) l (bits "011" lo) (tw-snoc k1 (bits "011" l) lo p1)))))
-
-(def-fns _ $ (erased trip-step : (erased (Nat) k a) (erased (List (Bool)) l r x lo) (erased (Mul k n3 a) mk) (erased (Rp (BTrue) a r x) p)
-    (erased (Tw k (bits "011" l) lo) tw) (erased (Go (MkTc 1 (DR) (bits "011" l) x) (MkTc 1 (DR) lo r)) g)
-    -> (erased (Nat) a2) (erased (Mul (Succ k) n3 a2) mk2) (erased (Rp (BTrue) a2 r (bits "111" x)) p2) (erased (Tw (Succ k) l lo) tw2)
-    (erased (Go (MkTc 1 (DR) l (bits "111" x)) (MkTc 1 (DR) lo r)) g2))
-  (values (Succ (Succ (Succ a)))
-    (MulSucc k n3 a _ mk (add-comm n3 a _ (AddSucc _ _ _ (AddSucc _ _ _ (AddSucc _ _ _ (AddZero a))))))
-    (RpS _ _ _ _ (RpS _ _ _ _ (RpS _ _ _ _ p))) (TwS k l lo tw) (go-cat _ _ _ (go _ _ (c-sw0 p3 sg3 l x)) g)))
-
-(def-fns _ $ (erased trips : (subterm erased (Nat) k) (erased (List (Bool)) l r)
-    -> (erased (Nat) a) (erased (Mul k n3 a) mk) (erased (List (Bool)) x lo) (erased (Rp (BTrue) a r x) p) (erased (Tw k l lo) tw)
-    (erased (Go (MkTc 1 (DR) l x) (MkTc 1 (DR) lo r)) g))
-  (let-match erased k (Succ k1) ((Zero) (values (Zero) (MulZero n3) r l (RpZ _ r) (TwZ l) (go-refl _))))
-  (let ((erased a1) (erased m1) (erased x1) (erased lo) (erased p1) (erased tw1) (erased g1)) (trips k1 (bits "011" l) r))
-  (let ((erased a2) (erased m2) (erased p2) (erased tw2) (erased g2)) (trip-step k1 a1 l r x1 lo m1 p1 tw1 g1))
-  (values a2 m2 (bits "111" x1) lo p2 tw2 g2))
-
-(def-fns _ $ (erased tw-fn : (erased (Nat) k) (erased (List (Bool)) l a b) (subterm erased (Tw k l a) p) (erased (Tw k l b) q) -> (erased (Eq (List (Bool)) a b) e))
-  (match erased p _
-    ((TwZ _) (let-match erased q (TwZ _)) (Refl _ a))
-    ((TwS k1 _ _ p1) (let-match erased q (TwS _ _ _ q1)) (tw-fn k1 (bits "011" l) a b p1 q1))))
-
-(def-fns _ $ (erased blk3 : (erased (Nat) m) (erased (List (Bool)) l t)
-    -> (erased (Nat) a) (erased (Mul (Succ m) n3 a) mk) (erased (List (Bool)) x lo) (erased (Rp (BTrue) a t x) p) (erased (Tw (Succ m) (Cons (Bool) (BTrue) l) lo) tw)
-    (erased (Go (MkTc 1 (DR) l (Cons (Bool) (BFalse) x)) (MkTc 1 (DR) lo t)) g))
-  (let ((erased a1) (erased m1) (erased x1) (erased lo) (erased p1) (erased tw1) (erased g1)) (trips m (bits "0111" l) t))
-  (let ((erased a2) (erased m2) (erased p2) (erased tw2) (erased g2)) (trip-step m a1 (bits "1" l) t x1 lo m1 p1 tw1 g1))
-  (values a2 m2 (bits "111" x1) lo p2 tw2 (go-cat _ _ _ (go _ _ (c-st3 p3 sg5 l (bits "11" x1))) g2)))
-
 (def-fns _ $ (many push-vm : (subterm many (Nat) m) (many (List (Rn)) L) (erased (List (Bool)) l) (erased (Den L l) d)
     -> (many (List (Rn)) L2) (erased (List (Bool)) lo) (erased (Den L2 lo) d2) (erased (Tw (Succ m) (Cons (Bool) (BTrue) l) lo) tw))
   (let-match many m (Succ m1)
@@ -425,7 +448,7 @@
   ((S3R : ((List (Bool)) l r) -> Type)
     enum
     (many S3Ok : (erased (List (Bool)) l r lo r1 z) (many (List (Rn)) L2) (erased (Den L2 lo) d2) (many (Nat) g1) (many (List (Rn)) R1) (erased (Den R1 r1) dr1)
-       (erased (Rp (BFalse) g1 r1 z) pz) (erased (Go (MkTc 1 (DR) l (Cons (Bool) (BFalse) r)) (MkTc 1 (DR) lo (Cons (Bool) (BFalse) z))) g) -> (S3R l r))
+       (erased (Rp (BFalse) g1 r1 z) pz) (erased (S3w l r lo z) w) -> (S3R l r))
     (many S3No : (erased (List (Bool)) l r) -> (S3R l r))))
 
 (def-fns _ $ (many sw3 : (many (List (Rn)) L) (erased (List (Bool)) l) (erased (Den L l) d) (subterm many (List (Rn)) R) (erased (List (Bool)) r) (erased (Den R r) dr)
@@ -445,19 +468,19 @@
   (let-match erased dr (DeC _ _ _ x _ dr1 px))
   (let-match erased dr1 (DeC _ _ _ r2 _ dr2 pg))
   (let ((many Lo) (erased lo) (erased dLo) (erased tw)) (push-vm m L l d))
-  (let ((erased a2) (erased mk) (erased x2) (erased lo2) (erased p2) (erased tw2) (erased gb)) (blk3 m l x))
+  (let ((erased a2) (erased mk) (erased x2) (erased lo2) (erased p2) (erased tw2) (erased _)) (blk3 m l x))
   (let-match erased (mul-fn q n3 a2 a mk mm) (Refl _ _))
   (let-match erased (rp-fn (BTrue) a x x2 r p2 px) (Refl _ _))
   (let-match erased (tw-fn q _ lo lo2 tw tw2) (Refl _ _))
   (let-match erased pg (RpS _ _ _ z pz))
-  (let ((many stop)) (S3Ok l r lo2 r2 z Lo dLo g1 R2 dr2 pz gb))
+  (let ((many stop)) (S3Ok l r lo2 r2 z Lo dLo g1 R2 dr2 pz (S3C m a2 l z r lo2 lo2 z mk p2 tw2 (S3N lo2 z))))
   (let-match many g1 (Zero) ((Succ _) stop))
   (let-match erased pz (RpZ _ _))
   (let-match many R2 (Cons _ rn _) ((Nil _) stop))
   (let-match many rn (MkRn bn _))
   (let-match many bn (BTrue) ((BFalse) stop))
   (let-match many (notail $ sw3 Lo lo2 dLo R2 r2 dr2) (S3Ok _ _ lo3 r3 z3 L3 d3 g3 R3 dr3 pz3 gc) ((S3No _ _) stop))
-  (S3Ok l r lo3 r3 z3 L3 d3 g3 R3 dr3 pz3 (go-cat _ _ _ gb gc)))
+  (S3Ok l r lo3 r3 z3 L3 d3 g3 R3 dr3 pz3 (S3C m a2 l z r lo2 lo3 z3 mk p2 tw2 gc)))
 
 (def-fns _ $ (many try-sweep3 : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
   (let ((many no)) (RsNo l3 c0 e ch))
@@ -467,9 +490,11 @@
   (let-match many (eq-nat q 1) (ESome _ eq) ((ENone _) no))
   (let-match erased eq (Refl _ _))
   (let-match many h (BFalse) ((BTrue) no))
-  (let-match many (sw3 L l dl R r dr) (S3Ok _ _ lo r1 zz L2 d2 g1 R1 dr1 pz g) ((S3No _ _) no))
+  (let-match many (sw3 L l dl R r dr) (S3Ok _ _ lo r1 zz L2 d2 g1 R1 dr1 pz w) ((S3No _ _) no))
   (let ((many R2) (erased y) (erased z2) (erased d3) (erased p) (erased ez)) (cpushn (BFalse) g1 R1 r1 dr1))
   (let-match erased (rp-fn (BFalse) g1 r1 z2 zz p pz) (Refl _ _))
+  (let ((erased zX) (erased cz) (erased g)) (s3-go l r lo zz w (Nil (Bool)) r (cat-nilr (Bool) r)))
+  (let-match erased (cat-fn (Bool) zz (Nil (Bool)) zX zz cz (cat-nilr (Bool) zz)) (Refl _ _))
   (let ((erased t) (erased run)) (go-run 1 1 _ _ _ _ _ _ g))
   (RsOk l3 c0 (MkRq 1 L2 (BFalse) R2)
     (rch-z l3 c0 c c _ (MkConf 1 lo (BFalse) y) e _ t ch dc (cez-refl c) run (MkDc 1 L2 R2 (BFalse) lo y d2 d3)
@@ -608,10 +633,17 @@
   (let-match many z (Succ z1) ((Zero) (tail $ tokz cs3 (Zero) (Cons _ (T0) acc))))
   (tail $ tokz cs3 (Zero) (Cons _ (T1) (tps z1 acc))))
 
-(def-fns _ $ (many try-ident : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
-  (let ((many no)) (RsNo l3 c0 e ch))
-  (let-match erased ch (MkRch _ _ a c _ t0 r0 dc0 z))
-  (let-match many (c-lm e c dc0) (LmOk _ lz x0 u y xr n L0 d0 p0 X T px R1 d1 cu dc) ((LmNo _) no))
+(def-adts
+  ((IdtR : ((Rq) e) -> Type)
+    enum
+    (many IdtOk : (erased (Rq) e) (erased (List (Bool)) lz x0 u y xr) (many (Nat) n) (many (List (Rn)) L0) (erased (Den L0 lz) d0) (erased (Rp (BTrue) n lz x0) p0)
+       (erased (List (Tk)) X) (erased (Tt) T) (erased (XT X T u) px) (many (List (Rn)) R1) (erased (Den R1 y) d1) (erased (Cat (Bool) u y xr) cu)
+       (erased (Dc e (MkConf 2 (bits "00" x0) (BTrue) (bits "0" xr))) dc) (many (Nat) k w) (many (List (Tk)) Z) (many (Tt) U) (erased (RdK k X T Z U w) rk) -> (IdtR e))
+    (many IdtNo : (erased (Rq) e) -> (IdtR e))))
+
+(def-fns _ $ (many ident-lm : (many (Rq) e) (many (LmR e) lm) -> (many (IdtR e) res))
+  (let ((many no)) (IdtNo e))
+  (let-match many lm (LmOk _ lz x0 u y xr n L0 d0 p0 X T px R1 d1 cu dc) ((LmNo _) no))
   (let-match many (wtk 64 R1 y d1) (WtOk _ yh r w cw h R2 d2 ph) ((WtNo _) no))
   (let-match many w (Cons _ _ _) ((Nil _) no))
   (let ((many tbs) (erased tbn)) (tbits T))
@@ -636,7 +668,12 @@
   (let ((erased v3) (erased tb3) (erased xb4)) (xt-cat X2 T2 u2 yh xr2 px2 cu2))
   (let-match erased (tb-fn T2 yh v2 v3 tb2 tb3) (Refl _ _))
   (let-match erased (xb-fn X2 v2 xr xr2 xb3 xb4) (Refl _ _))
-  (c-apply c0 e ch lz x0 u2 yh xr n L0 d0 p0 X2 T2 px2 (Cons _ (MkRn (BFalse) h) R2) (DeC (BFalse) h R2 r yh d2 ph) cu2 dc k wu Z U rk))
+  (IdtOk e lz x0 u2 yh xr n L0 d0 p0 X2 T2 px2 (Cons _ (MkRn (BFalse) h) R2) (DeC (BFalse) h R2 r yh d2 ph) cu2 dc k wu Z U rk))
+
+(def-fns _ $ (many try-ident : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
+  (let-match erased ch (MkRch _ _ a c _ t0 r0 dc0 z))
+  (let-match many (ident-lm e (c-lm e c dc0)) (IdtOk _ lz x0 u y xr n L0 d0 p0 X T px R1 d1 cu dc k w Z U rk) ((IdtNo _) (RsNo l3 c0 e ch)))
+  (c-apply c0 e ch lz x0 u y xr n L0 d0 p0 X T px R1 d1 cu dc k w Z U rk))
 
 (def-fns _ $ (many try-identG : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
   (match many (guarded e) _ ((BTrue) (try-ident c0 e ch)) ((BFalse) (RsNo l3 c0 e ch))))
@@ -939,10 +976,6 @@
   (let-match many (try-contact c0 e2 ch2) (RsOk _ _ e3 ch3) ((RsNo _ _ _ _) no))
   (RsOk l3 c0 e3 ch3))
 
-(def-fns _ $ (erased cat-nilr : (erased Type A) (subterm erased (List A) x) -> (erased (Cat A x (Nil A) x) c))
-  (let-match erased x (Cons _ a x1) ((Nil _) (CatN A (Nil A))))
-  (CatC A a x1 (Nil A) x1 (cat-nilr A x1)))
-
 (def-fns _ $ (erased fsq-rch : (erased (Conf) c0) (erased (Rq) e e2) (erased (FSq e e2) s) (erased (Rch l3 c0 e) ch) -> (erased (Rch l3 c0 e2) ch2))
   (let-match erased ch (MkRch _ _ a c _ t0 r0 dc z))
   (let-match erased dc (MkDc q L R h l r dl dr))
@@ -1088,8 +1121,13 @@
   (let-match many acc (Cons _ m acc1) ((Nil _) L))
   (Cons _ (MkRn (BFalse) 1) $ Cons _ (MkRn (BTrue) 2) $ Cons _ (MkRn (BFalse) 1) $ Cons _ (MkRn (BTrue) (nat-add 3 m)) (notail $ stkr acc1 L)))
 
-(def-fns _ $ (many train-tgt : (many (Bool) g1) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Maybe (Rq)) res))
-  (let ((many no)) (None (Rq)))
+(def-adts $ (TgR : -> Type)
+  enum
+  (many TgOk : (many (Rq) t) (many (List (Rn)) S) -> (TgR))
+  (many TgNo : -> (TgR)))
+
+(def-fns _ $ (many train-tgt-s : (many (Bool) g1) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (TgR) res))
+  (let ((many no)) (TgNo))
   (let-match erased ch (MkRch _ _ a c _ t0 r0 dc0 z))
   (let-match many (c-lm e c dc0) (LmOk _ lz x0 u y xr n L0 d0 p0 X T px R1 d1 cu dc) ((LmNo _) no))
   (let-match many (nat-eq n 2) (Equal _ _ _) (else no))
@@ -1123,7 +1161,10 @@
   (let ((many R3) (erased y3) (erased _) (erased d3) (erased _) (erased _)) (cpushn (BFalse) gap2 R2 r2 dr2))
   (let ((many Ro) (erased _) (erased _) (erased _)) (rapp C (Cons (Bool) (BFalse) u0) dC R3 y3 d3))
   (let ((many Lo)) (Cons _ (MkRn (BFalse) 2) (Cons _ (MkRn (BTrue) 2) (stkr acc L0))))
-  (Some _ (MkRq 2 Lo (BTrue) Ro)))
+  (TgOk (MkRq 2 Lo (BTrue) Ro) R2))
+
+(def-fns _ $ (many train-tgt : (many (Bool) g1) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Maybe (Rq)) res))
+  (match many (train-tgt-s g1 c0 e ch) _ ((TgOk t _) (Some _ t)) ((TgNo) (None (Rq)))))
 
 (def-fns _ $ (many train-core : (many (Bool) g1) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
   (let-match many (train-tgt g1 c0 e ch) (Some _ t) ((None _) (RsNo l3 c0 e ch)))
