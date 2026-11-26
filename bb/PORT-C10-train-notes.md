@@ -60,6 +60,18 @@ calls `c10-move-t`.
 
 The whole run from 89,502 to 400,000 took 1,479 s against 1,848 s.
 
+Goals, `slc` with `--goal proved`, user time:
+
+- `bb/l3c10bound-37981.sl` with `c10-run3` replaced by `c10-run4`, after
+  the full file list, `bb/l3c10-run.sl`, `bb/l3c10-far.sl` and
+  `bb/l3c10-train.sl`: PASS, exit 0, 4,277 s, 1.7 GB peak. The 89,501
+  moves it runs end before the counter, so TRAIN's speed-up seems not to
+  show there.
+- `bb/l3c10bound.sl` (`c10-run2`, which does not use the cut TRAIN but
+  does use the changed `try-sweep3` and `try-ident`): PASS, exit 0,
+  147 s against 141 s for the base tree in the same session, which may
+  be noise on the shared container.
+
 What seems to remain is the replay itself: in two instances near move
 89,600, the cut replay took about 1,700 and 8,100 moves (about 20 and
 70 per marker, most of them single steps), about 2.5 and 40 ms. Before
