@@ -21,7 +21,7 @@
 (def-fns _ $ (many macro-at : (many (Nat) j) (many (Rq) e) -> (many (Maybe (Rq)) r))
   (let ((erased c0) (erased ch)) (rch-self l3 e))
   (let-match many (neqb j 6) (BFalse) ((BTrue) (rs-maybe c0 (try-fe (BFalse) c0 e ch))))
-  (let-match many (neqb j 10) (BFalse) ((BTrue) (rs-maybe c0 (c-death c0 e ch))))
+  (let-match many (neqb j 10) (BFalse) ((BTrue) (rs-maybe c0 (c-death-u c0 e ch))))
   (let-match many (neqb j 5) (BFalse) ((BTrue) (rs-maybe c0 (try-fe (BTrue) c0 e ch))))
   (let-match many (neqb j 24) (BFalse) ((BTrue) (rs-maybe c0 (try-resume c0 e ch))))
   (let-match many (neqb j 8) (BFalse) ((BTrue) (rs-maybe c0 (try-beven c0 e ch))))

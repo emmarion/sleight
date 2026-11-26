@@ -1,3 +1,7 @@
+(def-fns _ $ (many rlen : (subterm many (List (Rn)) L) (many (Nat) acc) -> (many (Nat) n))
+  (let-match many L (Cons _ _ L1) ((Nil _) acc))
+  (tail $ rlen L1 (Succ acc)))
+
 (def-fns _ $ (many rq-norm : (many (Rq) t) -> (many (Rq) t2))
   (let-match many t (MkRq q L h R))
   (let ((erased l) (erased dl)) (den-ex L))
