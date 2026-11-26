@@ -231,16 +231,21 @@
   (let ((many e1) (erased ch1)) (ls-out c0 X T st))
   (RsOk l3 c0 e1 ch1))
 
-(def-fns _ $ (many train-l : (many (Bool) g1) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
-  (let ((many no)) (train-f g1 c0 e ch))
-  (let-match many (train-tgt-s g1 c0 e ch) (TgOk t S) ((TgNo) (RsNo l3 c0 e ch)))
+(def-fns _ $ (many train-lw : (many (Bool) g1) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Maybe (Rs l3 c0)) res))
+  (let ((many no)) (Some _ (RsNo l3 c0 e ch)))
+  (let-match many (train-tgt-s g1 c0 e ch) (TgOk t S) ((TgNo) (None _)))
   (let-match erased ch (MkRch _ _ _ c _ _ _ dc _))
   (let-match many (c-lm e c dc) (LmOk _ _ _ _ _ _ _ _ _ _ _ _ _ R1 _ _ _) ((LmNo _) no))
   (let-match many (find-at R1 S 0) (Some _ i) ((None _) no))
   (let ((many k) (many _) (erased _) (erased _) (erased _) (erased _)) (divmod i (Succ 1) (LtZ 1)))
   (let-match many (ls-train k c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ _ _) no))
   (let-match many (rq-same e1 t) (BTrue) ((BFalse) no))
-  (RsOk l3 c0 e1 ch1))
+  (Some _ (RsOk l3 c0 e1 ch1)))
+
+(def-fns _ $ (many train-l : (many (Bool) g1) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
+  (match many (train-lw g1 c0 e ch) _
+    ((None _) (RsNo l3 c0 e ch))
+    ((Some _ r) (match many r _ ((RsOk _ _ _ _) r) ((RsNo _ _ _ _) (train-f g1 c0 e ch))))))
 
 (def-fns _ $ (many try-trainl : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
   (train-l (BFalse) c0 e ch))
