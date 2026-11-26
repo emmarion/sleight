@@ -911,3 +911,5 @@
     (absurd (FVO P) (match erased fq _))))
 
 (let ((erased RndW)) Rnd)
+
+(let ((many FamE)) FE)
