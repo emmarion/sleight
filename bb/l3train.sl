@@ -186,11 +186,6 @@
   (let-match erased c8 (CatN _ _))
   (Refl _ r))
 
-(def-fns _ $ (many monus : (many (Nat) a b) -> (many (Nat) c))
-  (let-match many (lt-dec b (Succ a)) (Yes _ _ _ _ le) ((No _ _ _ _ _) (Zero)))
-  (let ((many c) (erased _)) (sub a b le))
-  c)
-
 (def-fns _ $ (many dlt-sum : (many (Nat) acc) (subterm many (List (Ps)) w) -> (many (Nat) n))
   (let-match many w (Cons _ x w1) ((Nil _) acc))
   (let ((many d)) (match many x (((Nat) d)) ((PrA) 3) ((PrB) 4) ((PrBp) 1) ((PrC) 2) ((PrD) 3) ((PrDp) 0)))
@@ -225,8 +220,7 @@
   (let ((many m4) (erased _)) (mul s 4))
   (let ((many fast)) (phi-at P (monus m4 (dlt-sum 0 (Cons _ x w))) h w D Z g en))
   (let-match many fast (NxNo _ _ _ _ _) (else fast))
-  (let ((many r) (many l)) (rho-of (ps-snoc w)))
-  (phi-at P (odd-s h r l) h w D Z g en))
+  (phi-at P (odd-s h (rho-q (ps-digits (ps-snoc w)))) h w D Z g en))
 
 (def-adts
   ((TrS : ((Nat) P s) ((List (Tk)) X) ((List (Bool)) xr x0) -> Type)
