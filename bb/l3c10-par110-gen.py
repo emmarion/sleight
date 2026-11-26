@@ -97,6 +97,28 @@ def emit(ts,s="(PNil)"):
     for kind,xs in reversed(out):
         s=p37.dig(xs,s) if kind=='flat' and len(xs)>8 else f"(PG {pg.emit(pg.merge([('lit',[x]) if isinstance(x,int) else x for x in xs]))} {s})"
     return s
+LB=2**32; CH=1500
+def num(n):
+    ls=[]
+    while n: n,r=divmod(n,LB); ls.append(r)
+    return [len(ls)]+ls
+def tok(e):
+    h=e[0]; tag={'PNil':0,'PDig':1,'PG':2,'GNil':0,'GCons':1,'GRep':2,'GTrn':3}[h]; out=[tag]
+    for x in e[1:]:
+        if isinstance(x,str): out+=num(int(x))
+        elif x[0]=='MkGBlk': out+=tok(x[1])+tok(x[2])
+        else: out+=tok(x)
+    return out
+def encode(e):
+    ts=tok(e); s="(PNil)"
+    for i in reversed(range(0,len(ts),CH)):
+        c=ts[i:i+CH]; b=max(c)+1; n=0
+        for d in reversed(c): n=n*b+d
+        s=f"(PDig {len(c)} {b} {n} {s})"
+    return s
+def encq(g):
+    e=pg.parse(g); assert e[0]=='MkPQ'
+    return f"(MkPQ {e[1]} ({e[2][0]}) ({e[3][0]}) {encode(e[4])} ({e[5][0]}) {encode(e[6])})"
 def side_gen(items):
     S=flat(items); bits=[b for b,n in S]
     assert all(bits[i]!=bits[i+1] for i in range(len(bits)-1))
@@ -138,22 +160,27 @@ def ckgen(src):
     t=open(src).read().strip()
     if t.startswith('(let'): return t[t.index('(MkPQ'):-1]
     cfg=p37.read(src); g=p37.gen(cfg); assert p37.ev(pg.parse(g))==cfg; return g
+def ckenc(src):
+    g=ckgen(src); c=encq(g); e,d=pg.parse(g),pg.parse(c)
+    for i in (4,6):
+        xs=ev(d[i],[])[::-1]; assert xs==tok(e[i])
+    return c
 def goal(exp,script,cks):
     bl="(MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)))"; N="1"+"0"*exp; sc=open(script).read().split()
     pts=[(0,0,None)]+[tuple(map(int,c.split('=')[0].split(':')))+(c.split('=')[1] if '=' in c else None,) for c in cks]
-    k=len(pts)-2; out=["(let ((many g0)) (MkPQ 0 (BFalse) (BFalse) (PNil) (BFalse) (PNil)))"]
-    out+=[f"(let ((many g{i})) {ckgen(src)})" for i,(_,_,src) in enumerate(pts) if src]
+    k=len(pts)-2; out=["(let ((many g0)) (MkPQ (Zero) (BFalse) (BFalse) (PG (GCons (Zero) (GNil)) (PNil)) (BFalse) (PG (GCons (Zero) (GNil)) (PNil))))"]
+    out+=[f"(let ((many g{i})) {ckenc(src)})" for i,(_,_,src) in enumerate(pts) if src]
     for i in range(k+1):
         (m0,s0,_),(m1,s1,_)=pts[i],pts[i+1]; assert s0==0 or m1==m0
         xs=sc[s0:s1]; scr=f'(rd-nats {len(xs)} "{" ".join(xs)}")' if xs else "(values (Nil (Nat)) \"\")"
-        call=f"(rp5-run {m1-m0} sc g{i} g{i+1})" if i<k else f"(rp5-span {m1-m0} sc {N} g{k})"
-        ty=f"(ReachP l3 g{i} g{i+1})" if i<k else f"(SpanP l3 g{k} {N})"
+        call=f"(re-run {m1-m0} sc g{i} g{i+1})" if i<k else f"(re-span {m1-m0} sc {N} g{k})"
+        ty=f"(ReachE l3 g{i} g{i+1})" if i<k else f"(SpanE l3 g{k} {N})"
         out.append(f"(def-fns _ $ (many piece{i} : -> (many (Res {ty}) r))\n  (let ((many sc) (many _)) {scr})\n  {call})")
     out.append(f"(let ({' '.join(f'(many r{i})' for i in range(k+1))}) (native-compute {' '.join(f'piece{i}' for i in range(k+1))}))")
     out+= [f"(comptime-match many r{i} (ROk _ q{i}))" for i in range(k+1)]
-    out.append(f"(let-match erased q{k} (MkSpanP _ _ _ lv span-last))")
-    ch="(rchp0)"
-    for i in range(k): ch=f"(rchp-cat l3 _ g{i} g{i+1} {ch} q{i})"
+    out.append(f"(let-match erased q{k} (MkSpanE _ _ _ lv span-last))")
+    ch="(rche0)"
+    for i in range(k): ch=f"(rche-cat l3 _ g{i} g{i+1} {ch} q{i})"
     out.append(f"(let ((erased span)) (span-last {ch}))")
     out.append(f"""
 (def-fns _ $ (erased bound : (erased (Nat) k) (erased (HaltsAt l3 {bl} k) h) -> (erased (Lt {N} k) p))
@@ -167,4 +194,4 @@ if __name__=='__main__' and sys.argv[1]=='--goal':
 elif __name__=='__main__':
     for arg in sys.argv[1:]:
         name,path=arg.split('=')
-        print(f"(let ((many {name})) {gen(path)})")
+        print(f"(let ((many {name})) {ckenc(path)})")
