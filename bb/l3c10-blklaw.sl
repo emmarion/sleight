@@ -107,11 +107,6 @@
     (many X4Z : -> (X4 (Zero) (Zero)))
     (many X4S : (erased (Nat) a b) (erased (X4 a b) p) -> (X4 (Succ a) (Succ (Succ (Succ (Succ b))))))))
 
-(def-fns _ $ (erased x4-ex : (subterm erased (Nat) a) -> (erased (Nat) b) (erased (X4 a b) p))
-  (let-match erased a (Succ a1) ((Zero) (values (Zero) (X4Z))))
-  (let ((erased b1) (erased p1)) (x4-ex a1))
-  (values (Succ (Succ (Succ (Succ b1)))) (X4S a1 b1 p1)))
-
 (def-fns _ $ (erased x4-fn : (erased (Nat) a b c) (subterm erased (X4 a b) p) (erased (X4 a c) q) -> (erased (Eq (Nat) b c) e))
   (let-match erased p (X4S a1 b1 p1) ((X4Z) (let-match erased q (X4Z)) (Refl _ b)))
   (let-match erased q (X4S _ c1 q1))
@@ -290,11 +285,6 @@
     ((CatN _ _) b)
     ((CatC _ x u1 _ w1 c1) (let-match erased a (NfC _ _ z a1)) (NfC x w1 z (nfw-cat u1 W w1 c1 a1 b)))))
 
-(def-fns _ $ (erased nfw-pre : (erased (List (Ps)) u W w) (subterm erased (Cat (Ps) u W w) c) (erased (Nfw w) a) -> (erased (Nfw u) r))
-  (match erased c _
-    ((CatN _ _) (NfN))
-    ((CatC _ x u1 _ w1 c1) (let-match erased a (NfC _ _ z a1)) (NfC x u1 z (nfw-pre u1 W w1 c1 a1)))))
-
 (def-adts
   ((Nf2 : ((List (Ps)) w) -> Type)
     enum
@@ -312,12 +302,6 @@
         (absurd (N2O _) (match erased c1 _))
         (absurd (N2T _ _) (let-match erased c1 (CatC _ _ _ _ _ c2)) (match erased c2 _))
         ((N2C _ _ z f1) (NfC x u1 z (nf2-pre u1 W w1 a b c1 f1)))))))
-
-(def-fns _ $ (erased nfw-nf2 : (erased (List (Ps)) u w) (erased (Ps) a b) (subterm erased (Cat (Ps) u (Cons (Ps) a (Cons (Ps) b (Nil (Ps)))) w) c)
-    (erased (Nfw u) f) -> (erased (Nf2 w) r))
-  (match erased c _
-    ((CatN _ _) (N2T a b))
-    ((CatC _ x u1 _ w1 c1) (let-match erased f (NfC _ _ z f1)) (N2C x w1 z (nfw-nf2 u1 w1 a b c1 f1)))))
 
 (def-fns _ $ (erased swap-k : (erased (Nat) k x y X Y n1 n2 N) (erased (Add x n1 N) p) (erased (Add y n2 N) q) (erased (Add k x X) r) (erased (Add k y Y) s)
     -> (erased (Nat) M) (erased (Add X n1 M) a) (erased (Add Y n2 M) b))
@@ -483,11 +467,6 @@
   (match erased s _
     ((SnN) (let-match erased sd (SdwN)) (SdwC (PrDp) (Nil (Ps)) (Zero) (Zero) (Zero) (DzDp) (SdwN) (AddZero (Zero))))
     ((SnC x w1 w3 s1) (let-match erased sd (SdwC _ _ d D1 _ dl sd1 a)) (SdwC x w3 d D1 D dl (sd-sn w1 w3 D1 s1 sd1) a))))
-
-(def-fns _ $ (erased nfw-sn : (erased (List (Ps)) w w2) (subterm erased (Sn w w2) s) (erased (Nfw w) f) -> (erased (Nf2 w2) r))
-  (match erased s _
-    ((SnN) (N2O (PrDp)))
-    ((SnC x w1 w3 s1) (let-match erased f (NfC _ _ z f1)) (N2C x w3 z (nfw-sn w1 w3 s1 f1)))))
 
 (def-fns _ $ (erased rva-sn : (erased (List (Ps)) acc w w2) (erased (Rva (Ps) acc (Nil (Ps)) w) r) (erased (Sn w w2) s)
     -> (erased (Rva (Ps) (Cons (Ps) (PrDp) acc) (Nil (Ps)) w2) q))
@@ -703,16 +682,6 @@
       (values s e ae aet (NthThere (Nat) s0 ss1 i1 s nt) p1 c2 c3
         (add-lt-mono s0 aet1 (Succ b1) aet (Succ b) d3 (add-succ-right s0 b1 b bd) p4)))))
 
-(def-fns _ $ (erased loc-up : (erased (List (Nat)) ss) (erased (Nat) rho i r r2 d s) (subterm erased (Loc ss rho i r) q) (erased (Add r d r2) a)
-    (erased (Nth (Nat) ss i s) nt) (erased (Lt r2 s) lt) -> (erased (Nat) rho2) (erased (Loc ss rho2 i r2) q2) (erased (Add rho d rho2) b))
-  (match erased q _
-    ((LcH s0 _ ss1 _) (let-match erased nt (NthHere _ _ _)) (values r2 (LcH s0 r2 ss1 lt) a))
-    ((LcT s0 rho1 _ i1 _ ss1 ad q1)
-      (let-match erased nt (NthThere _ _ _ _ _ nt1))
-      (let ((erased rho3) (erased q3) (erased b1)) (loc-up ss1 rho1 i1 r r2 d s q1 a nt1 lt))
-      (let ((erased c) (erased p) (erased p2)) (add-pre s0 rho1 rho d rho3 ad b1))
-      (values c (LcT s0 rho3 c i1 r2 ss1 p2 q3) p))))
-
 (def-fns _ $ (erased loc-same : (erased (List (Nat)) ss) (erased (Nat) a b i r t g) (subterm erased (Loc ss a i r) qa) (erased (Loc ss b i t) qb) (erased (Add r g t) p)
     -> (erased (Add a g b) q))
   (match erased qa _
@@ -740,15 +709,6 @@
     (many NaB : -> (Na (PrB)))
     (many NaC : -> (Na (PrC)))
     (many NaD : -> (Na (PrD)))))
-
-(def-adts
-  ((SOk : ((List (Ps)) M) ((Nat) n p s s0) -> Type)
-    enum
-    (many SoN : (erased (Nat) n s0) -> (SOk (Nil (Ps)) n n s0 s0))
-    (many SoA : (erased (List (Ps)) M) (erased (Nat) n p s s0) (erased (SOk M n p (Succ s) s0) so) -> (SOk (Cons (Ps) (PrA) M) n (Succ p) s s0))
-    (many SoW : (erased (Ps) y) (erased (List (Ps)) M) (erased (Nat) n p s s0) (erased (Na y) na) (erased (SOk M n p s s0) so) -> (SOk (Cons (Ps) y M) n (Succ p) s s0))
-    (many SoS : (erased (Ps) y) (erased (List (Ps)) M) (erased (Nat) n p s s0 m s2) (erased (Na y) na) (erased (SOk M n p s s0) so) (erased (Top p m) tp)
-       (erased (Lt s2 (Succ m)) l) -> (SOk (Cons (Ps) y M) n (Succ p) s2 s0))))
 
 (def-fns _ $ (erased lt-irr : (erased (Nat) a) (subterm erased (Lt a a) l) -> (erased (False) f))
   (let-match erased l (LtS a1 _ l1))
@@ -823,135 +783,10 @@
   (let-match erased g6 (MkSg6 _))
   (values b1 (loc-same ss rho2 T n5 rb2 m1 b1 lc qt ag2) l1))
 
-(def-fns _ $ (erased mf-na : (erased (Ps) y) (erased (Nat) i r m rs rho d rb2 s2 T) (erased (List (Ps)) M1 w2a) (erased (Nat) p1)
-    (erased (List (Nat)) ss) (erased (Sg6 m ss) g6) (erased (Top p1 m) top) (erased (TopAt m T) ta)
-    (erased (Loc ss rho i r) lc) (erased (StS i y r m rs) st) (erased (Na y) na) (erased (PBlk p1 rb2 w2a) b2o) (erased (Add rs d rb2) a2)
-    (erased (Nat) g0) (erased (Add rb2 g0 m) ag) (erased (Lt s2 (Succ m)) ls)
-    -> (erased (Nat) rho2) (erased (PBlk (Succ p1) rho2 (Cons (Ps) y w2a)) bo) (erased (Add rho d rho2) ao) (erased (Slk (Succ p1) rho2 s2) so2))
-  (let-match erased g6 (MkSg6 _))
-  (let ((erased e) (erased nt) (erased l) (erased st2)) (na-facts y i r m rs rb2 na st))
-  (let-match erased e (Refl _ _))
-  (let ((erased lb)) (add-le-left rb2 g0 m ag))
-  (let ((erased rho2) (erased lc2) (erased a3)) (loc-up ss rho i r rb2 d (Succ m) lc a2 nt lb))
-  (let ((erased g) (erased q) (erased l2)) (slk-n y i rb2 m rho2 T s2 na st2 lc2 ta lb ls))
-  (values rho2 (BlS p1 m rho2 i rb2 rb2 y w2a ss top (MkSg6 m) lc2 st2 b2o) a3 (MkSlk (Succ p1) rho2 s2 T g (TopS p1 m T top ta) q l2)))
-
-(def-fns _ $ (erased mframe : (erased (List (Ps)) M B1 B2 w1 w2) (erased (Nat) p r1 n b1 b2 d s s0)
-    (subterm erased (Cat (Ps) M B1 w1) c1) (erased (Cat (Ps) M B2 w2) c2) (erased (PBlk p r1 w1) b) (erased (SOk M n p s s0) so)
-    (erased (PBlk n b1 B1) bb1) (erased (PBlk n b2 B2) bb2) (erased (Add b1 d b2) ad) (erased (Slk n b2 s0) sl)
-    -> (erased (Nat) r2) (erased (PBlk p r2 w2) bo) (erased (Add r1 d r2) ao) (erased (Slk p r2 s) so2))
-  (match erased c1 _
-    ((CatN _ _)
-      (let-match erased c2 (CatN _ _))
-      (let-match erased so (SoN _ _))
-      (let ((erased e) (erased f)) (blk-inj p n r1 b1 B1 b bb1))
-      (let-match erased e (Refl _ _))
-      (let-match erased f (Refl _ _))
-      (values b2 bb2 ad sl))
-    ((CatC _ y M1 _ w1a c11)
-      (let-match erased c2 (CatC _ _ _ _ w2a c21))
-      (let-match erased b (BlS p1 m _ i r rs _ _ ss top g lc st bb))
-      (let ((erased T) (erased ta)) (top-at m))
-      (match erased so _
-        ((SoA _ _ _ _ _ so1)
-          (let-match erased g (MkSg6 _))
-          (let-match erased st (Ss5 _ _))
-          (let ((erased rb2) (erased b2o) (erased a2) (erased sl1)) (mframe M1 B1 B2 w1a w2a p1 r n b1 b2 d (Succ s) s0 c11 c21 bb so1 bb1 bb2 ad sl))
-          (let-match erased sl1 (MkSlk _ _ _ T0 g0 top1 ag lt))
-          (let-match erased (top-fn p1 T0 m top1 top) (Refl _ _))
-          (let-match erased lt (LtS _ _ l1))
-          (let ((erased b3) (erased eb)) (lt-sb s g0 l1))
-          (let-match erased eb (Refl _ _))
-          (let ((erased c) (erased ec) (erased ag2)) (add-succ-right-inv rb2 b3 m ag))
-          (let-match erased ec (Refl _ _))
-          (let ((erased rho2) (erased lc2) (erased a3))
-            (loc-up ss r1 n5 r rb2 d m lc a2 (NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthThere _ _ _ _ _ $ NthHere _ _ _)
-              (add-le-left rb2 b3 c ag2)))
-          (let ((erased g2) (erased q) (erased l2)) (slk-a rb2 m rho2 T s g0 lc2 ta ag lt))
-          (values rho2 (BlS p1 m rho2 n5 rb2 rb2 (PrA) w2a ss top (MkSg6 m) lc2 (Ss5 rb2 m) b2o) a3 (MkSlk (Succ p1) rho2 s T g2 (TopS p1 m T top ta) q l2)))
-        ((SoW _ _ _ _ _ _ na so1)
-          (let ((erased rb2) (erased b2o) (erased a2) (erased sl1)) (mframe M1 B1 B2 w1a w2a p1 rs n b1 b2 d s s0 c11 c21 bb so1 bb1 bb2 ad sl))
-          (let-match erased sl1 (MkSlk _ _ _ T0 g0 top1 ag lt))
-          (let-match erased (top-fn p1 T0 m top1 top) (Refl _ _))
-          (mf-na y i r m rs r1 d rb2 s T M1 w2a p1 ss g top ta lc st na b2o a2 g0 ag (le-tr s g0 m lt (add-le-left g0 rb2 m (add-comm rb2 g0 m ag)))))
-        ((SoS _ _ _ _ sm _ m3 _ na so1 tp3 lm)
-          (let ((erased rb2) (erased b2o) (erased a2) (erased sl1)) (mframe M1 B1 B2 w1a w2a p1 rs n b1 b2 d sm s0 c11 c21 bb so1 bb1 bb2 ad sl))
-          (let-match erased sl1 (MkSlk _ _ _ T0 g0 top1 ag lt))
-          (let-match erased (top-fn p1 T0 m top1 top) (Refl _ _))
-          (let-match erased (top-fn p1 m3 m tp3 top) (Refl _ _))
-          (mf-na y i r m rs r1 d rb2 s T M1 w2a p1 ss g top ta lc st na b2o a2 g0 ag lm))))))
-
-(def-adts
-  ((Ab : ((Ps) x) ((Ps) y) -> Type)
-    enum
-    (many AbA : -> (Ab (PrA) (PrC)))
-    (many AbB : -> (Ab (PrB) (PrD)))))
-
 (def-fns _ $ (erased slk1 : -> (erased (Slk one one three) sl))
   (let ((erased T) (erased ta)) (top-at (Zero)))
   (let-match erased (topat-q4 (Zero) T ta) (Q4Z))
   (MkSlk one one three T three (TopS (Zero) (Zero) T (TopZ) ta) (AddSucc _ _ _ (AddZero _)) (lt-succ three)))
-
-(def-fns _ $ (erased dec-top : (erased (Nat) q R1 s) (erased (Ps) x x2) (erased (List (Ps)) M S S2) (erased (Ab x x2) ab)
-    (erased (PBlk (Succ q) R1 (Cons (Ps) x S)) b) (erased (Cat (Ps) M (Cons (Ps) (PrDp) (Nil (Ps))) S) c1) (erased (Cat (Ps) M (Cons (Ps) (PrD) (Nil (Ps))) S2) c2)
-    (erased (SOk M one q s three) so)
-    -> (erased (Nat) R2 m K) (erased (Top q m) top) (erased (PBlk (Succ q) R2 (Cons (Ps) x2 S2)) b2) (erased (Add (Succ m) (Succ m) K) k)
-    (erased (Add R2 K R1) a))
-  (let-match erased b (BlS _ m _ i r rs _ _ ss top g lc st bb))
-  (let-match erased g (MkSg6 _))
-  (let ((erased bdp)) (BlS (Zero) (Zero) (Zero) (Zero) (Zero) (Zero) (PrDp) (Nil (Ps)) _ (TopZ) (MkSg6 (Zero)) (LcH n1 (Zero) _ (LtZ _)) (Ss0 (Zero)) (BlZ)))
-  (let ((erased bd)) (BlS (Zero) (Zero) one one (Zero) (Zero) (PrD) (Nil (Ps)) _ (TopZ) (MkSg6 (Zero))
-    (LcT n1 (Zero) one (Zero) (Zero) _ (a1x (Zero)) (LcH n1 (Zero) _ (LtZ _))) (Ss1 (Zero) (Zero)) (BlZ)))
-  (let ((erased rb2) (erased b2o) (erased a2) (erased sl)) (mframe M _ _ S S2 q rs one (Zero) one one s three c1 c2 bb so bdp bd (AddZero one) (slk1)))
-  (let-match erased sl (MkSlk _ _ _ T0 g0 top1 ag _))
-  (let-match erased (top-fn q T0 m top1 top) (Refl _ _))
-  (let ((erased lb)) (add-le-left rb2 g0 m ag))
-  (let ((erased c) (erased ec) (erased a0)) (add-succ-right-inv rs (Zero) rb2 a2))
-  (let-match erased ec (Refl _ _))
-  (let-match erased (add-fn rs (Zero) c rs a0 (add-zero-right rs)) (Refl _ _))
-  (match erased ab _
-    ((AbA)
-      (let-match erased st (Ss5 _ _))
-      (let-match erased lc (LcT _ q1 _ _ _ _ a1 lc1))
-      (let-match erased a1 (AddSucc _ _ _ a10))
-      (let-match erased a10 (AddZero _))
-      (let-match erased lc1 (LcT _ q2 _ _ _ _ a2b lc2))
-      (let-match erased lc2 (LcT _ q3 _ _ _ _ a3 lc3))
-      (let-match erased lc3 (LcT _ q4 _ _ _ _ a4 lc4))
-      (let-match erased a4 (AddSucc _ _ _ a40))
-      (let-match erased a40 (AddZero _))
-      (let-match erased lc4 (LcT _ q5 _ _ _ _ a5 lc5))
-      (let-match erased lc5 (LcH _ _ _ _))
-      (let ((erased Ke) (erased kk)) (add-ex (Succ m) (Succ m)))
-      (let ((erased c3) (erased ec3) (erased a3b)) (add-succ-right-inv (Succ m) q4 q2 a3))
-      (let-match erased ec3 (Refl _ _))
-      (let ((erased c4) (erased p4) (erased s4)) (add-assoc-l (Succ m) (Succ m) rs q4 c3 a5 a3b))
-      (let-match erased (add-fn (Succ m) (Succ m) c4 Ke p4 kk) (Refl _ _))
-      (let ((erased y1) (erased ya)) (add-ex (Succ m) (Succ rs)))
-      (let ((erased Y) (erased d1) (erased d2)) (add-pre (Succ m) (Succ rs) y1 Ke q2 ya (AddSucc _ _ _ (add-comm c4 rs c3 s4))))
-      (let-match erased (add-fn (Succ m) q2 Y q1 d2 a2b) (Refl _ _))
-      (values (Succ y1) m Ke top
-        (BlS q m (Succ y1) n2 (Succ rs) (Succ rs) (PrC) S2 ss top (MkSg6 m)
-          (LcT n1 y1 (Succ y1) n1 (Succ rs) _ (a1x y1) $ LcT (Succ m) (Succ rs) y1 (Zero) (Succ rs) _ ya $ LcH (Succ m) (Succ rs) _ lb) (Ss2 (Succ rs) m) b2o)
-        kk (AddSucc _ _ _ d1)))
-    ((AbB)
-      (let-match erased st (Ss4 _ _))
-      (let-match erased lc (LcT _ q1 _ _ _ _ a1 lc1))
-      (let-match erased a1 (AddSucc _ _ _ a10))
-      (let-match erased a10 (AddZero _))
-      (let-match erased lc1 (LcT _ q2 _ _ _ _ a2b lc2))
-      (let-match erased lc2 (LcT _ q3 _ _ _ _ a3 lc3))
-      (let-match erased lc3 (LcT _ q4 _ _ _ _ a4 lc4))
-      (let-match erased a4 (AddSucc _ _ _ a40))
-      (let-match erased a40 (AddZero _))
-      (let-match erased lc4 (LcH _ _ _ _))
-      (let ((erased Ke) (erased kk)) (add-ex (Succ m) (Succ m)))
-      (let ((erased c4) (erased p4) (erased s4)) (add-assoc-l (Succ m) (Succ m) (Succ rs) q2 q1 a3 a2b))
-      (let-match erased (add-fn (Succ m) (Succ m) c4 Ke p4 kk) (Refl _ _))
-      (values (Succ (Succ rs)) m Ke top
-        (BlS q m (Succ (Succ rs)) n1 (Succ rs) (Succ rs) (PrD) S2 ss top (MkSg6 m)
-          (LcT n1 (Succ rs) (Succ (Succ rs)) (Zero) (Succ rs) _ (a1x (Succ rs)) $ LcH (Succ m) (Succ rs) _ lb) (Ss1 (Succ rs) m) b2o)
-        kk (AddSucc _ _ _ (add-comm c4 (Succ rs) q1 s4))))))
 
 (def-adts
   ((Nf1 : ((List (Ps)) w) -> Type)
@@ -987,30 +822,6 @@
 (def-fns _ $ (erased bdp1 : -> (erased (PBlk one (Zero) (Cons (Ps) (PrDp) (Nil (Ps)))) b))
   (BlS (Zero) (Zero) (Zero) (Zero) (Zero) (Zero) (PrDp) (Nil (Ps)) _ (TopZ) (MkSg6 (Zero)) (LcH n1 (Zero) _ (LtZ _)) (Ss0 (Zero)) (BlZ)))
 
-(def-fns _ $ (erased sok-len : (erased (List (Ps)) M S B) (erased (Nat) n p q s s0 r b) (subterm erased (SOk M n p s s0) so) (erased (Cat (Ps) M B S) c)
-    (erased (PBlk q r S) bs) (erased (PBlk n b B) bb) -> (erased (Eq (Nat) p q) e))
-  (match erased so _
-    ((SoN _ _)
-      (let-match erased c (CatN _ _))
-      (let ((erased e1) (erased _)) (blk-inj q n r b B bs bb))
-      (let-match erased e1 (Refl _ _))
-      (Refl _ p))
-    ((SoA M1 _ p1 s1 _ so1)
-      (let-match erased c (CatC _ _ _ _ S1 c1))
-      (let-match erased bs (BlS q1 _ _ _ _ rs _ _ _ _ _ _ _ bs1))
-      (let-match erased (sok-len M1 S1 B n p1 q1 (Succ s1) s0 rs b so1 c1 bs1 bb) (Refl _ _))
-      (Refl _ p))
-    ((SoW y M1 _ p1 _ _ _ so1)
-      (let-match erased c (CatC _ _ _ _ S1 c1))
-      (let-match erased bs (BlS q1 _ _ _ _ rs _ _ _ _ _ _ _ bs1))
-      (let-match erased (sok-len M1 S1 B n p1 q1 s s0 rs b so1 c1 bs1 bb) (Refl _ _))
-      (Refl _ p))
-    ((SoS y M1 _ p1 sm _ _ _ _ so1 _ _)
-      (let-match erased c (CatC _ _ _ _ S1 c1))
-      (let-match erased bs (BlS q1 _ _ _ _ rs _ _ _ _ _ _ _ bs1))
-      (let-match erased (sok-len M1 S1 B n p1 q1 sm s0 rs b so1 c1 bs1 bb) (Refl _ _))
-      (Refl _ p))))
-
 (def-adts
   ((TopM : ((Nat) p) -> Type)
     enum
@@ -1018,93 +829,10 @@
     (many TmN : (erased (Nat) p) -> (TopM p))))
 
 (def-adts
-  ((Dst : ((Ps) y) ((List (Ps)) M) ((Nat) p) -> Type)
-    enum
-    (many DsOk : (erased (Ps) y) (erased (List (Ps)) M) (erased (Nat) p) (many (Nat) s2) (erased (SOk (Cons (Ps) y M) one (Succ p) s2 three) so) -> (Dst y M p))
-    (many DsNo : (erased (Ps) y) (erased (List (Ps)) M) (erased (Nat) p) -> (Dst y M p))))
-
-(def-fns _ $ (many dna : (erased (Ps) y) (erased (Nat) p) (many (TopM p) tm) (many (Nat) s) (erased (List (Ps)) M) (erased (SOk M one p s three) so) (erased (Na y) na)
-    -> (many (Dst y M p) r))
-  (let ((many wk)) (DsOk y M p s (SoW y M one p s three na so)))
-  (let-match many tm (TmY _ t tp) ((TmN _) wk))
-  (let-match many (lt-dec s t) (Yes _ _ _ _ _) ((No _ _ _ _ _) wk))
-  (DsOk y M p t (SoS y M one p s three t t na so tp (lt-succ t))))
-
-(def-fns _ $ (many dstep : (many (Ps) y) (erased (Nat) p) (many (TopM p) tm) (many (Nat) s) (erased (List (Ps)) M) (erased (SOk M one p s three) so) -> (many (Dst y M p) r))
-  (match many y _
-    ((PrA) (let-match many s (Succ s1) ((Zero) (DsNo y M p))) (DsOk y M p s1 (SoA M one p s1 three so)))
-    ((PrB) (dna y p tm s M so (NaB)))
-    ((PrC) (dna y p tm s M so (NaC)))
-    ((PrD) (dna y p tm s M so (NaD)))
-    (else (DsNo y M p))))
-
-(def-adts
-  ((Dw : ((List (Ps)) wf) -> Type)
-    enum
-    (many DwOk : (erased (List (Ps)) wf) (many (Nat) p s) (many (List (Ps)) M S rem) (erased (Cat (Ps) M (Cons (Ps) (PrDp) (Nil (Ps))) S) c)
-       (erased (Rva (Ps) rem S wf) r) (erased (SOk M one p s three) so) -> (Dw wf))
-    (many DwNo : (erased (List (Ps)) wf) -> (Dw wf))))
-
-(def-fns _ $ (many dwalk : (subterm many (Nat) cnt) (many (Nat) p) (many (TopM p) tm) (many (Nat) s) (many (List (Ps)) M S rem) (erased (List (Ps)) wf)
-    (erased (Cat (Ps) M (Cons (Ps) (PrDp) (Nil (Ps))) S) c) (erased (Rva (Ps) rem S wf) r) (erased (SOk M one p s three) so) -> (many (Dw wf) res))
-  (let-match many cnt (Succ c1) ((Zero) (DwOk wf p s M S rem c r so)))
-  (let-match many rem (Cons _ y rem1) ((Nil _) (DwNo wf)))
-  (let-match erased r (RvC _ _ _ _ _ r1))
-  (let-match many (dstep y p tm s M so) (DsOk _ _ _ s2 so2) ((DsNo _ _ _) (DwNo wf)))
-  (let ((many tm2)) (match many tm (((TopM (Succ p)) z))
-    ((TmY _ t tp)
-      (match many (lt-dec t 100000000) _
-        ((Yes _ _ _ _ _) (let ((many t2) (erased ta)) (top-at t)) (TmY (Succ p) t2 (TopS p t t2 tp ta)))
-        ((No _ _ _ _ _) (TmN (Succ p)))))
-    ((TmN _) (TmN (Succ p)))))
-  (tail $ dwalk c1 (Succ p) tm2 s2 (Cons (Ps) y M) (Cons (Ps) y S) rem1 wf (CatC (Ps) y M _ S c) r1 so2))
-
-(def-adts
-  ((AbM : ((Ps) x) -> Type)
-    enum
-    (many AbOk : (erased (Ps) x) (many (Ps) y) (erased (Ab x y) ab) -> (AbM x))
-    (many AbNo : (erased (Ps) x) -> (AbM x))))
-
-(def-fns _ $ (many ab-of : (many (Ps) x) -> (many (AbM x) r))
-  (match many x _ ((PrA) (AbOk x (PrC) (AbA))) ((PrB) (AbOk x (PrD) (AbB))) (else (AbNo x))))
-
-(def-fns _ $ (many snoc-d : (subterm many (List (Ps)) M) -> (many (List (Ps)) S) (erased (Cat (Ps) M (Cons (Ps) (PrD) (Nil (Ps))) S) c))
-  (let-match many M (Cons _ y M1) ((Nil _) (values (Cons (Ps) (PrD) (Nil (Ps))) (CatN (Ps) _))))
-  (let ((many S1) (erased c1)) (notail $ snoc-d M1))
-  (values (Cons (Ps) y S1) (CatC (Ps) y M1 _ S1 c1)))
-
-(def-adts
   ((Ak : ((Fam) F) ((Nat) Q s) ((List (Ps)) wf) -> Type)
     enum
     (many AkOk : (erased (Fam) F) (erased (Nat) Q s) (erased (List (Ps)) wf) (many (Nat) k) (many (Wj F Q s k wf) j) -> (Ak F Q s wf))
     (many AkNo : (erased (Fam) F) (erased (Nat) Q s) (erased (List (Ps)) wf) (many (Nat) why) -> (Ak F Q s wf))))
-
-(def-fns _ $ (many djump : (erased (Fam) F) (erased (Nat) Q) (many (Nat) V c D q) (many (List (Ps)) wr) (erased (List (Ps)) wf) (erased (List (Tk)) X)
-    (erased (Fb F Q V c D wf X) fb) (erased (Rva (Ps) wr (Nil (Ps)) wf) rv) (erased (Nf1 wf) nf) -> (many (Ak F Q V wf) res))
-  (let-match many wr (Cons _ b0 wr1) ((Nil _) (AkNo F Q V wf 1)))
-  (let-match many b0 (PrDp) (else (AkNo F Q V wf 2)))
-  (let-match erased rv (RvC _ _ _ _ _ rv1))
-  (let-match many q (Succ q0) ((Zero) (AkNo F Q V wf 3)))
-  (let ((many t1) (erased ta1)) (top-at (Zero)))
-  (let-match many (dwalk q0 one (TmY one t1 (TopS (Zero) (Zero) t1 (TopZ) ta1)) three (Nil (Ps)) (Cons (Ps) (PrDp) (Nil (Ps))) wr1 wf (CatN (Ps) _) rv1 (SoN one three))
-    (DwOk _ p s M S rem cM rS so) ((DwNo _) (AkNo F Q V wf 4)))
-  (let-match many rem (Cons _ x rem1) ((Nil _) (AkNo F Q V wf 5)))
-  (let-match erased rS (RvC _ _ _ _ _ rS1))
-  (let-match many (ab-of x) (AbOk _ x2 ab) ((AbNo _) (AkNo F Q V wf 6)))
-  (let ((many S2) (erased cM2)) (snoc-d M))
-  (let ((erased u) (erased ru) (erased cu1)) (rva-cat rem1 (Cons (Ps) x S) wf rS1))
-  (let-match erased fb (MkFb _ _ _ _ _ _ _ _ _ _ _ _ bk _ _ _ _ _))
-  (let ((erased n0) (erased R1) (erased bW1)) (blk-suf u (Cons (Ps) x S) wf Q V cu1 bk))
-  (let-match erased bW1 (BlS q1 _ _ _ _ rs _ _ _ _ _ _ _ bS))
-  (let-match erased (sok-len M S _ one p q1 s three rs (Zero) so cM bS (bdp1)) (Refl _ _))
-  (let ((erased R2) (erased m) (erased Ke) (erased top) (erased b2) (erased kk) (erased a)) (dec-top p R1 s x x2 M S S2 ab bW1 cM cM2 so))
-  (let ((many t) (erased tq)) (top-run p))
-  (let-match erased (top-fn p t m tq top) (Refl _ _))
-  (let ((many K) (erased kr)) (add (Succ t) (Succ t)))
-  (let-match erased (add-fn (Succ t) (Succ t) Ke K kk kr) (Refl _ _))
-  (AkOk F Q V wf K (wtail F Q V c D K wf X fb (Succ p) R1 R2 (Cons (Ps) x S) (Cons (Ps) x2 S2) rem1 bW1 b2 a u ru cu1 (nf1-pre u S wf x cu1 nf))))
-
-
 
 (def-adts
   ((Off : ((Ps) y) ((Nat) m o) -> Type)
