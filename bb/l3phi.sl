@@ -1664,6 +1664,21 @@
     ((Bit0) (values (Zero) (Bmul0 P)))
     ((Bit1) (values P (Bmul1 P)))))
 
+(let ((many m62)) (u62-modulus-many))
+(comptime-match many (nat-eq c62 m62) (Equal _ _ _))
+(let-match erased c62p (PS _ c61x _ p61 dc62))
+(let-match erased (pow2-fn _ _ _ p61 c61p) (Refl _ _))
+(comptime-match many (lt-dec n2 c61) (Yes _ _ _ _ lt2c))
+(comptime-match many (lt-dec n4 c61) (Yes _ _ _ _ lt4c))
+
+(def-fns _ $ (erased lt-sum : (erased (Nat) a b c s d) (erased (Lt a c) la) (erased (Lt b c) lb) (erased (Add a b s) ab) (erased (Double c d) dd)
+    -> (erased (Lt s d) l))
+  (let ((erased t) (erased at)) (add-ex a c))
+  (lt-trans s t d (add-lt-mono a b c s t ab at lb) (add-lt-mono c a c t d (add-comm a c t at) (dbl-add c d dd) la)))
+
+(def-fns _ $ (erased dki-lt : (erased (Bit) b0 b1) (erased (Nat) k i) (erased (Ps) z) (erased (Dki b0 b1 k i z) dk) -> (erased (Lt k c61) l))
+  (match erased dk _ ((Dk00) lt3c) ((Dk10) lt2c) ((Dk01) lt4c) ((Dk11) lt3c)))
+
 (def-fns _ $ (many dki-run : (many (Bit) b0 b1) -> (many (Nat) k i) (many (Ps) z) (erased (Dki b0 b1 k i z) d))
   (match many b0 _
     ((Bit0) (match many b1 _ ((Bit0) (values n3 n1 (PrD) (Dk00))) ((Bit1) (values n4 n4 (PrB) (Dk01)))))
@@ -1852,7 +1867,7 @@
   (xstep p xr rho xp Pt s0 acc u))
 
 (def-fns _ $ (many awalk : (subterm many (Nat) p) (many (Nat) dl) (erased (Nat) rho x W H) (erased (X3 rho x) xp) (erased (Add x dl W) a)
-    (many (Nat) dpr) (erased (Double p dpr) dd) (many (Nat) X f L0) (erased (Nat) H0) (erased (LowH X (Succ (Succ dpr)) H W) lh)
+    (many (Nat) dpr) (erased (Double p dpr) dd) (erased (Lt dpr u62-modulus) ldp) (many (Nat) X f L0) (erased (Nat) H0) (erased (LowH X (Succ (Succ dpr)) H W) lh)
     (erased (Lt dl c61) ld) (erased (BitAt X f (Bit1)) bf) (erased (Lt f (Succ (Succ dpr))) lf) (erased (Lt k61 f) lkf)
     (erased (LowH X k62 H0 L0) lz) (erased (Zr X k62 f) zr) (erased (Nat) Pt s0) (many (List (Ps)) acc) (erased (Cxt p rho acc Pt s0) u) -> (many (BRes Pt s0) r))
   (match many (lt-dec f dpr) _
@@ -1876,18 +1891,19 @@
       (let-match erased e2 (Refl _ _))
       (let ((erased T) (erased tw) (erased atw)) (tw-bits b0 b1 _ R1 W2 W1 W Bb0 Bb1 a1 a2 bm0 bm1 (dbl-add _ R1 dR)))
       (let ((many k) (many i) (many z) (erased dk)) (dki-run b0 b1))
-      (let ((many dl2) (erased ak)) (add dl k))
+      (let ((erased dl2) (erased ak)) (add-ex dl k))
+      (let ((many dl2)) (u62-add dl k dl2 ak (lt-sum dl k c61 dl2 c62 ld (dki-lt b0 b1 k i z dk) ak dc62)))
       (let-match many (lt-dec dl2 c61) (Yes _ _ _ _ ld2) ((No _ _ _ _ _) (BrNo Pt s0)))
       (let ((erased Pf) (erased pwf) (erased _)) (pow2 f))
       (let ((erased lw)) (low-ge X dpr Hc W2 f Pf bf lh2 lfd pwf))
       (let ((erased x2) (erased ax)) (sub W2 dl2 (lt-trans _ _ _ (lt-trans _ _ _ ld2 (pow2-lt k61 f c61 Pf lkf c61p pwf)) lw)))
       (let ((erased r) (erased xq) (erased lc) (erased st))
         (dstep b0 b1 k i T m y x dl W W2 x2 dl2 rho z dk tw d3 a atw (add-comm _ _ _ ax) ak (lowh-lt X dpr Hc W2 _ lh2 pw1) xp))
-      (let ((many dq) (erased aq)) (sub dpr n2 (LtS _ _ (LtS _ _ (LtZ _)))))
+      (let ((many dq) (erased aq) (erased ldq)) (u62-sub dpr n2 ldp (LtS _ _ (LtS _ _ (LtZ _)))))
       (let-match erased (add-cancel n2 dq dp1 dpr aq (add-comm _ _ _ (add-succ-right _ _ _ (add-succ-right _ _ _ (add-zero-right dp1))))) (Refl _ _))
       (let ((many acc2)) (Cons (Ps) z acc))
       (let ((erased u2)) (CxC p1 m rho i r r Pt s0 z acc _ u tp (MkSg6 m) lc st))
-      (tail $ awalk p1 dl2 r x2 W2 Hc xq (add-comm _ _ _ ax) dq dd1 X f L0 H0 lh2 ld2 bf lfd lkf lz zr Pt s0 acc2 u2))
+      (tail $ awalk p1 dl2 r x2 W2 Hc xq (add-comm _ _ _ ax) dq dd1 ldq X f L0 H0 lh2 ld2 bf lfd lkf lz zr Pt s0 acc2 u2))
     ((No _ _ _ _ le)
       (let ((erased Hf) (erased lhf)) (lowh-zeros X k62 f H0 L0 lz zr))
       (let ((many Pf) (erased v) (erased pkf) (erased mmf)) (shl n1 f))
@@ -1928,7 +1944,8 @@
   (let-match erased (double-fn P dp2 dpr dd2 dd) (Refl _ _))
   (let ((erased H) (erased V) (erased lh)) (lowh-ex X Nn))
   (let-match erased (lowh-small X Nn H V _ lh pw (lt-weaken _ _ (x3-ltd s X (Succ t) Y d3 xp bn))) (Refl _ _))
-  (awalk P (Zero) s X X H xp (add-zero-right X) dpr dd X f L0 H0 lh (lt-trans _ _ _ (LtZ _) lt3c) bf lf lkf lz zr P s (Nil (Ps)) (CxN P s)))
+  (let-match many (nat-fits-u62 dpr) (Yes _ _ _ _ ldp) ((No _ _ _ _ _) (BrNo _ _)))
+  (awalk P (Zero) s X X H xp (add-zero-right X) dpr dd ldp X f L0 H0 lh (lt-trans _ _ _ (LtZ _) lt3c) bf lf lkf lz zr P s (Nil (Ps)) (CxN P s)))
 
 (def-fns _ $ (many blk-fast : (many (Nat) P s) (erased (Nat) t) (erased (Top P t) tp) (erased (Lt s (Succ t)) bn)
     -> (many (List (Ps)) w) (erased (PBlk P s w) b))

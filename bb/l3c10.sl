@@ -304,6 +304,9 @@
   (let ((many X1) (erased xb1)) (notail $ tps-x k1 Y v w x1 p1 xb))
   (values (Cons _ (Tp) X1) (XbP X1 v x1 xb1)))
 
+(unary 3)
+(let ((erased lt3-u62)) (prove-literal-lt 3 m62))
+
 (def-adts
   ((PR : ((List (Bool)) x) -> Type)
     enum
@@ -322,9 +325,10 @@
   (let-match many (lt-dec 8 a) (No _ _ _ _ _) ((Yes _ _ _ _ _) stop))
   (let-match erased d (DeC _ _ _ x1 _ d1 pa))
   (let-match erased d1 (DeC _ _ _ x2 _ d2 pj))
-  (let ((many q) (many rm) (erased m) (erased mm) (erased ad) (erased lr)) (divmod j n3 (LtZ _)))
-  (let ((erased z) (erased prm) (erased pm)) (rp-split (BTrue) m rm j x2 x1 ad pj))
   (let ((many no)) (PrNo x))
+  (let-match many (nat-fits-u62 j) (Yes _ _ _ _ lj) ((No _ _ _ _ _) no))
+  (let ((many q) (many rm) (erased m) (erased mm) (erased ad) (erased lr) (erased _) (erased _)) (u62-divmod j 3 lj lt3-u62 (LtZ _)))
+  (let ((erased z) (erased prm) (erased pm)) (rp-split (BTrue) m rm j x2 x1 ad pj))
   (let-match many q (Succ q1)
     ((Zero)
       (let-match erased mm (MulZero _))
