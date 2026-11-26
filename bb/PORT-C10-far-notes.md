@@ -5,56 +5,76 @@ they may be wrong in places.
 
 ## Files
 
-- `bb/l3c10-far.sl`: `c10-move-f` is `c10-move` with entries 0 (BIGJC)
-  and 1 (BIGJ) computed together. BIGJC is BIGJ, then M9, then CONTACT,
-  so `c10-big` makes the BIGJ move once and continues BIGJC from it;
-  when BIGJC fails it answers BIGJ's result. `c10-run3` iterates it.
-  Over the 697 moves where both dispatchers were run from one
-  configuration, the indices agreed and the move took about 0.10 s
-  against 0.15 s.
+- `bb/l3c10-far.sl`:
+  - `c10-big` computes entries 0 (BIGJC) and 1 (BIGJ) together: BIGJC
+    is BIGJ, then M9, then CONTACT, so the BIGJ move is made once and
+    BIGJC continues from it.
+  - `c-certify-f` certifies a proposal on a cut configuration. The cut
+    is at the gap run in front of the tail that the configuration and
+    the proposal share (found by `slot-eq` on the tail's first cell); the
+    cut pair is replayed by the framed simulator (`f-run`), lifted by
+    `frame-one`, and the two zero runs at the junction are merged
+    (`rnorm-pre`). `certify-fc` falls back to `c-certify-c` when the
+    framed replay does not reach the proposal.
+  - `c10-ent-f` is `c10-ent` with CHILD (5), BCOVF (6) and RESUME1 (24)
+    over `certify-fc`, and BEVEN (8) as `certify-fc` with a replay budget
+    of 3,000,000 moves. `c10-move-f` dispatches with these and `c10-big`;
+    `c10-run3` iterates it.
+  - All have the type `Rch l3 c0 e -> Rs l3 c0` (or return an `Rs`); no
+    axiom is used.
 - `bb/l3c10-farh.sl`: a `Program` harness that reads a configuration on
-  standard input and runs `c10-move-f`, printing per move the index and
+  standard input, runs `c10-move-f`, and prints per move the index and
   the process's times, and at checkpoint moves a fingerprint (state,
   head, run counts, and a hash of each side's runs modulo 2^61-1).
 - `bb/l3c10drv.ml`: `tracefrom FILE M0 N DIR m...` traces Rocq's simC10
-  from a configuration file; with `C10FP` set it writes only
-  fingerprints at the checkpoint moves.
+  from a configuration file; with `C10FP` set it writes only fingerprints.
 - `bb/l3c10bound-37981.sl`: `c10-run3` for 89,501 moves from the blank
   tape, then the span bound.
 
 ## Agreement with Rocq
 
-- Moves 40,036 to 56,563 (Rocq's trace from its configuration at
-  40,035, against the harness from the same configuration): the entry
-  that fired agrees on every move, and the configurations are equal at
-  42,500, 45,000, ..., 55,000. Rocq's trace was still running past move
-  65,000 when these notes were written.
-- The harness reaches move 89,501 by VDESC (index 3). The tape span
-  there has 37,982 digits, so the bound is 10^37981 (Rocq's step count
-  gives 10^37987). The configuration is about 1.2 GB of text, with
-  63,040 runs of more than 100 digits on the left.
-- Rocq's simC10 run from the harness's configuration at 89,501 agrees
-  with the harness on every move to 118,559, with equal fingerprints at
-  90,000, 92,500, ..., 115,000. At 118,560 Rocq's TRAIN fires and the
-  older TRAIN port (`try-train`) did not; the base's `try-train2` fires
-  there and gives Rocq's configuration on the first 19,800 runs of a
-  truncated copy. The run past 89,501 is being repeated on that base.
+- From the blank tape to move 40,035 the index agrees with Rocq's trace
+  on every move, and the fingerprint at 40,035 equals that of Rocq's
+  configuration.
+- Moves 40,036 to 69,895 against Rocq's trace from its configuration at
+  40,035: every index agrees, and the configurations are equal at
+  42,500, 45,000, ..., 67,500. Rocq's trace was stopped at 69,895, where
+  its BIGJ moves took about 1.1 s each.
+- At move 89,501 the fingerprint equals that of `lin3c1_m3/m3_c16.v`,
+  the configuration of Rocq's certificate at that move (the generators
+  `trnU`/`trnD`/`repL` expanded by a script). The tape span there has
+  37,982 digits.
+- Moves 89,502 to 367,361 against Rocq's simC10 traced from that
+  configuration: every index agrees, and the fingerprint is equal at
+  350,000 (an earlier run, with the BEVEN budget still at 100,000, had
+  equal fingerprints at the 12 checkpoints from 90,000 to 150,000, and
+  diverged at 334,276 where BEVEN did not fire). At 345,355, the end of the
+  epoch-3 counter, the fingerprint equals that of `lin3c3_s0/s0_c66.v`,
+  and so do those of `s0_c1.v` to `s0_c16.v` (moves 93,501 to 157,501).
+  The span at 345,355 still has 37,982 digits.
+- Past the counter, simC10's list takes the stack phase through long
+  runs of BIGJ moves (4,072 of Rocq's first 54,645 moves there), as
+  lin3c3's notes describe; Rocq's 10^110012 comes from a different,
+  scripted list (lin3c4's simS over msC15), which these files do not
+  port.
 
 ## Timings
 
-One shared 4-core container, user time.
+User time on a shared 4-core container; Rocq's from its trace, which
+ran alongside.
 
 | stretch | Sleight | Rocq simC10 (OCaml) |
 |---|---|---|
-| 40,036 to 56,563 | 907 s | 5,663 s |
-| 67,501 to 89,501 | 2,868 s | not yet measured |
-| 89,502 to 118,559 | about 1,360 s | about 276 s |
+| 40,036 to 68,197 | 2,091 s (`c10-move`) | 13,106 s |
+| 67,501 to 69,895 | 247 s | 2,531 s |
+| 67,501 to 89,501 | 2,292 to 2,868 s | not measured |
+| 89,502 to 367,361 | 1,749 s | 3,687 s |
 
-- From 40,036 to 89,501 most moves are BIGJC and BIGJ; a BIGJ move took
-  about 0.1 s in Sleight against 0.3 to 1.0 s in Rocq, growing with the
-  register.
-- In the epoch-3 counter Rocq is faster: CHILD and BCOVF take about
-  0.6 s each in Sleight (both replay M9 to certify) against about 25 ms
-  and 5 ms in Rocq, and there are about 10,000 of them in the counter.
+- In the counter TRAIN takes most of the Sleight time (12,711 moves,
+  about 1,040 s, against 30 s in Rocq), then CHILD (174 s) and AEND
+  (145 s). Before `c-certify-f`, CHILD and BCOVF took about 0.6 s each:
+  the replay certifier rebuilt and compared the whole right side, whose
+  tail holds about 1 GB of digits.
 - `slc` with `--goal proved` on `bb/l3c10bound-37981.sl` printed PASS
-  and exited 0 in about 4,116 s of user time, 1.9 GB peak.
+  and exited 0 in about 4,116 s of user time, 1.9 GB peak, with the
+  dispatcher before the framed certifier.
