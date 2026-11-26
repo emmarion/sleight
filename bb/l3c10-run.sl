@@ -28,12 +28,17 @@
   (let-match many (nat-eq i 25) (Unequal _ _ _ _ _) ((Equal _ _ _) (c-vdesc (BFalse) c0 e ch)))
   (c-move9 c0 e ch))
 
+(def-fns _ $ (many c10-try : (many (Nat) i) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch)
+    (many (LmC) lc) (many (Maybe (Nat)) mp) (many (Nat) rho) -> (many (Rs l3 c0) res))
+  (let ((many r)) (c10-ent i c0 e ch lc mp rho))
+  (let-match many r (RsOk _ _ e1 _) ((RsNo _ _ _ _) r))
+  (match many (rq-eq e1 e) _ ((ESome _ _) (RsNo l3 c0 e ch)) ((ENone _) r)))
+
 (def-fns _ $ (many c10-scan : (subterm many (Nat) n) (many (Nat) i) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch)
     (many (LmC) lc) (many (Maybe (Nat)) mp) (many (Nat) rho) -> (many (Nat) j) (many (Rs l3 c0) res))
-  (let ((many r)) (c10-ent i c0 e ch lc mp rho))
+  (let ((many r)) (c10-try i c0 e ch lc mp rho))
+  (let-match many r (RsNo _ _ _ _) ((RsOk _ _ _ _) (values i r)))
   (let-match many n (Succ n1) ((Zero) (values i r)))
-  (let-match many (match many r (((Bool) b)) ((RsOk _ _ e1 _) (match many (rq-eq e1 e) _ ((ESome _ _) (BFalse)) ((ENone _) (BTrue)))) ((RsNo _ _ _ _) (BFalse)))
-    (BFalse) ((BTrue) (values i r)))
   (tail $ c10-scan n1 (Succ i) c0 e ch lc mp rho))
 
 (def-fns _ $ (many c10-move : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Nat) idx) (many (Rs l3 c0) res))
