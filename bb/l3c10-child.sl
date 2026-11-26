@@ -1,3 +1,45 @@
+(def-fns _ $ (many vl-init : (subterm many (List (Nat)) D) -> (many (List (Vl)) V))
+  (let-match many D (Cons _ d D1) ((Nil _) (Nil (Vl))))
+  (Cons _ (MkVl d 1) (notail $ vl-init D1)))
+
+(def-fns _ $ (many b4 : (many (List (Nat)) D) -> (many (Nat) v))
+  (vl-loop (nlen D) (vl-init D)))
+
+(def-fns _ $ (many tdigits : (many (Nat) acc) (subterm many (List (Tk)) X) -> (many (Maybe (List (Nat))) D))
+  (let-match many X (Cons _ x X1) ((Nil _) (let-match many (nat-zero-dec acc) (IsZero) ((IsSucc _) (None _))) (Some _ (Nil (Nat)))))
+  (match many x _
+    ((Tp) (tail $ tdigits (Succ acc) X1))
+    ((T0) (let-match many (nat-zero-dec acc) (IsZero) ((IsSucc _) (None _)))
+      (let-match many (notail $ tdigits (Zero) X1) (Some _ D1) ((None _) (None _)))
+      (Some _ (Cons _ (Zero) D1)))
+    ((T1) (let-match many (notail $ tdigits (Zero) X1) (Some _ D1) ((None _) (None _)))
+      (Some _ (Cons _ (Succ acc) D1)))))
+
+(def-fns _ $ (many nreps : (many (Nat) a) (subterm many (List (Ps)) w) -> (many (List (Nat)) D))
+  (let-match many w (Cons _ _ w1) ((Nil _) (Nil (Nat))))
+  (Cons _ a (notail $ nreps a w1)))
+
+(def-fns _ $ (many rdig : (many (Nat) acc cs) (subterm many (List (Ps)) w) -> (many (List (Nat)) D) (many (Nat) cs2))
+  (let-match many w (Cons _ x w1) ((Nil _) (values (Nil (Nat)) cs)))
+  (let ((many d) (many c) (many rs))
+    (match many x (((Nat) d) ((Nat) c) ((Bool) rs))
+      ((PrDp) (values 0 0 (BTrue)))
+      ((PrD) (values 0 1 (BFalse)))
+      ((PrC) (values 1 1 (BFalse)))
+      ((PrBp) (values 2 1 (BTrue)))
+      ((PrB) (values 2 2 (BFalse)))
+      ((PrA) (values 3 2 (BFalse)))))
+  (let ((many a1)) (nat-add acc d))
+  (let ((many c1)) (nat-add cs c))
+  (let-match many rs (BFalse) ((BTrue) (values (Cons _ a1 (nreps a1 w1)) c1)))
+  (let ((many D1) (many cs2)) (notail $ rdig a1 c1 w1))
+  (values (Cons _ a1 D1) cs2))
+
+(def-fns _ $ (many odd-sl : (many (Nat) h) (many (Nat) r) (many (Nat) l) -> (many (Nat) s))
+  (let-match many h (Succ h1) ((Zero) (let ((many s) (erased _)) (add r l)) (Succ s)))
+  (let-match many h1 (Succ _) ((Zero) (Succ r)))
+  (Zero))
+
 (def-fns _ $ (many nle : (many (Nat) a b) -> (many (Bool) r))
   (match many (lt-dec b a) _ ((Yes _ _ _ _ _) (BFalse)) ((No _ _ _ _ _) (BTrue))))
 
@@ -248,7 +290,7 @@
   (let-match many (pairs B1) (Some _ w) ((None _) (values no 0)))
   (let ((many Dd) (many cs)) (rdig 0 0 w))
   (let ((many n)) (ps-len w))
-  (values (Some _ n) (odd-s h (nat-add (b4 Dd) cs) (lpf n))))
+  (values (Some _ n) (odd-sl h (nat-add (b4 Dd) cs) (lpf n))))
 
 (def-fns _ $ (many is-canon : (many (List (Tk)) X) (many (Tt) T) (many (Nat) k u) -> (many (Can) r))
   (let-match many (tdigits 0 X) (Some _ D) ((None _) (CanNo)))
