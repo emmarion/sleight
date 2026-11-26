@@ -49,8 +49,17 @@ shadowed by the type `FE` of `bb/l3c10-local.sl`), `FQ` and `fq-next`
 
 The per-marker work is still O(P): two block computations (`blk-fast`
 for the jump target and for the snoc'ed register) and a few list passes.
-Measured on the dumped instances it is not faster than `mac-absorb` (see
-the session report). What would make it O(1) is Rocq's lin3s7/lin3s8
+The contact only handles a remaining gap of 2; where the guessed jump
+leaves 0 or 1 blanks, or the snoc check fails, the loop stops there.
+
+Measured (one shared container, single runs, user time): all 42 dumped
+ABSORB instances give Rocq's output (`/tmp/claude-0/rocqsim/K`); with
+entry 23 of `bb/l3c10-run.sl` set to `mac-absorb2` (a local edit, not
+committed), the free run from the blank tape picks Rocq's entry on all
+40,035 moves and its configurations equal Rocq's at the five checkpoints.
+ABSORB's moves then take about 67 s in all against about 110 s with
+`mac-absorb` in the same build (Rocq 471 s), and the run to 40,035 about
+172 s against 213 s. What would make it O(1) is Rocq's lin3s7/lin3s8
 block laws (snoc_ok, the decrement and borrow laws, critb8), which would
 give both blocks from the previous one without computing them; none of
 those is ported here.
