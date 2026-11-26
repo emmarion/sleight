@@ -1,0 +1,16 @@
+(def-fns _ $ (many s15-ent3 : (many (Nat) i) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
+  (let-match many (nat-is i 42) (BFalse)
+    ((BTrue)
+      (let-match erased ch (MkRch _ _ _ c _ _ _ dc _))
+      (let ((many lc)) (lc-of e (c-lm e c dc)))
+      (let ((many mp) (many rho)) (fe-of lc))
+      (c-child-h c0 e ch lc mp rho)))
+  (s15-ent i c0 e ch))
+
+(def-fns _ $ (many s15-move3 : (many (Nat) i) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
+  (fired c0 e ch (s15-ent3 i c0 e ch)))
+
+(def-fns _ $ (many s15-run3 : (erased (Conf) c0) (subterm many (List (Nat)) sc) (many (Nat) k) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Nat) done) (many (Rq) e2) (erased (Rch l3 c0 e2) ch2))
+  (let-match many sc (Cons _ i sc1) ((Nil _) (values k e ch)))
+  (let-match many (s15-move3 i c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ e1 ch1) (values k e1 ch1)))
+  (tail $ s15-run3 c0 sc1 (Succ k) e1 ch1))
