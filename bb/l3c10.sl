@@ -696,9 +696,7 @@
   (let-match many (eq-bit b h) (ESome _ _) ((ENone _) (BFalse)))
   (match many p _ ((Zero) (BFalse)) ((Succ _) (BTrue))))
 
-(def-fns _ $ (many c-move9 : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
-  (let-match erased ch (MkRch _ _ a c _ t0 r0 dc z))
-  (let ((many lm)) (c-lm e c dc))
+(def-fns _ $ (many c-move9-at : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (LmR e) lm) -> (many (Rs l3 c0) res))
   (let-match many (c-jump (BFalse) c0 e ch lm) (RsNo _ _ _ _) ((RsOk _ _ e1 ch1) (RsOk l3 c0 e1 ch1)))
   (let-match many (c-round c0 e ch lm) (RsNo _ _ _ _) ((RsOk _ _ e1 ch1) (RsOk l3 c0 e1 ch1)))
   (let-match many (c-sweep c0 e ch lm) (RsNo _ _ _ _) ((RsOk _ _ e1 ch1) (RsOk l3 c0 e1 ch1)))
@@ -706,6 +704,10 @@
   (let-match many (is-wc e) (BFalse) ((BTrue) (c-mac c0 e ch)))
   (let-match many (c-shift c0 e ch) (RsNo _ _ _ _) ((RsOk _ _ e1 ch1) (RsOk l3 c0 e1 ch1)))
   (c-mac c0 e ch))
+
+(def-fns _ $ (many c-move9 : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
+  (let-match erased ch (MkRch _ _ a c _ t0 r0 dc z))
+  (c-move9-at c0 e ch (c-lm e c dc)))
 
 (def-fns _ $ (many c10run : (erased (Conf) c0) (subterm many (Nat) fuel) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Nat) left) (many (Rq) e2) (erased (Rch l3 c0 e2) ch2))
   (let-match many fuel (Succ f) ((Zero) (values fuel e ch)))
