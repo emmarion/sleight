@@ -75,6 +75,10 @@
   (let-match many ok (ESome _ s) ((ENone _) no))
   (rs-normpre c0 (Succ j) (frame-one (MkFE ein eo s) c0 e ch)))
 
+(def-fns _ $ (many certify-fc : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Nat) fuel) (many (LmC) lc) (many (Maybe (Rq)) mt) -> (many (Rs l3 c0) res))
+  (let-match many (c-certify-f c0 e ch fuel lc mt) (RsNo _ _ _ _) ((RsOk _ _ e1 ch1) (RsOk l3 c0 e1 ch1)))
+  (c-certify-c c0 e ch fuel 0 mt))
+
 (def-fns _ $ (many c-child-f : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (LmC) lc) (many (Maybe (Nat)) mp) (many (Nat) rho) -> (many (Rs l3 c0) res))
   (let ((many no)) (RsNo l3 c0 e ch))
   (let-match many (child-pre lc mp rho) (CpOk _ p _ gbc Gr _ _) ((CpNo) no))
@@ -83,14 +87,14 @@
   (let-match many (nle need Gr) (BTrue) ((BFalse) no))
   (let-match many (reach-t1 c0 10000000 256 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ _ _) no))
   (let ((many lc1)) (lmc e1))
-  (let-match many (c-certify-f c0 e1 ch1 64 lc1 (child-fin lc1 (monus Gr need))) (RsOk _ _ e2 ch2) ((RsNo _ _ _ _) no))
+  (let-match many (certify-fc c0 e1 ch1 64 lc1 (child-fin lc1 (monus Gr need))) (RsOk _ _ e2 ch2) ((RsNo _ _ _ _) no))
   (RsOk l3 c0 e2 ch2))
 
 (def-fns _ $ (many fe-cert-f : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Bool) child) (many (LmC) lc) (many (Maybe (Nat)) mp) (many (Nat) rho)
     -> (many (Rs l3 c0) res))
   (match many child _
     ((BTrue) (c-child-f c0 e ch lc mp rho))
-    ((BFalse) (c-certify-f c0 e ch 64 lc (m-bcovf lc mp rho)))))
+    ((BFalse) (certify-fc c0 e ch 64 lc (m-bcovf lc mp rho)))))
 
 (def-fns _ $ (many try-resume-f : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
   (let-match erased ch (MkRch _ _ _ c _ _ _ dc _))
@@ -107,6 +111,7 @@
     (many (LmR e) lm) (many (LmC) lc) (many (Maybe (Nat)) mp) (many (Nat) rho) -> (many (Rs l3 c0) res))
   (let-match many (nat-eq i 5) (Unequal _ _ _ _ _) ((Equal _ _ _) (fe-cert-f c0 e ch (BTrue) lc mp rho)))
   (let-match many (nat-eq i 6) (Unequal _ _ _ _ _) ((Equal _ _ _) (fe-cert-f c0 e ch (BFalse) lc mp rho)))
+  (let-match many (nat-eq i 8) (Unequal _ _ _ _ _) ((Equal _ _ _) (certify-fc c0 e ch 3000000 lc (m-beven lc))))
   (let-match many (nat-eq i 24) (Unequal _ _ _ _ _) ((Equal _ _ _) (try-resume-f c0 e ch)))
   (c10-ent i c0 e ch lm lc mp rho))
 
