@@ -44,7 +44,7 @@ they may be wrong in places.
   the configuration of Rocq's certificate at that move (the generators
   `trnU`/`trnD`/`repL` expanded by a script). The tape span there has
   37,982 digits.
-- Moves 89,502 to 367,361 against Rocq's simC10 traced from that
+- Moves 89,502 to 400,000 against Rocq's simC10 traced from that
   configuration: every index agrees, and the fingerprint is equal at
   350,000 (earlier runs, with the BEVEN budget still at 100,000, had
   equal fingerprints at the 12 checkpoints from 90,000 to 150,000, and
@@ -53,7 +53,7 @@ they may be wrong in places.
   and so do those of `s0_c1.v` to `s0_c16.v` (moves 93,501 to 157,501).
   The span at 345,355 still has 37,982 digits.
 - Past the counter, simC10's list takes the stack phase through long
-  runs of BIGJ moves (4,072 of Rocq's first 54,645 moves there), as
+  runs of BIGJ moves (4,072 of the 54,645 moves from 345,356 to 400,000, about 118 s in Sleight and 1,546 s in Rocq), as
   lin3c3's notes describe; Rocq's 10^110012 comes from a different,
   scripted list (lin3c4's simS over msC15), which these files do not
   port.
@@ -68,7 +68,7 @@ ran alongside.
 | 40,036 to 68,197 | 2,091 s (`c10-move`) | 13,106 s |
 | 67,501 to 69,895 | 247 s | 2,531 s |
 | 67,501 to 89,501 | 2,292 to 2,868 s | not measured |
-| 89,502 to 367,361 | 1,749 s | 3,687 s |
+| 89,502 to 400,000 | 1,848 s | 4,828 s |
 
 - In the counter TRAIN takes most of the Sleight time (12,711 moves,
   about 1,040 s, against 30 s in Rocq), then CHILD (174 s) and AEND
