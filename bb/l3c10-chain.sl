@@ -1,18 +1,4 @@
 (def-adts
-  ((PhR : ((Fam) F) ((Nat) s) -> Type)
-    enum
-    (many PhOk : (erased (Fam) F) (erased (Nat) s) (many (Nat) n) (erased (FamOK F) ok) (erased (MaxS F n) mx) (erased (Lt s (Succ n)) bn)
-       (many (List (Tk)) X) (many (Tt) T) (erased (Phi F s X T) ph) -> (PhR F s))
-    (many PhNo : (erased (Fam) F) (erased (Nat) s) -> (PhR F s))))
-
-(def-fns _ $ (many phr : (many (Fam) F) (many (Nat) s) -> (many (PhR F s) r))
-  (let-match many (famok F) (FkOk _ ok) ((FkNo _) (PhNo F s)))
-  (let ((many n) (erased mx)) (maxs-run F))
-  (let-match many (lt-dec s (Succ n)) (Yes _ _ _ _ bn) ((No _ _ _ _ _) (PhNo F s)))
-  (let ((many X) (many T) (erased ph)) (phi-run F s n ok mx bn))
-  (PhOk F s n ok mx bn X T ph))
-
-(def-adts
   ((IdR : ((List (Tk)) Y) ((Tt) T) -> Type)
     enum
     (many IdOk : (erased (List (Tk)) Y) (erased (Tt) T) (many (Fam) F) (many (Nat) s n) (erased (FamOK F) ok) (erased (MaxS F n) mx)
@@ -20,11 +6,10 @@
     (many IdNo : (erased (List (Tk)) Y) (erased (Tt) T) -> (IdR Y T))))
 
 (def-fns _ $ (many id-at : (many (Fam) F) (many (Nat) s) (many (List (Tk)) Y) (many (Tt) T) -> (many (IdR Y T) r))
-  (let-match many (phr F s) (PhOk _ _ n ok mx bn X U ph) ((PhNo _ _) (IdNo Y T)))
-  (let-match many (tks-eq X Y) (ESome _ e1) ((ENone _) (IdNo Y T)))
-  (let-match many (tt-eq U T) (ESome _ e2) ((ENone _) (IdNo Y T)))
-  (let-match erased e1 (Refl _ _))
-  (let-match erased e2 (Refl _ _))
+  (let-match many (famok F) (FkOk _ ok) ((FkNo _) (IdNo Y T)))
+  (let ((many n) (erased mx)) (maxs-run F))
+  (let-match many (lt-dec s (Succ n)) (Yes _ _ _ _ bn) ((No _ _ _ _ _) (IdNo Y T)))
+  (let-match many (phi-chk F s n ok mx bn Y T) (ESome _ ph) ((ENone _) (IdNo Y T)))
   (IdOk Y T F s n ok mx bn ph))
 
 (def-fns _ $ (many ident : (many (Fam) F) (many (Nat) s) (many (List (Tk)) Y) (many (Tt) T) -> (many (IdR Y T) r))
