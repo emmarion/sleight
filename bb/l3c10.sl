@@ -780,3 +780,12 @@
   (let-match many fuel (Succ f) ((Zero) (values fuel e ch)))
   (let-match many (c-move9 c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ e1 ch1) (values fuel e1 ch1)))
   (tail $ c10run c0 f e1 ch1))
+
+(def-adts
+  ((FeR : ((Fam) F) -> Type)
+    enum
+    (many FeOk : (erased (Fam) F) (many (Nat) P) (many (Tt) T) (erased (Eq (Fam) F (FE P T)) e) -> (FeR F))
+    (many FeNo : (erased (Fam) F) -> (FeR F))))
+
+(def-fns _ $ (many fam-e : (many (Fam) F) -> (many (FeR F) r))
+  (match many F _ ((FE P T) (FeOk F P T (Refl _ F))) (else (FeNo F))))
