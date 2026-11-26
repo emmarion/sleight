@@ -2,12 +2,6 @@
   (let-match many e (MkRq q L h R))
   (sp (sp (sp (sp (sp (RStr "") q) (bit-nat h)) (nlen-runs L 0)) (nlen-runs R 0)) (fp-runs R 0)))
 
-(def-fns _ $ (many rd-nats : (subterm many (Nat) k) (many (String) s) -> (many (List (Nat)) xs) (many (String) t))
-  (let-match many k (Succ k1) ((Zero) (values (Nil _) s)))
-  (let ((many n) (many s1)) (tok s))
-  (let ((many xs) (many t)) (notail $ rd-nats k1 s1))
-  (values (Cons _ n xs) t))
-
 (def-lvl S15P0)
 (def-lvl S15P)
 (def-fns S15P0 $ (many s15-step : (subterm many (List (Nat)) sc) (many (Bool) light) (many (Nat) mv) (many (List (Nat)) cks) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch)
