@@ -43,21 +43,31 @@ let chk = match Sys.getenv_opt "C10CHK" with
 let mtab = [ (17, try_fdescK); (3, try_vdescS); (25, try_vdesc2); (11, try_aend4); (2, try_retS); (4, try_walkNS) ]
 let mine = List.map fst mtab
 let tm = Array.make 26 0.0 and cn = Array.make 26 0
+let readc f = let ic = open_in f in let n = in_channel_length ic in let s = really_input_string ic n in close_in ic;
+  let t = ref (List.filter (( <> ) "") (String.split_on_char ' ' (String.concat " " (String.split_on_char '\n' s)))) in
+  let nx () = match !t with x :: r -> t := r; x | [] -> failwith "eof" in
+  let ni () = int_of_string (nx ()) in
+  let sd () = List.init (ni ()) (fun _ -> let b = ni () in let n = Z.of_string (nx ()) in ((if b = 0 then S0 else S1), n)) in
+  let q = [| A; B; C; D; E; F |].(ni ()) in let h = if ni () = 0 then S0 else S1 in
+  let l = sd () in let r = sd () in (((q, l), h), r)
 let writef f s = let oc = open_out f in output_string oc s; close_out oc
 let () = match Sys.argv.(1) with
-  | "trace" ->
-    let n = int_of_string Sys.argv.(2) and dir = Sys.argv.(3) in
-    let cks = List.map int_of_string (Array.to_list (Array.sub Sys.argv 4 (Array.length Sys.argv - 4))) in
+  | "trace" | "tracefrom" ->
+    let fr = Sys.argv.(1) = "tracefrom" in
+    let k = if fr then 2 else 0 in
+    let m0 = if fr then int_of_string Sys.argv.(3) else 0 in
+    let n = int_of_string Sys.argv.(2 + k) and dir = Sys.argv.(3 + k) in
+    let cks = List.map int_of_string (Array.to_list (Array.sub Sys.argv (4 + k) (Array.length Sys.argv - 4 - k))) in
     let tr = open_out (dir ^ "/trace.txt") in
-    let c = ref rc0 in
+    let c = ref (if fr then readc Sys.argv.(2) else rc0) in
     if List.mem 0 cks then writef (Printf.sprintf "%s/c_%d.txt" dir 0) (txt !c);
-    for m = 1 to n do
+    for m = m0 + 1 to n do
       let ta = Unix.gettimeofday () in
       let r = moveC10 !c in
       let dt = Unix.gettimeofday () -. ta in
       let cls = match r with None -> failwith "stuck" | Some (i, _) -> if nm i = "M9" then "M9:" ^ m9class !c else nm i in
       (match r with Some (_, (c', _)) -> c := c' | None -> ());
-      Printf.fprintf tr "%d %s %.6f\n" m cls dt;
+      Printf.fprintf tr "%d %s %.6f\n" m cls dt; flush tr;
       if List.mem m cks then (flush tr; writef (Printf.sprintf "%s/c_%d.txt" dir m) (txt !c))
     done; close_out tr
   | "hints" ->
