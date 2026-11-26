@@ -46,7 +46,7 @@ they may be wrong in places.
   37,982 digits.
 - Moves 89,502 to 367,361 against Rocq's simC10 traced from that
   configuration: every index agrees, and the fingerprint is equal at
-  350,000 (an earlier run, with the BEVEN budget still at 100,000, had
+  350,000 (earlier runs, with the BEVEN budget still at 100,000, had
   equal fingerprints at the 12 checkpoints from 90,000 to 150,000, and
   diverged at 334,276 where BEVEN did not fire). At 345,355, the end of the
   epoch-3 counter, the fingerprint equals that of `lin3c3_s0/s0_c66.v`,
