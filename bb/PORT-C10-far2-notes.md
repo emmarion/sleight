@@ -74,3 +74,48 @@ of `c10-run3` at 345,355 (the far session's notes).
   Before that move the span seems to stay at 37,982 digits (s2_c1.v,
   move 1,199), so a bound file between 10^37981 and 10^110012 does not
   seem to be available on this path.
+
+## Goal
+
+`slc` with `--goal proved` on the full file list, `bb/l3c10-run.sl`,
+`bb/l3c10-far.sl`, `bb/l3c10-train.sl`, `bb/l3c10-far2.sl` and
+`bb/l3c10bound-110012.sl` printed `--goal proved: PASS` and exited 0:
+8,328 s wall, 8,125 s user, 4.06 GB peak (the compiled program of
+`native-compute`), on a shared 4-core container.
+
+## Timings
+
+Wall time per index over moves 106 to 1,618, from the harness run that
+also printed a light fingerprint after every move (about a second of
+each move seems to be that fingerprint and the output, judging by the
+cheapest indices), against Rocq's extracted msC15 from the same
+configuration without fingerprints:
+
+| index | macro | moves | Sleight | Rocq |
+|---|---|---|---|---|
+| 0 | M9 | 835 | 1,312 s | 10.1 s |
+| 6 | WALKN | 59 | 96 s | 4.8 s |
+| 20 | CONTACT | 226 | 391 s | 3.2 s |
+| 26 | RESUME1J | 56 | 263 s | 7.1 s |
+| 37 | FDESC6 | 224 | 403 s | 9.0 s |
+| 41 | ABSORB8 | 20 | 624 s | 46.2 s |
+| 42 | CHILD9 | 8 | 1,145 s | 34.9 s |
+| 39 | BCOVF (cntX) | 7 | 26 s | 42.3 s |
+| 40 | CHAIN8V | 1 | 105 s | 10.1 s |
+
+- The CHILD9 at move 1,605 took 841 s (Rocq 17 s). CHAIN8V at 1,619
+  (Rocq 65 s) and the two moves after it took about 36 s from Rocq's
+  configuration at 1,619 for the last two, and under 700 s with the
+  load of the 1.2 GB configuration for the first.
+- Reading a 1.2 GB configuration in the harness peaks at about 5.7 GB;
+  the goal run reads none.
+
+## Open
+
+- JUNC's proposal (`jx-prop`) is unproven code checked by M9 replay;
+  lin3r3's window lemma (`win_rounds`) is not ported, so a junction
+  whose result the M9 replay does not pass through would fail rather
+  than be proven another way.
+- CHILD9 and ABSORB8 seem to be where the Sleight time goes in the
+  scripted part; Rocq's closed forms (lin3s8's `fastStep8`, the
+  shift-based digit reads of lin3c4_cdiv) are not ported.
