@@ -1088,8 +1088,8 @@
   (let-match many acc (Cons _ m acc1) ((Nil _) L))
   (Cons _ (MkRn (BFalse) 1) $ Cons _ (MkRn (BTrue) 2) $ Cons _ (MkRn (BFalse) 1) $ Cons _ (MkRn (BTrue) (nat-add 3 m)) (notail $ stkr acc1 L)))
 
-(def-fns _ $ (many train-core : (many (Bool) g1) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
-  (let ((many no)) (RsNo l3 c0 e ch))
+(def-fns _ $ (many train-tgt : (many (Bool) g1) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Maybe (Rq)) res))
+  (let ((many no)) (None (Rq)))
   (let-match erased ch (MkRch _ _ a c _ t0 r0 dc0 z))
   (let-match many (c-lm e c dc0) (LmOk _ lz x0 u y xr n L0 d0 p0 X T px R1 d1 cu dc) ((LmNo _) no))
   (let-match many (nat-eq n 2) (Equal _ _ _) (else no))
@@ -1123,7 +1123,11 @@
   (let ((many R3) (erased y3) (erased _) (erased d3) (erased _) (erased _)) (cpushn (BFalse) gap2 R2 r2 dr2))
   (let ((many Ro) (erased _) (erased _) (erased _)) (rapp C (Cons (Bool) (BFalse) u0) dC R3 y3 d3))
   (let ((many Lo)) (Cons _ (MkRn (BFalse) 2) (Cons _ (MkRn (BTrue) 2) (stkr acc L0))))
-  (f-cert c0 e ch (MkRq 2 Lo (BTrue) Ro) 1000000))
+  (Some _ (MkRq 2 Lo (BTrue) Ro)))
+
+(def-fns _ $ (many train-core : (many (Bool) g1) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
+  (let-match many (train-tgt g1 c0 e ch) (Some _ t) ((None _) (RsNo l3 c0 e ch)))
+  (f-cert c0 e ch t 1000000))
 
 (def-fns _ $ (many try-train : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
   (train-core (BFalse) c0 e ch))
