@@ -398,13 +398,22 @@
       (MkCEz 2 (bits "00" x0) (bits "0" xr) (bits "00" x0) (bits "0" xr2) (BTrue) (eqz-refl _) (EC (BFalse) xr xr2 exr)) run
       (MkDc 2 Lo Ro (BTrue) (bits "00" x0o) ro dLo dRo) (cez-refl _))))
 
+(def-fns _ $ (many death-end-u : (erased (Conf) c0) (subterm many (Nat) fuel) (many (Nat) depth) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Rq) t)
+    -> (many (Rs l3 c0) res))
+  (let-match many (c-wr-n depth (BFalse) c0 e ch) (RsNo _ _ _ _)
+    ((RsOk _ _ e1 ch1) (match many (rq-same e1 t) _ ((ESome _ _) (RsOk l3 c0 e1 ch1)) ((ENone _) (RsNo l3 c0 e ch)))))
+  (let-match many fuel (Succ f) ((Zero) (RsNo l3 c0 e ch)))
+  (let-match many (c-move9 c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ _ _) (RsNo l3 c0 e ch)))
+  (tail $ death-end-u c0 f depth e1 ch1 t))
+
 (def-fns _ $ (many c-death-u : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
   (let ((many no)) (RsNo l3 c0 e ch))
   (let ((many lc)) (lmc e))
   (let-match many (m-death lc) (Some _ t) ((None _) no))
   (let-match many lc (LcOk _ _ D _ _ _) ((LcNo) no))
-  (let-match many (c-dlev (memp D) c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ _ _) no))
-  (let-match many (death-end c0 64 e1 ch1 t) (RsNo _ _ _ _) ((RsOk _ _ e2 ch2) (RsOk l3 c0 e2 ch2)))
+  (let ((many P)) (memp D))
+  (let-match many (c-dlev P c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ _ _) no))
+  (let-match many (death-end-u c0 64 (nat-add 4 (nat-add P P)) e1 ch1 t) (RsNo _ _ _ _) ((RsOk _ _ e2 ch2) (RsOk l3 c0 e2 ch2)))
   (let-match many (death-end c0 64 e1 ch1 (rq-norm t)) (RsOk _ _ e2 ch2) ((RsNo _ _ _ _) no))
   (c-certify c0 e2 ch2 0 (Some _ t)))
 
