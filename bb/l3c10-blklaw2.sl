@@ -217,13 +217,13 @@
   (let ((erased u) (erased run3)) (run-cat l3 _ _ _ t1 t2 run1 run2))
   (MkCfL F s X xr x0 F3 s3 n3v ok3 mx3 bn3 X3 T3 ph3 Rt3 rc3 v3 xr3 dr3 tb3 xb3 M2 st x4 (rp-add (BTrue) M m M2 x0 x3 x4 pm p1 aM) u run3))
 
-(def-fns _ $ (many mac-chain3 : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
+(def-fns _ $ (many mac-chain3g : (many (Bool) glob) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
   (let ((many no)) (RsNo l3 c0 e ch))
   (let-match erased ch (MkRch _ _ a c _ t0 r0 dc0 z))
   (let-match many (c-lm e c dc0) (LmOk _ lz x0 u y xr n L0 d0 p0 X T px R1 d1 cu dc) ((LmNo _) no))
   (let-match many T (TtE) (else no))
   (let-match many e (MkRq _ _ _ RR))
-  (let-match many (rshort 40000 RR) (BTrue) ((BFalse) no))
+  (let-match many (match many glob (((Bool) b)) ((BTrue) (rshort 40000 RR)) ((BFalse) (BTrue))) (BTrue) ((BFalse) no))
   (let-match many (rshort 64 R1) (BTrue) ((BFalse) no))
   (let-match many (decode X T) (DecOk F0 s0) ((DecNo) no))
   (let-match many (id-at F0 s0 X T) (IdOk _ _ F s nb ok mx bn ph) ((IdNo _ _) no))
@@ -247,3 +247,6 @@
   (let-match erased (tb-fn T2 rc2 v2 v3 tb2 tb3) (Refl _ _))
   (let-match erased (xb-fn X2 v2 xr2 zr2 xb2 zb3) (Refl _ _))
   (RsOk l3 c0 (MkRq 2 Lo (BTrue) Ro) (rch-run l3 c0 _ _ e _ t ch dc run (MkDc 2 Lo Ro (BTrue) (bits "00" x3) ro dLo dRo))))
+
+(def-fns _ $ (many mac-chain3 : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
+  (mac-chain3g (BTrue) c0 e ch))
