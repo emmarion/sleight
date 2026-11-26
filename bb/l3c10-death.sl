@@ -9,7 +9,7 @@
 (def-fns _ $ (many death-end : (erased (Conf) c0) (subterm many (Nat) fuel) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Rq) t) -> (many (Rs l3 c0) res))
   (let-match many e (MkRq _ L _ _))
   (let-match many t (MkRq _ Lt _ _))
-  (let-match many (c-wr-n (nat-shr (monus (rlen L 0) (rlen Lt 0)) 1) (BFalse) c0 e ch) (RsNo _ _ _ _)
+  (let-match many (c-wr-n (nat-shr (monus (nlen-runs L 0) (nlen-runs Lt 0)) 1) (BFalse) c0 e ch) (RsNo _ _ _ _)
     ((RsOk _ _ e1 ch1) (match many (rq-same e1 t) _ ((ESome _ _) (RsOk l3 c0 e1 ch1)) ((ENone _) (RsNo l3 c0 e ch)))))
   (let-match many fuel (Succ f) ((Zero) (RsNo l3 c0 e ch)))
   (let-match many (c-move9 c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ _ _) (RsNo l3 c0 e ch)))
