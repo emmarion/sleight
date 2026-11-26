@@ -42,9 +42,13 @@
   (let ((many R2) (erased dr2)) (rnorm-pre k R x dr))
   (RsOk l3 c0 (MkRq q L h R2) (MkRch l3 c0 a c (MkRq q L h R2) n run (MkDc q L R2 h l x dl dr2) z)))
 
-(def-fns _ $ (many c-certify-f : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Nat) fuel tl) (many (Maybe (Rq)) mt) -> (many (Rs l3 c0) res))
+(def-fns _ $ (many tl-of : (many (LmC) lc) -> (many (Nat) n))
+  (match many lc _ ((LcOk _ _ _ _ _ R1) (monus (rlen R1 0) 1)) ((LcNo) 0)))
+
+(def-fns _ $ (many c-certify-f : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Nat) fuel) (many (LmC) lc) (many (Maybe (Rq)) mt) -> (many (Rs l3 c0) res))
   (let ((many no)) (RsNo l3 c0 e ch))
   (let-match many mt (Some _ t) ((None _) no))
+  (let ((many tl)) (tl-of lc))
   (let-match many e (MkRq q L h R))
   (let-match many t (MkRq tq tL th tR))
   (let ((many i)) (monus (rlen R 0) (Succ tl)))
@@ -67,9 +71,6 @@
   (let-match many ok (ESome _ s) ((ENone _) no))
   (rs-normpre c0 (Succ j) (frame-one (MkFE ein eo s) c0 e ch)))
 
-(def-fns _ $ (many tl-of : (many (LmC) lc) -> (many (Nat) n))
-  (match many lc _ ((LcOk _ _ _ _ _ R1) (monus (rlen R1 0) 1)) ((LcNo) 0)))
-
 (def-fns _ $ (many c-child-f : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (LmC) lc) (many (Maybe (Nat)) mp) (many (Nat) rho) -> (many (Rs l3 c0) res))
   (let ((many no)) (RsNo l3 c0 e ch))
   (let-match many (child-pre lc mp rho) (CpOk _ p _ gbc Gr _ _) ((CpNo) no))
@@ -78,14 +79,14 @@
   (let-match many (nle need Gr) (BTrue) ((BFalse) no))
   (let-match many (reach-t1 c0 10000000 256 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ _ _) no))
   (let ((many lc1)) (lmc e1))
-  (let-match many (c-certify-f c0 e1 ch1 64 (tl-of lc1) (child-fin lc1 (monus Gr need))) (RsOk _ _ e2 ch2) ((RsNo _ _ _ _) no))
+  (let-match many (c-certify-f c0 e1 ch1 64 lc1 (child-fin lc1 (monus Gr need))) (RsOk _ _ e2 ch2) ((RsNo _ _ _ _) no))
   (RsOk l3 c0 e2 ch2))
 
 (def-fns _ $ (many fe-cert-f : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Bool) child) (many (LmC) lc) (many (Maybe (Nat)) mp) (many (Nat) rho)
     -> (many (Rs l3 c0) res))
   (match many child _
     ((BTrue) (c-child-f c0 e ch lc mp rho))
-    ((BFalse) (c-certify-f c0 e ch 64 (tl-of lc) (m-bcovf lc mp rho)))))
+    ((BFalse) (c-certify-f c0 e ch 64 lc (m-bcovf lc mp rho)))))
 
 (def-fns _ $ (many try-resume-f : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
   (let-match erased ch (MkRch _ _ _ c _ _ _ dc _))
