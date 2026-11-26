@@ -75,6 +75,6 @@ ran alongside.
   (145 s). Before `c-certify-f`, CHILD and BCOVF took about 0.6 s each:
   the replay certifier rebuilt and compared the whole right side, whose
   tail holds about 1 GB of digits.
-- `slc` with `--goal proved` on `bb/l3c10bound-37981.sl` printed PASS
-  and exited 0 in about 4,116 s of user time, 1.9 GB peak, with the
-  dispatcher before the framed certifier.
+- `slc` with `--goal proved` on the full file list, `bb/l3c10-run.sl`,
+  `bb/l3c10-far.sl` and `bb/l3c10bound-37981.sl` printed PASS and exited
+  0 in about 4,066 s of user time, 1.8 GB peak.
