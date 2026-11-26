@@ -73,7 +73,10 @@ equal those of Rocq's configurations at 1,000, 10,000, 20,000, 22,268,
 notes compare with Rocq's certificate configuration there. From
 `far/sr/c89501.txt` to 345,355, every index equals that of Rocq's simC10
 trace, the fingerprints equal Rocq's at 100,000, 200,000 and 300,000,
-and the one at 345,355 equals that of `lin3c3_s0/s0_c66.v`.
+and the one at 345,355 equals that of `lin3c3_s0/s0_c66.v`. A run on to
+400,000 also agrees on every index, with equal fingerprints at 350,000;
+its one CHILD past the counter, at move 345,938 (`P = 7843`, `gc = 3`),
+takes about 7.4 s against about 39.5 s for `c10-move-l` (Rocq 137 s).
 
 ## Timings
 
@@ -97,6 +100,19 @@ All CHILD moves from the blank tape to 89,501 come before 58,055. Move
 about 41.7 s for `c-child-f`; of those, the climb's 7,825 markers take
 about 5 s, about 0.8 ms each, most of it in `zjump`'s walk to the jump
 level and `wtail`'s recount of the changed window.
+
+## Goals
+
+`slc` with `--goal proved`, user time:
+
+- `bb/l3c10bound.sl` after the full file list and `bb/l3c10-run.sl`:
+  PASS, exit 0, 136.4 s, 0.60 GB peak; with `bb/l3c10-far.sl`,
+  `bb/l3c10-train.sl`, `bb/l3c10-trlaw.sl` and `bb/l3c10-chf.sl` added
+  before it: PASS, exit 0, 136.8 s, 0.65 GB.
+- A copy of `bb/l3c10bound-37981.sl` with `c10-run6` in place of
+  `c10-run3`, after the full list and the five files above: PASS,
+  exit 0, 3,935 s, 1.74 GB peak (the far notes give about 4,066 s and
+  1.8 GB for `c10-run3`, on another day's load).
 
 ## What is left
 
