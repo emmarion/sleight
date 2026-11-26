@@ -113,6 +113,16 @@
   (CtOk u x y rc2 R2 d2 prc2 (rp-eqz (BFalse) u z y x rc2 pu prc2 (eqz-sym y z ez))))
 
 (def-adts
+  ((CTakeX : ((Nat) w) ((List (Bool)) x) -> Type)
+    enum
+    (many CtxOk : (erased (Nat) w) (erased (List (Bool)) x r rc) (many (List (Rn)) L) (erased (Den L r) d) (erased (Rp (BFalse) w r rc) p) (erased (Eqz x rc) ez)
+       -> (CTakeX w x))
+    (many CtxNo : (erased (Nat) w) (erased (List (Bool)) x) -> (CTakeX w x))))
+
+(def-fns _ $ (many rest-take-x : (many (List (Rn)) R) (erased (List (Bool)) x) (erased (Den R x) d) (many (Nat) u) -> (many (CTakeX u x) t))
+  (match many (rest-take R x d u) _ ((CtOk _ _ r rc L dl p ez) (CtxOk u x r rc L dl p ez)) ((CtNo _ _) (CtxNo u x))))
+
+(def-adts
   ((LSp : ((List (Bool)) l) -> Type)
     enum
     (many LSpOk : (erased (List (Bool)) lz x0) (many (Nat) n) (many (List (Rn)) L0) (erased (Den L0 lz) d) (erased (Rp (BTrue) n lz x0) p)
