@@ -21,8 +21,10 @@ the target's left side, since some outputs lie inside one M9 walk; the
 depth is the difference between the numbers of leading stack entries
 (`0^1 1^t`, `2 <= t <= 64`) of the two left sides (`stk-cnt`), the
 target's counted once. The fuel is 10^7 replay moves for CHILD.
-`try-resume` is Rocq's guard, `c-move9`, then the certified BCOVF or
-CHILD. `bb/l3c10.sl`'s `c-walk` is `c-walk-n` with an unbounded depth.
+`try-resume` is Rocq's guard, one M9 move, then the certified BCOVF or
+CHILD; the guard and the M9 move share one `c-lm` parse (`c-move9-at`),
+and the guard compares the parsed tokens with `c-enc` of `phie` rather
+than the digit lists, which can only make it stricter than Rocq's. `bb/l3c10.sl`'s `c-walk` is `c-walk-n` with an unbounded depth.
 
 ## Agreement
 
