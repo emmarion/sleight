@@ -149,11 +149,29 @@
 (def-adts
   ((Pb : ((Fam) F) ((Nat) s) -> Type)
     enum
-    (many PbOk : (erased (Fam) F) (erased (Nat) s) (many (List (Nat)) H) (many (List (Ps)) wf w) (erased (List (Nat)) D A) (erased (List (Tk)) X)
+    (many PbOk : (erased (Fam) F) (erased (Nat) s) (erased (Nat) Q) (erased (FQ F Q) fq) (many (List (Nat)) H) (many (List (Ps)) wf w)
+       (erased (PBlk Q s wf) bk) (erased (List (Nat)) D A) (erased (List (Tk)) X)
        (erased (Dg w (Cons (Nat) (Zero) (Nil (Nat))) D) g) (erased (Pa H D A) pa) (erased (DEnc A X) en) (erased (Phi F s X (Tt1)) ph) -> (Pb F s))
     (many PbNo : (erased (Fam) F) (erased (Nat) s) -> (Pb F s))))
 
-(def-fns _ $ (many phi-pb : (many (Fam) F) (many (Nat) s) -> (many (Pb F s) r))
+(def-fns _ $ (many pb-of : (many (Fam) F) (many (Nat) s) (erased (Nat) Q) (erased (FQ F Q) fq) (many (List (Ps)) wf) (erased (PBlk Q s wf) bk) -> (many (Pb F s) r))
+  (let-match many F (FO P T)
+    (else
+      (let-match many (fam-e F) (FeOk _ P T ef) ((FeNo _) (PbNo F s)))
+      (let-match erased ef (Refl _ _))
+      (let-match erased fq (FqE _))
+      (let ((erased D) (erased g)) (dg-tr wf (Cons (Nat) (Zero) (Nil (Nat)))))
+      (let ((erased X) (erased e)) (enc-tr (Cons (Nat) n2 D)))
+      (PbOk F s Q fq (Nil (Nat)) wf wf bk D _ X g (PaE D) e (PhE P s (Tt1) wf D X bk g e))))
+  (let-match erased fq (FqO _))
+  (let-match many wf (Cons _ x w) (absurd (Nil _) (match erased bk _)))
+  (let ((many h0) (many h) (erased pd)) (dig2-run x))
+  (let-match many h0 (Zero) ((Succ _) (PbNo F s)))
+  (let ((erased D) (erased g)) (dg-tr w (Cons (Nat) (Zero) (Nil (Nat)))))
+  (let ((erased X) (erased e)) (enc-tr (Cons (Nat) n2 (Cons (Nat) h D))))
+  (PbOk F s Q fq (Cons (Nat) h (Nil (Nat))) wf w bk D _ X g (PaO h D) e (PhO P s (Tt1) x h w D X bk pd g e)))
+
+(def-fns _ $ (many phi-pb : (many (Fam) F) (many (Nat) s) (erased (Nat) Q) (erased (FQ F Q) fq) -> (many (Pb F s) r))
   (let ((many no)) (PbNo F s))
   (let ((many n) (erased mx)) (maxs-run F))
   (let-match many (lt-dec s (Succ n)) (Yes _ _ _ _ bn) ((No _ _ _ _ _) no))
@@ -161,17 +179,81 @@
     (else
       (let-match many (fam-e F) (FeOk _ P T ef) ((FeNo _) no))
       (let-match erased ef (Refl _ _))
-      (let-match many T (Tt1) (else no))
+      (let-match erased fq (FqE _))
       (let-match erased mx (MxE _ _ _ q))
       (let ((many t) (erased tq)) (top-run P))
       (let-match erased (top-fn P n t q tq) (Refl _ _))
       (let ((many w) (erased b)) (blk-fast P s t tq bn))
-      (let ((erased D) (erased g)) (dg-tr w (Cons (Nat) (Zero) (Nil (Nat)))))
-      (let ((erased X) (erased e)) (enc-tr (Cons (Nat) n2 D)))
-      (PbOk F s (Nil (Nat)) w w D _ X g (PaE D) e (PhE P s (Tt1) w D X b g e))))
-  (let-match many T (Tt1) (else no))
+      (pb-of F s Q fq w b)))
+  (let-match erased fq (FqO _))
   (let ((many x) (many h) (many w) (erased D) (erased X) (erased g) (erased e) (erased ph)) (phi-blk P s (Tt1) n mx bn))
-  (PbOk F s (Cons (Nat) h (Nil (Nat))) (Cons (Ps) x w) w D _ X g (PaO h D) e ph))
+  (let-match erased ph (PhO _ _ _ _ _ _ _ _ b _ _ _))
+  (pb-of F s Q fq (Cons (Ps) x w) b))
+
+(def-adts
+  ((NBp : ((Ps) x) -> Type)
+    enum
+    (many NbA : -> (NBp (PrA)))
+    (many NbB : -> (NBp (PrB)))
+    (many NbC : -> (NBp (PrC)))
+    (many NbD : -> (NBp (PrD)))
+    (many NbDp : -> (NBp (PrDp)))))
+
+(def-fns _ $ (many step-run : (many (Ps) x) (erased (NBp x) nb) (many (Bool) c) -> (many (Ps) y) (many (Bool) co) (erased (Step x c y co) st))
+  (match many x _
+    ((PrA) (match many c _ ((BFalse) (values (PrA) (BFalse) (StA0))) ((BTrue) (values (PrB) (BFalse) (StA1)))))
+    ((PrB) (match many c _ ((BFalse) (values (PrB) (BFalse) (StB0))) ((BTrue) (values (PrBp) (BFalse) (StB1)))))
+    ((PrC) (match many c _ ((BFalse) (values (PrC) (BFalse) (StC0))) ((BTrue) (values (PrD) (BFalse) (StC1)))))
+    ((PrD) (match many c _ ((BFalse) (values (PrD) (BFalse) (StD0))) ((BTrue) (values (PrDp) (BFalse) (StD1)))))
+    ((PrDp) (match many c _ ((BFalse) (values (PrA) (BTrue) (StDp0))) ((BTrue) (values (PrB) (BTrue) (StDp1)))))
+    (absurd (PrBp) (match erased nb _))))
+
+(def-adts
+  ((NbR : ((Ps) x) -> Type)
+    enum
+    (many NbYes : (erased (Ps) x) (erased (NBp x) nb) -> (NbR x))
+    (many NbNo : -> (NbR (PrBp)))))
+
+(def-fns _ $ (many nbp-of : (many (Ps) x) -> (many (NbR x) r))
+  (match many x _
+    ((PrA) (NbYes _ (NbA))) ((PrB) (NbYes _ (NbB))) ((PrC) (NbYes _ (NbC))) ((PrD) (NbYes _ (NbD))) ((PrDp) (NbYes _ (NbDp)))
+    ((PrBp) (NbNo))))
+
+(def-fns _ $ (many rnd-run : (subterm many (List (Ps)) w) -> (many (List (Ps)) w2) (many (Bool) c) (erased (Rnd w w2 c) rn))
+  (let-match many w (Cons _ x w1) ((Nil _) (values (Nil (Ps)) (BTrue) (RnN))))
+  (let-match many (nbp-of x) (NbYes _ nb) ((NbNo) (values (Cons _ (PrC) w1) (BFalse) (RnBp w1))))
+  (let ((many w3) (many c1) (erased rn1)) (notail $ rnd-run w1))
+  (let ((many y) (many co) (erased st)) (step-run x nb c1))
+  (values (Cons _ y w3) co (RnX x y w1 w3 c1 co rn1 st)))
+
+(def-fns _ $ (erased step-fn : (erased (Ps) x y y2) (erased (Bool) c co co2) (erased (Step x c y co) p) (erased (Step x c y2 co2) q)
+    -> (erased (Eq (Ps) y y2) e1) (erased (Eq (Bool) co co2) e2))
+  (match erased p _
+    ((StA0) (let-match erased q (StA0)) (values (Refl _ y) (Refl _ co)))
+    ((StA1) (let-match erased q (StA1)) (values (Refl _ y) (Refl _ co)))
+    ((StB0) (let-match erased q (StB0)) (values (Refl _ y) (Refl _ co)))
+    ((StB1) (let-match erased q (StB1)) (values (Refl _ y) (Refl _ co)))
+    ((StC0) (let-match erased q (StC0)) (values (Refl _ y) (Refl _ co)))
+    ((StC1) (let-match erased q (StC1)) (values (Refl _ y) (Refl _ co)))
+    ((StD0) (let-match erased q (StD0)) (values (Refl _ y) (Refl _ co)))
+    ((StD1) (let-match erased q (StD1)) (values (Refl _ y) (Refl _ co)))
+    ((StDp0) (let-match erased q (StDp0)) (values (Refl _ y) (Refl _ co)))
+    ((StDp1) (let-match erased q (StDp1)) (values (Refl _ y) (Refl _ co)))))
+
+(def-fns _ $ (erased rnd-fn : (erased (List (Ps)) w w2 w3) (erased (Bool) c c2) (subterm erased (Rnd w w2 c) p) (erased (Rnd w w3 c2) q)
+    -> (erased (Eq (List (Ps)) w2 w3) e1) (erased (Eq (Bool) c c2) e2))
+  (match erased p _
+    ((RnN) (let-match erased q (RnN)) (values (Refl _ w2) (Refl _ c)))
+    ((RnBp _) (let-match erased q (RnBp _) (absurd (RnX _ _ _ _ _ _ _ st) (match erased st _))) (values (Refl _ w2) (Refl _ c)))
+    ((RnX x y w1 w4 c1 co p1 s1)
+      (let-match erased q (RnX _ y2 _ w5 c3 co2 q1 s2) (absurd (RnBp _) (match erased s1 _)))
+      (let ((erased a1) (erased a2)) (rnd-fn w1 w4 w5 c1 c3 p1 q1))
+      (let-match erased a1 (Refl _ _))
+      (let-match erased a2 (Refl _ _))
+      (let ((erased b1) (erased b2)) (step-fn x y y2 c1 co co2 s1 s2))
+      (let-match erased b1 (Refl _ _))
+      (let-match erased b2 (Refl _ _))
+      (values (Refl _ w2) (Refl _ c)))))
 
 (def-fns _ $ (many pb-cells : (many (List (Nat)) H) (many (List (Ps)) w) (erased (List (Nat)) D A) (erased (List (Tk)) X)
     (erased (Dg w (Cons (Nat) (Zero) (Nil (Nat))) D) g) (erased (Pa H D A) pa) (erased (DEnc A X) en) -> (many (Nat) c) (erased (Rl X (Zero) c) r))
