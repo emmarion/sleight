@@ -2,6 +2,8 @@
   (let-match many (nat-eq idx 15) (Unequal _ _ _ _ _) ((Equal _ _ _) (try-train2 c0 e ch)))
   (let-match many (nat-eq idx 16) (Unequal _ _ _ _ _) ((Equal _ _ _) (try-traing2 c0 e ch)))
   (let-match many (nat-eq idx 115) (Unequal _ _ _ _ _) ((Equal _ _ _) (try-train c0 e ch)))
+  (let-match many (nat-eq idx 9) (Unequal _ _ _ _ _) ((Equal _ _ _) (mac-chain3 c0 e ch)))
+  (let-match many (nat-eq idx 109) (Unequal _ _ _ _ _) ((Equal _ _ _) (mac-chain c0 e ch)))
   (RsNo l3 c0 e ch))
 
 (def-fns _ $ (many b2-rep : (subterm many (Nat) k) (many (Nat) idx) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
