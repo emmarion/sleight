@@ -60,6 +60,8 @@ Shared 4-core container, single runs, user time.
   matches Rocq's trace on all 40,035 moves and the configurations equal
   Rocq's at 1,000, 10,000, 22,268, 38,513 and 40,035. ABSORB's 42 moves
   take about 14 s (Rocq 471 s); the run to 40,035 about 100 s user.
+- With the same local edit, `bb/l3c10bound.sl` under `--goal proved`
+  passes in about 159 s (138 s user), compilation included.
 
 ## Additive change to shared files
 
