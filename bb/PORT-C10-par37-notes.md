@@ -94,3 +94,10 @@ from other sessions while the pieces ran.
   before the four compiled pieces started; they used 1,046, 1,044,
   1,132 and 1,035 s of CPU in about 2,200 to 2,290 s of wall time each,
   at most 0.5, 0.3, 0.2 and 1.4 GB.
+- `bb/l3c10bound-37981.sl` right after, on the same tree (load about 3
+  to 4): PASS, exit 0, 4,259 s wall, 4,178 s user, 2.0 GB peak; its
+  one compiled run took about 4,200 s of wall time.
+- So four pieces took about 55% of the single piece's wall time, with
+  about the same user time. Under the heavier load the pieces got
+  about half a core each; on an idle machine they might finish in
+  about 1,100 to 1,200 s.
