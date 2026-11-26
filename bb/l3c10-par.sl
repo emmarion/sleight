@@ -66,3 +66,20 @@
   (def-fns _ $ (erased span-of : (erased (Rch l3 (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) e) ch) -> (erased (Span l3 (MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool))) B) s))
     (g (rr-cat l3 _ e f ch rr)))
   (ROk _ (MkSpanAll l3 e B (level-of span-of) span-of)))
+
+(def-fns _ $ (many alt : (many (Bool) b) (subterm many (List (Nat)) ns) -> (many (List (Rn)) L))
+  (let-match many ns (Cons _ n ns1) ((Nil _) (Nil _)))
+  (Cons _ (MkRn b n) $ alt (match many b (((Bool) c)) ((BTrue) (BFalse)) ((BFalse) (BTrue))) ns1))
+
+(def-fns _ $ (many rep : (subterm many (Nat) k) (many (List (Nat)) xs acc) -> (many (List (Nat)) r))
+  (let-match many k (Succ k1) ((Zero) acc))
+  (cat _ xs $ rep k1 xs acc))
+
+(def-fns _ $ (many trn : (subterm many (Nat) k) (many (Nat) v a c s) (many (List (Nat)) pre post acc) -> (many (List (Nat)) r))
+  (let-match many k (Succ k1) ((Zero) acc))
+  (let ((many av) (erased _)) (mul a v))
+  (let ((many w) (erased _)) (add av c))
+  (trn k1 (monus w s) a c s pre post (cat _ pre $ Cons _ v $ cat _ post acc)))
+
+(def-fns _ $ (many rq-gen : (many (Nat) q) (many (Bool) h bl) (many (List (Nat)) L) (many (Bool) br) (many (List (Nat)) R) -> (many (Rq) e))
+  (MkRq q (alt bl L) h (alt br R)))
