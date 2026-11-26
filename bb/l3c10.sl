@@ -802,3 +802,5 @@
     ((FO P T) (let-match erased fq (FqO _)) (values (FO (Succ P) T) (FqO (Succ P))))
     (absurd (FVE P) (match erased fq _))
     (absurd (FVO P) (match erased fq _))))
+
+(let ((erased RndW)) Rnd)
