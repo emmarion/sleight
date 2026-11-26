@@ -43,13 +43,16 @@ let chk = match Sys.getenv_opt "C10CHK" with
 let mtab = [ (17, try_fdescK); (3, try_vdescS); (25, try_vdesc2); (11, try_aend4); (2, try_retS); (4, try_walkNS) ]
 let mine = List.map fst mtab
 let tm = Array.make 26 0.0 and cn = Array.make 26 0
-let readc f = let ic = open_in f in let n = in_channel_length ic in let s = really_input_string ic n in close_in ic;
-  let t = ref (List.filter (( <> ) "") (String.split_on_char ' ' (String.concat " " (String.split_on_char '\n' s)))) in
-  let nx () = match !t with x :: r -> t := r; x | [] -> failwith "eof" in
+let readc f = let ic = Scanf.Scanning.open_in f in
+  let nx () = Scanf.bscanf ic " %s" (fun x -> x) in
   let ni () = int_of_string (nx ()) in
   let sd () = List.init (ni ()) (fun _ -> let b = ni () in let n = Z.of_string (nx ()) in ((if b = 0 then S0 else S1), n)) in
   let q = [| A; B; C; D; E; F |].(ni ()) in let h = if ni () = 0 then S0 else S1 in
-  let l = sd () in let r = sd () in (((q, l), h), r)
+  let l = sd () in let r = sd () in Scanf.Scanning.close_in ic; (((q, l), h), r)
+let fp (((q, ll), s), rr) =
+  let p = Z.of_string "2305843009213693951" in
+  let h l = List.fold_left (fun a (b, n) -> Z.erem (Z.add (Z.mul a (Z.of_int 1000003)) (Z.add (Z.add n n) (Z.of_int (si b)))) p) Z.zero l in
+  Printf.sprintf "%d %d %d %d %s %s" (qi q) (si s) (List.length ll) (List.length rr) (Z.to_string (h ll)) (Z.to_string (h rr))
 let writef f s = let oc = open_out f in output_string oc s; close_out oc
 let () = match Sys.argv.(1) with
   | "trace" | "tracefrom" ->
@@ -68,7 +71,8 @@ let () = match Sys.argv.(1) with
       let cls = match r with None -> failwith "stuck" | Some (i, _) -> if nm i = "M9" then "M9:" ^ m9class !c else nm i in
       (match r with Some (_, (c', _)) -> c := c' | None -> ());
       Printf.fprintf tr "%d %s %.6f\n" m cls dt; flush tr;
-      if List.mem m cks then (flush tr; writef (Printf.sprintf "%s/c_%d.txt" dir m) (txt !c))
+      if List.mem m cks then (flush tr; if Sys.getenv_opt "C10FP" = None then writef (Printf.sprintf "%s/c_%d.txt" dir m) (txt !c);
+        writef (Printf.sprintf "%s/c_%d.fp" dir m) (fp !c))
     done; close_out tr
   | "hints" ->
     let a = int_of_string Sys.argv.(2) and b = int_of_string Sys.argv.(3) and out = Sys.argv.(4) and all = Sys.argv.(5) = "all" and idx = Sys.argv.(5) = "idx" and mo = Sys.argv.(5) = "mine" in
