@@ -70,3 +70,13 @@ that point) added about 7 ms per TRAIN, and it grew with the tape.
 
 Rocq's TRAIN law (lin3s2 `comp1`, from lin3d25 `comp_exact_even`) is
 not ported: the cut replay still takes tens of moves per marker.
+`comp_exact_even` seems to rest on lin3d25 `comp_law_exact`, which
+composes `first_contact` (the phi jump to the contact state),
+`even_reentry` and `marker_t1` (the marker read by the contact round
+and the re-entry rounds of the next family), `phi_jump` over the blanks,
+and lin3d14 `shed_margin` (the SHED back to `phi_O(P, 2 Lp P - 2)`),
+with the cell counts of lin3c3 and lin3d16 and `kap_eq` (lin3d26) for
+the debris. Of these, the jump (`phi-chain`), the marker read
+(`ct-e`, `ap3-cat` in `bb/l3c10-blklaw2.sl`) and the SHED of one level
+(`bb/l3c10-uniform.sl`) have counterparts here; the re-entry rounds
+and the margin arithmetic, uniform in `P`, seem not to.
