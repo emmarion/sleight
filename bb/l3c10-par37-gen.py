@@ -67,7 +67,32 @@ def read(path):
         f.seek(0)
         q,h=map(int,f.readline().split()); L=side(f.readline()); R=side(f.readline())
     return (q,'BTrue' if h else 'BFalse',L,R)
-if __name__=='__main__':
+def goal(exp,last,cks):
+    bl="(MkConf (Zero) (Nil (Bool)) (BFalse) (Nil (Bool)))"; N="1"+"0"*exp
+    mv=[0]+[m for m,_ in cks]; k=len(cks)
+    out=["(let ((many g0)) (MkPQ 0 (BFalse) (BFalse) (PNil) (BFalse) (PNil)))"]
+    for i,(m,path) in enumerate(cks):
+        cfg=read(path); g=gen(cfg); assert ev(pg.parse(g))==cfg
+        out.append(f"(let ((many g{i+1})) {g})")
+    for i in range(k): out.append(f"(def-fns _ $ (many piece{i} : -> (many (Res (ReachP l3 g{i} g{i+1})) r)) (rp-run {mv[i+1]-mv[i]} g{i} g{i+1}))")
+    out.append(f"(def-fns _ $ (many piece{k} : -> (many (Res (SpanP l3 g{k} {N})) r)) (rp-span {last-mv[k]} {N} g{k}))")
+    out.append(f"(let ({' '.join(f'(many r{i})' for i in range(k+1))}) (native-compute {' '.join(f'piece{i}' for i in range(k+1))}))")
+    out+= [f"(comptime-match many r{i} (ROk _ q{i}))" for i in range(k+1)]
+    out.append(f"(let-match erased q{k} (MkSpanP _ _ _ lv span-last))")
+    ch="(rchp0)"
+    for i in range(k): ch=f"(rchp-cat l3 _ g{i} g{i+1} {ch} q{i})"
+    out.append(f"(let ((erased span)) (span-last {ch}))")
+    out.append(f"""
+(def-fns _ $ (erased bound : (erased (Nat) k) (erased (HaltsAt l3 {bl} k) h) -> (erased (Lt {N} k) p))
+  (span-bound l3 _ {N} k span h))
+
+(goal erased (NoHaltBelow l3 {bl} {N}))
+(qed (MkNHB l3 _ {N} (level-of bound) bound))""")
+    return "\n".join(out)+"\n"
+if __name__=='__main__' and sys.argv[1]=='--goal':
+    cks=[(int(m),p) for m,p in (a.split('=') for a in sys.argv[4:])]
+    sys.stdout.write(goal(int(sys.argv[2]),int(sys.argv[3]),cks))
+elif __name__=='__main__':
     for arg in sys.argv[1:]:
         name,path=arg.split('=')
         cfg=read(path); s=gen(cfg)
