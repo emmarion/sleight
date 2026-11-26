@@ -447,7 +447,7 @@
   (let ((many t) (erased _)) (top-run p))
   (tail $ fd-loop-u f p (nat-add t t) A2 G cn))
 
-(def-fns _ $ (many c-fdesc-u : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) r))
+(def-fns _ $ (many c-fdesc-k : (many (Nat) cap) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) r))
   (let ((many no)) (RsNo l3 c0 e ch))
   (let-match erased ch (MkRch _ _ a c _ t0 r0 dc z))
   (let-match many (c-lm e c dc) (LmOk _ lz x0 u y xr n L0 d0 p0 X T px R1 d1 cu dc1) ((LmNo _) no))
@@ -468,9 +468,12 @@
         (match many b _ ((BFalse) (values g (BTrue))) ((BTrue) (values 0 (BFalse)))))))
   (let-match many ok (BTrue) ((BFalse) no))
   (let ((many cx) (erased _)) (rl-run X))
-  (let ((many qo)) (fd-loop-u (min-nat 256 q) q s 0 G cx))
+  (let ((many qo)) (fd-loop-u (min-nat cap q) q s 0 G cx))
   (let-match many (lt-dec qo q) (Yes _ _ _ _ _) ((No _ _ _ _ _) no))
   (c-dlev (monus q qo) c0 e ch))
+
+(def-fns _ $ (many c-fdesc-u : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) r))
+  (c-fdesc-k 256 c0 e ch))
 
 (def-fns _ $ (many dl-best : (subterm many (Nat) fuel) (many (Nat) lo hi) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Rs l3 c0) best)
     -> (many (Rs l3 c0) res))
