@@ -2,8 +2,8 @@
   (let-match many t (MkRq q L h R))
   (let ((erased l) (erased dl)) (den-ex L))
   (let ((erased r) (erased dr)) (den-ex R))
-  (let ((many L2) (erased _)) (rnorm L l dl))
-  (let ((many R2) (erased _)) (rnorm R r dr))
+  (let ((many L2) (erased _)) (rnorm-q L l dl))
+  (let ((many R2) (erased _)) (rnorm-q R r dr))
   (MkRq q L2 h R2))
 
 (def-fns _ $ (many death-end : (erased (Conf) c0) (subterm many (Nat) fuel) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Rq) t) -> (many (Rs l3 c0) res))

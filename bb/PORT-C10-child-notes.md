@@ -12,8 +12,10 @@ Six macros have the soundness type `Rch l3 c0 e -> Rs l3 c0`:
 
 Each takes the configuration proposed by its unproven port (`m-bcovf`,
 `m-child`, `m-death`, `m-beven`, `m-reent`) and certifies it with
-`c-certify`: `rnorm` merges equal-bit neighbours and drops empty runs
-(Rocq's outputs may contain both) with a proof that the denotation is
+`c-certify`: `rnorm-q` returns a side as it is when it has neither
+empty runs nor equal-bit neighbours (`rn-normal`), and otherwise
+`rnorm` merges equal-bit neighbours and drops empty runs (Rocq's
+outputs may contain both) with a proof that the denotation is
 unchanged, and `c-reach` runs the proven `c-move9` until it reaches the
 normalized configuration exactly (`rq-same`). Before each move
 `walk-to` tries `c-walk-n`, a walk over exactly the stack entries above
