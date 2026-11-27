@@ -1,4 +1,4 @@
-# Notes on the 10^110012 goal in twelve pieces (`bb/l3c10bound-110012-bstr.sl`)
+# Notes on the 10^110012 goal in 24 pieces (`bb/l3c10bound-110012-bstr.sl`)
 
 These notes are a session's account of an experiment and its
 measurements; they may be wrong in places.
@@ -52,10 +52,16 @@ measurements; they may be wrong in places.
   ```sh
   D=bb/l3c10-bstr-data
   python3 bb/l3c10-bstr-gen.py --goal 110012 $D/script.txt \
-    --order=10,0,1,2,11,3,4,5,9,6,7,8 \
-    55117:0=$V/lin3c1_m1/m1_c5.v 64231:0=$V/lin3c1_m1/m1_c9.v \
-    69746:0=$V/lin3c1_m2/m2_c8.v 74657:0=$V/lin3c1_m2/m2_c14.v \
-    79212:0=$V/lin3c1_m3/m3_c4.v 84158:0=$V/lin3c1_m3/m3_c9.v \
+    --order=22,23,19,20,21,9,18,16,17,7,15,6,14,13,12,8,11,4,10,5,3,2,1,0 \
+    46007:0=$V/lin3c1_m1/m1_c2.v 49133:0=$V/lin3c1_m1/m1_c3.v \
+    52189:0=$V/lin3c1_m1/m1_c4.v 55117:0=$V/lin3c1_m1/m1_c5.v \
+    58111:0=$V/lin3c1_m1/m1_c6.v 60874:0=$V/lin3c1_m1/m1_c7.v \
+    64231:0=$V/lin3c1_m1/m1_c9.v 66862:0=$V/lin3c1_m2/m2_c4.v \
+    68992:0=$V/lin3c1_m2/m2_c7.v 71317:0=$V/lin3c1_m2/m2_c10.v \
+    72978:0=$V/lin3c1_m2/m2_c12.v 74657:0=$V/lin3c1_m2/m2_c14.v \
+    76391:0=$V/lin3c1_m3/m3_c1.v 78252:0=$V/lin3c1_m3/m3_c3.v \
+    80201:0=$V/lin3c1_m3/m3_c5.v 82198:0=$V/lin3c1_m3/m3_c7.v \
+    84158:0=$V/lin3c1_m3/m3_c9.v 86078:0=$V/lin3c1_m3/m3_c11.v \
     87938:0=$V/lin3c1_m3/m3_c13.v 215907:0=$V/lin3c3_s0/s0_c32.v \
     345355:0=$V/lin3c3_s0/s0_c66.v 345355:1199=$V/lin3c4_s2/s2_c1.v \
     345355:1618=$D/q1618.sl 345355:1621 \
@@ -66,18 +72,30 @@ measurements; they may be wrong in places.
 
 | piece | from | to | checkpoint source |
 |---|---|---|---|
-| 0 | blank | move 55,117 | `lin3c1_m1/m1_c5.v` |
-| 1 | 55,117 | 64,231 | `m1_c9.v` |
-| 2 | 64,231 | 69,746 | `lin3c1_m2/m2_c8.v` |
-| 3 | 69,746 | 74,657 | `m2_c14.v` |
-| 4 | 74,657 | 79,212 | `lin3c1_m3/m3_c4.v` |
-| 5 | 79,212 | 84,158 | `m3_c9.v` |
-| 6 | 84,158 | 87,938 | `m3_c13.v` |
-| 7 | 87,938 | 215,907 | `lin3c3_s0/s0_c32.v` |
-| 8 | 215,907 | 345,355 | `s0_c66.v` |
-| 9 | 345,355 | script step 1,199 | `lin3c4_s2/s2_c1.v` |
-| 10 | step 1,199 | step 1,618 (CHILD9 at 1,605, ABSORB8 at 1,612) | dump, fitted against `s2_c1.v` |
-| 11 | step 1,618 | step 1,621 (CHAIN8V at 1,619) and the span bound | |
+| 0 | blank | move 46,007 | `lin3c1_m1/m1_c2.v` |
+| 1 | 46,007 | 49,133 | `m1_c3.v` |
+| 2 | 49,133 | 52,189 | `m1_c4.v` |
+| 3 | 52,189 | 55,117 | `m1_c5.v` |
+| 4 | 55,117 | 58,111 | `m1_c6.v` |
+| 5 | 58,111 | 60,874 | `m1_c7.v` |
+| 6 | 60,874 | 64,231 | `m1_c9.v` |
+| 7 | 64,231 | 66,862 | `lin3c1_m2/m2_c4.v` |
+| 8 | 66,862 | 68,992 | `m2_c7.v` |
+| 9 | 68,992 | 71,317 | `m2_c10.v` |
+| 10 | 71,317 | 72,978 | `m2_c12.v` |
+| 11 | 72,978 | 74,657 | `m2_c14.v` |
+| 12 | 74,657 | 76,391 | `lin3c1_m3/m3_c1.v` |
+| 13 | 76,391 | 78,252 | `m3_c3.v` |
+| 14 | 78,252 | 80,201 | `m3_c5.v` |
+| 15 | 80,201 | 82,198 | `m3_c7.v` |
+| 16 | 82,198 | 84,158 | `m3_c9.v` |
+| 17 | 84,158 | 86,078 | `m3_c11.v` |
+| 18 | 86,078 | 87,938 | `m3_c13.v` |
+| 19 | 87,938 | 215,907 | `lin3c3_s0/s0_c32.v` |
+| 20 | 215,907 | 345,355 | `s0_c66.v` |
+| 21 | 345,355 | script step 1,199 | `lin3c4_s2/s2_c1.v` |
+| 22 | step 1,199 | step 1,618 (CHILD9 at 1,605, ABSORB8 at 1,612) | dump, fitted against `s2_c1.v` |
+| 23 | step 1,618 | step 1,621 (CHAIN8V at 1,619) and the span bound |  |
 
 - Rocq's move counts for `lin3c1_*` appear to equal `c10-run6`'s, and
   those for `lin3c3_s0` less 1,220,145,608 (so that `s0_c0.v` is at
@@ -90,43 +108,59 @@ measurements; they may be wrong in places.
 - The three fitted checkpoints keep 2,970 of the 3,041 left items of
   `s2_c1.v` with 96 new runs at the head, and 6, 4 and 2 of its 21
   right items with 33,084, 125,688 and 195,654 new runs.
-- The order of the pieces in the `native-compute` is 10, 0, 1, 2, 11,
-  3, 4, 5, 9, 6, 7, 8, chosen so that on four processors no more than
-  two of the large-memory pieces seem to run at once.
-- The cuts were chosen from the CPU time per move of an earlier split,
-  so that the pieces' CPU times come out roughly even.
+- The `native-compute` runs the five large-memory pieces 19 to 23
+  first (22, 23, 19, 20, 21), then pieces 0 to 18 longest first by the
+  profile below.
+- Pieces 19 to 23 are cut where the large-memory part of the run
+  seems to start (about move 87,938) and at the script steps above.
+  Pieces 0 to 18 are cut at Rocq certificates only, chosen from a
+  profile of the CPU time per 1,000 moves (`bb/l3c10-bstr-h.sl`, from
+  the blank tape and six checkpoints up to move 84,158) so as to keep
+  each piece under about 205 s with the times as even as the
+  certificates allow: they are about 1,000 moves apart past move
+  64,231, where 1,000 moves take about 100 s, so finer cuts would need
+  fitted dumps. Nearly all of the time below move 87,938 seems to be
+  past move 40,000 (about 20 s before it).
 
 ## Timings
 
 Both on a shared 4-core, 15 GB container with no other job, one
-after the other. The 12-piece column is from a run with `chk-b` and
+after the other. The 24-piece column is from a run with `chk-b` and
 `rnorm-q` (`bb/l3c10-child.sl`), the 4-piece column from one without
 them.
 
-| | 12 pieces, bytes | 4 pieces, tokens (`-par.sl`) |
+| | 24 pieces, bytes | 4 pieces, tokens (`-par.sl`) |
 |---|---|---|
 | result | PASS, exit 0 | PASS, exit 0 |
-| wall | 1,266 s | 1,785 s |
-| user | 4,483 s | 4,854 s |
+| wall | 1,193 s | 1,785 s |
+| user | 4,467 s | 4,854 s |
 | peak RSS (one process) | 3.46 GB | 4.99 GB |
 | pieces start after | about 45 s | about 45 s |
-| largest piece (CPU) | 490 s (pieces 0 and 1) | 1,721 s (piece 1) |
-| sum of pieces (CPU, `ps` every 5 s) | 4,410 s | 4,800 s |
+| largest piece (CPU) | 331 s (piece 19) | 1,721 s (piece 1) |
+| sum of pieces (CPU, `ps` every 5 s) | 4,368 s | 4,800 s |
 
-Per piece in the 12-piece run, CPU seconds and peak RSS:
+Per piece in the 24-piece run, CPU seconds and peak RSS:
 
 | piece | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| s | 490 | 490 | 425 | 445 | 448 | 492 | 399 | 328 | 176 | 149 | 276 | 292 |
-| GB | 0.36 | 0.24 | 0.21 | 0.16 | 0.12 | 0.09 | 0.07 | 1.68 | 1.29 | 2.82 | 3.46 | 2.53 |
+| s | 74 | 110 | 123 | 131 | 141 | 147 | 193 | 198 | 166 | 204 | 146 | 155 |
+| GB | 0.36 | 0.27 | 0.28 | 0.24 | 0.24 | 0.22 | 0.22 | 0.21 | 0.18 | 0.16 | 0.14 | 0.13 |
 
-- With a processor per piece, the wall time would seem to be about
-  45 s before the pieces start plus the largest piece, about 535 s,
-  against about 1,770 s for the four pieces. All twelve at once would
-  seem to hold about 13 GB, with about 0.7 GB more for `slc` itself.
+| piece | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| s | 163 | 172 | 188 | 196 | 209 | 216 | 212 | 331 | 181 | 151 | 271 | 290 |
+| GB | 0.12 | 0.11 | 0.10 | 0.09 | 0.08 | 0.07 | 0.07 | 1.68 | 1.39 | 2.80 | 3.46 | 2.89 |
+
+- On 12 processors, starting the pieces in the `native-compute`'s
+  order as processors come free, the wall time would seem to be about
+  45 s before the pieces start plus about 405 s, about 450 s. The
+  pieces running at once would then seem to hold at most about 13.1 GB
+  (the sum of their peaks, the first twelve pieces in that order), with
+  about 0.7 GB more for `slc` itself.
 - The four pieces' CPU was 1,270, 1,721, 1,204 and 605 s, at most
   0.48, 0.19, 4.99 and 3.59 GB.
-- Encoding alone (the same four checkpoints, and the same twelve,
+- Encoding alone (the same four checkpoints, and twelve of an earlier
+  split,
   with every piece's moves and script cut to nothing): elaboration
   and ocamlopt came within a few seconds of each other either way,
   and ocamlopt on the saved programs took 14.9 and 15.6 s with
@@ -160,7 +194,7 @@ Per piece in the 12-piece run, CPU seconds and peak RSS:
   absorbs (ABSORB8 at step 1,612). The left sides' numbers are small;
   their cells seem to take about 0.17 GB.
 - The simulator works on the explicit `Rq`, so those trains seem to
-  be live throughout pieces 7 to 11. A harness run of piece 10's
+  be live throughout pieces 19 to 23. A harness run of piece 22's
   script from the step-1,199 checkpoint (no target check) peaked at
   3.45 GB, at the end of ABSORB8, with a heap of about 487M words at
   exit; under `OCAMLRUNPARAM=o=60` it peaked at 2.66 GB and took about
@@ -171,11 +205,11 @@ Per piece in the 12-piece run, CPU seconds and peak RSS:
   it with `chk-b` against the configuration decoded from it, at
   2.29 GB in all, so the check's transient numbers seem to cost less
   than a second configuration. In a run of the goal that decoded each
-  target with `gen-b` in place of `chk-b`, piece 9's peak went from
+  target with `gen-b` in place of `chk-b`, piece 21's peak went from
   about 2.9 GB to 3.43 GB at that decode.
 - `rnorm` builds a copy of each side, the 3.4 to 3.8 million runs of
   the left included; `rnorm-q` skips it where the side is already
-  normal, as the proposals certified in pieces 8 to 11 seem to be.
+  normal, as the proposals certified in pieces 20 to 23 seem to be.
 
 ## Other `native-compute`s in the load list
 
