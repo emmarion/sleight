@@ -75,8 +75,6 @@ of far2's Rocq traces (`rq` and `rq3`).
 
 ## Open
 
-- Each marker still costs a walk over the levels below the jump level
-  and a rebuild of the word below it. Rocq's `fastStep` keeps only the
-  block's value, its pair-delta sum and its bottom pair; doing so here
-  seems to need lin3s7's `T_rel`, `Tv_digit` and `okW_crit` stated
-  against `PBlk`, or a word that the jump can change in place.
+- `zjump` and `wjump` first try the arithmetic step of
+  `bb/PORT-C10-fast-notes.md`; the walk above is their fallback, and
+  the timings above are of the walk.

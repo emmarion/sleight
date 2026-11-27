@@ -116,12 +116,9 @@ level and `wtail`.
 
 ## What is left
 
-- The climb is O(P) per marker: `zjump` walks the block word to the
-  jump level. Rocq's lin3s7 `fastStep_ok` takes the step with O(1)
-  big-number operations from the value, `sD` and the bottom pair (the
-  digit law `T_rel`, the decrement and borrow laws on base-4 digits of
-  `3 rho - D`, the canonicity criterion `critb`); porting it would need
-  those laws stated against `PBlk`.
+- The climb's `zjump` first tries the arithmetic step of
+  `bb/PORT-C10-fast-notes.md`; the timings above are of the walk to
+  the jump level, its fallback.
 - The head, the walk and the death are still replayed; Rocq takes them
   from lin3d31's lemmas. In a `P = 488` counter instance (about 44 ms)
   the head guards (`gen-head`, `head-chk`) take about 10 ms, the climb

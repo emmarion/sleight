@@ -8,7 +8,7 @@ measurements; they may be wrong in places.
 - `bb/l3c10-par37.sl`:
   - `DigEv k b n zs ys`: `ys` is the `k` base-`b` digits of `n`, least
     significant first, followed by `zs`. `dm-uniq` (quotient and
-    remainder are unique, from `div-small`) gives `dig-fn`, and
+    remainder are unique, from `div-small`; in `bb/l3c10-blklaw.sl`) gives `dig-fn`, and
     `dig-loop` computes it with `divmod`.
   - `PGen`: `PNil`, `PDig k b n g` (digits as above, then `g`) and
     `PG h g` (an `NGen` of `bb/l3c10-par.sl` over `g`). `PEv`, `pev-fn`

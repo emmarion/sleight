@@ -70,8 +70,8 @@
     (many CfNo : (erased (Fam) F) (erased (Nat) s) (erased (List (Tk)) X) (erased (List (Bool)) xr x0) (many (Nat) why) -> (CfR F s X xr x0))))
 
 (def-fns _ $ (many cf-step : (many (Fam) F) (erased (Nat) Q) (erased (FQ F Q) fq) (many (Nat) s n) (erased (FamOK F) ok) (erased (MaxS F n) mx) (erased (Lt s (Succ n)) bn)
-    (erased (List (Tk)) X) (erased (Phi F s X (TtE)) ph) (many (Nat) e) (erased (Rl X (Zero) e) re) (many (Nat) cV D) (many (List (Ps)) wr)
-    (erased (List (Ps)) wf) (erased (Tt) TV) (erased (List (Tk)) XV) (erased (Fb F TV Q s cV D wf XV) fb) (erased (Rva (Ps) wr (Nil (Ps)) wf) rv) (erased (Nf1 wf) nf)
+    (erased (List (Tk)) X) (erased (Phi F s X (TtE)) ph) (many (Nat) e) (erased (Rl X (Zero) e) re) (many (Nat) cV D)
+    (erased (List (Ps)) wf) (erased (Tt) TV) (erased (List (Tk)) XV) (erased (Fb F TV Q s cV D wf XV) fb) (many (Wr wf) wp) (erased (Nf1 wf) nf)
     (many (List (Rn)) Rt) (erased (List (Bool)) rc v xr) (erased (Den Rt rc) dr) (erased (Tb (TtE) rc v) tb) (erased (Xb X v xr) xb)
     (erased (Nat) nn) (erased (List (Bool)) lz x0) (erased (Rp (BTrue) nn lz x0) p0) -> (many (CfR F s X xr x0) r))
   (let-match many Rt (Cons _ r0 _) ((Nil _) (CfNo F s X xr x0 1)))
@@ -80,11 +80,11 @@
   (let ((many L) (erased _) (erased _) (erased _) (erased _) (erased _)) (div (nat-add G 4) (Succ five) (LtZ _)))
   (let ((many h) (erased _) (erased _) (erased _) (erased _) (erased _)) (div (monus (nat-bit-length (nat-add (nat-mul L 3) 1)) 1) two (LtZ _)))
   (let-match erased (fb-tt F TV Q s cV D wf XV s X (TtE) fb ph) (Refl _ _))
-  (let-match many (zjump F TV Q s cV D (monus h 1) wr wf XV fb rv nf) (AkOk _ _ _ _ _ K jk) ((AkNo _ _ _ _ _ w) (CfNo F s X xr x0 (nat-add 30 w))))
-  (let-match many jk (WjOk _ _ _ _ _ _ s1 c2 D1 wr1 W2 wf1 u Z fb1 rv1 cu nu as0) ((WjNo _ _ _ _ _ _) (CfNo F s X xr x0 3)))
+  (let-match many (zjump F TV Q (fq-num F Q fq) s cV D (monus h 1) wf XV fb wp nf) (AkOk _ _ _ _ _ K jk) ((AkNo _ _ _ _ _ w) (CfNo F s X xr x0 (nat-add 30 w))))
+  (let-match many jk (WjOk _ _ _ _ _ _ s1 c2 D1 W2 wf1 u Z fb1 wp1 cu nu nw as0) ((WjNo _ _ _ _ _ _) (CfNo F s X xr x0 3)))
   (let-match many (nat-eq (nat-add c2 (nat-mul K 3)) (monus (nat-add e G) 2)) (Equal _ _ _) (else (CfNo F s X xr x0 4)))
-  (let-match many (nfw-chk W2) (ESome _ nw) ((ENone _) (CfNo F s X xr x0 5)))
-  (let ((erased nf1)) (nfw-cat u W2 wf1 cu nu nw))
+  (let-match many nw (ESome _ nwp) ((ENone _) (CfNo F s X xr x0 5)))
+  (let ((erased nf1)) (nfw-cat u W2 wf1 cu nu nwp))
   (let-match many K (Succ k1) ((Zero) (CfNo F s X xr x0 6)))
   (let ((erased ph1) (erased rz)) (fb-phi F TV Q s1 c2 D1 wf1 Z fb1))
   (let ((erased w0) (erased rk)) (phi-chain F n s s1 k1 X Z (TtE) (TtE) ok mx bn as0 ph ph1))
@@ -128,7 +128,7 @@
   (let ((many n2v) (erased mx2)) (maxs-run F2))
   (let-match many (lt-dec V2 (Succ n2v)) (Yes _ _ _ _ bn2) ((No _ _ _ _ _) (CfNo F s X xr x0 14)))
   (CfOk F s X xr x0 F2 (Succ Q) fq2 V2 n2v ok2 mx2 bn2 X2 ph2 c8 re2
-    (FsOk F2 (Succ Q) V2 TV c8 D1 (Cons (Ps) (PrDp) wr1) wf2 X2 fb2 (rva-sn wr1 wf1 wf2 rv1 sn) (nfw-sn1 wf1 wf2 sn nf1))
+    (FsOk F2 (Succ Q) V2 TV c8 D1 wf2 X2 fb2 (wr-sn wf1 wf2 wp1 sn) (nfw-sn1 wf1 wf2 sn nf1))
     R4 y v2 zr d4 tbw xbw m x3 p1 t1 run1 c2 e D1))
 
 (def-adts
@@ -161,12 +161,12 @@
   (let ((many fr)) (match many cs (((CfR F s X xr x0) z))
     ((CsOk _ _ Q fq fs)
       (match many fs _
-        ((FsOk _ _ _ TV cV D wr wf XV fb rv nf)
+        ((FsOk _ _ _ TV cV D wf XV fb wp nf)
           (match many T _
             ((TtE)
               (let-match erased tbn (TwE _))
               (let-match erased (add-zero-eq a e ae) (Refl _ _))
-              (cf-step F Q fq s n ok mx bn X ph e ra cV D wr wf TV XV fb rv nf Rt rc v xr dr tb xb nn lz x0 p0))
+              (cf-step F Q fq s n ok mx bn X ph e ra cV D wf TV XV fb wp nf Rt rc v xr dr tb xb nn lz x0 p0))
             (else (CfNo F s X xr x0 0))))
         ((FsNo _ _ _) (CfNo F s X xr x0 0))))
     ((CsNo _ _) (CfNo F s X xr x0 0))))

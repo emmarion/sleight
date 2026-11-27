@@ -5,19 +5,6 @@
     (many DgS : (erased (Nat) k b n q m r) (erased (List (Nat)) zs ys) (erased (Mul q b m) mm) (erased (Add m r n) ad) (erased (Lt r b) lt)
        (erased (DigEv k b q zs ys) p) -> (DigEv (Succ k) b n zs (Cons (Nat) r ys)))))
 
-(def-fns _ $ (erased dm-uniq : (erased (Nat) b n q m r q2 m2 r2) (erased (Mul q b m) mm) (erased (Add m r n) ad) (erased (Lt r b) lt)
-    (erased (Mul q2 b m2) mm2) (erased (Add m2 r2 n) ad2) (erased (Lt r2 b) lt2) -> (erased (Eq (Nat) q q2) e1) (erased (Eq (Nat) r r2) e2))
-  (let ((erased s) (erased as)) (add-ex m b))
-  (let ((erased s2) (erased as2)) (add-ex m2 b))
-  (let ((erased l1)) (div-small q b (Succ q2) m r n s2 mm ad (add-lt-mono m2 r2 b n s2 ad2 as2 lt2) (MulSucc q2 b m2 s2 mm2 as2)))
-  (let ((erased l2)) (div-small q2 b (Succ q) m2 r2 n s mm2 ad2 (add-lt-mono m r b n s ad as lt) (MulSucc q b m s mm as)))
-  (let-match erased (nat-cmp q q2) (CEq _ _ _)
-    (absurd (CLt _ _ _ _ x) (lt-asym q q2 x l2))
-    (absurd (CGt _ _ _ _ x) (lt-asym q2 q x l1)))
-  (let-match erased (mul-fn q b m m2 mm mm2) (Refl _ _))
-  (let-match erased (add-cancel m r r2 n ad ad2) (Refl _ _))
-  (values (Refl _ q) (Refl _ r)))
-
 (def-fns _ $ (erased dig-fn : (erased (Nat) k b n) (erased (List (Nat)) zs ys ys2) (subterm erased (DigEv k b n zs ys) p) (erased (DigEv k b n zs ys2) p2)
     -> (erased (Eq (List (Nat)) ys ys2) e))
   (match erased p _

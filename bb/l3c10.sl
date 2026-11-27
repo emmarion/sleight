@@ -913,6 +913,13 @@
     (many FqE : (erased (Nat) P) (erased (Tt) T) -> (FQ (FE P T) P))
     (many FqO : (erased (Nat) P) (erased (Tt) T) -> (FQ (FO P T) (Succ P)))))
 
+(def-fns _ $ (many fq-num : (many (Fam) F) (erased (Nat) Q) (erased (FQ F Q) fq) -> (many Q is q))
+  (match many F _
+    ((FE P T) (let-match erased fq (FqE _ _)) P)
+    ((FO P T) (let-match erased fq (FqO _ _)) (Succ P))
+    (absurd (FVE _) (match erased fq _))
+    (absurd (FVO _) (match erased fq _))))
+
 (def-fns _ $ (many fq-next : (many (Fam) F) (erased (Nat) Q) (erased (FQ F Q) fq) -> (many (Fam) F2) (erased (FQ F2 (Succ Q)) fq2))
   (match many F _
     ((FE P T) (let-match erased fq (FqE _ _)) (values (FE (Succ P) T) (FqE (Succ P) T)))

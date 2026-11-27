@@ -72,12 +72,9 @@ Shared 4-core container, single runs, user time.
 
 ## Open
 
-- Each fast step still walks and rebuilds the block below the jump
-  level (`zwalk`, `wtail`, `push-all`). In the
-  CHAIN at move 38,507 the jump level, computed from each gap as
-  `cf-step` does, goes down from about 3,800 to about 1,900, one level
-  per marker, so this is thousands of levels per marker; Rocq's `fastStep8` keeps
-  only the block's value, sum and bottom pair. ABSORB's `af-step` has
-  the same walk.
+- `zjump` first tries the arithmetic step of
+  `bb/PORT-C10-fast-notes.md`, which keeps the block's value and sum
+  and no list; the walk of the block below the jump level (`zwalk`,
+  `wtail`, `push-all`) is its fallback.
 - TRAIN is still about ten times slower than Rocq, which applies
   `comp_exact_even` per marker without simulating.
