@@ -38,9 +38,11 @@ Shared 4-core container, single runs.
 - `bb/l3c10-bstr-h.sl` from `m3_c13.v`: the same configuration after
   3,000 moves as with the code of 713cf305 (`show-fp`), 66.7 s user
   against 158 s; at the start about 33 ms per move against 93 ms. The
-  whole of piece 19 (127,969 moves) took 198 s user; the first 1,000
+  127,969 moves to move 215,907 took 198 s user; the first 1,000
   moves 37 s and the next 1,000 29 s.
-- The 24-piece goal, `bb/l3c10bound-110012-bstr.sh` under
+- The goal in 24 pieces (those of `bb/PORT-C10-bstr-notes.md`
+  without the cut at move 125,501, so that piece 19 runs from move
+  87,938 to 215,907 and pieces 20 to 23 are 21 to 24 there), under
   `/usr/bin/time -v`: PASS, exit 0, 10:16 wall, 2,207 s user, 3.45 GB
   peak, against 16:53, 3,764 s and 3.45 GB for 713cf305. Per piece, CPU
   seconds from `ps` every 5 s: 19: 207 (301), 20: 167 (176), 22: 88,
@@ -58,6 +60,6 @@ Shared 4-core container, single runs.
 - With the code of 713cf305, `OCAMLRUNPARAM=s=4M` cut 40 moves from
   `m3_c13.v` in the harness from 3.77 s to 2.27 s user, at a larger
   peak.
-- Over the whole of piece 19, about half of 171 stack samples were in
+- Over the moves from 87,938 to 215,907, about half of 171 stack samples were in
   BIGJ, about a fifth in AEND (`ms-loop`) and about a tenth in DEATH's
   `rq-same`.

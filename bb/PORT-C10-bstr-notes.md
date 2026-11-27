@@ -1,4 +1,4 @@
-# Notes on the 10^110012 goal in 24 pieces (`bb/l3c10bound-110012-bstr.sl`)
+# Notes on the 10^110012 goal in 25 pieces (`bb/l3c10bound-110012-bstr.sl`)
 
 These notes are a session's account of an experiment and its
 measurements; they may be wrong in places.
@@ -52,7 +52,7 @@ measurements; they may be wrong in places.
   ```sh
   D=bb/l3c10-bstr-data
   python3 bb/l3c10-bstr-gen.py --goal 110012 $D/script.txt \
-    --order=22,23,19,20,21,9,18,16,17,7,15,6,14,13,12,8,11,4,10,5,3,2,1,0 \
+    --order=21,6,4,5,20,19,24,3,22,2,23,1,7,9,15,16,14,17,13,18,8,12,11,0,10 \
     46007:0=$V/lin3c1_m1/m1_c2.v 49133:0=$V/lin3c1_m1/m1_c3.v \
     52189:0=$V/lin3c1_m1/m1_c4.v 55117:0=$V/lin3c1_m1/m1_c5.v \
     58111:0=$V/lin3c1_m1/m1_c6.v 60874:0=$V/lin3c1_m1/m1_c7.v \
@@ -62,7 +62,8 @@ measurements; they may be wrong in places.
     76391:0=$V/lin3c1_m3/m3_c1.v 78252:0=$V/lin3c1_m3/m3_c3.v \
     80201:0=$V/lin3c1_m3/m3_c5.v 82198:0=$V/lin3c1_m3/m3_c7.v \
     84158:0=$V/lin3c1_m3/m3_c9.v 86078:0=$V/lin3c1_m3/m3_c11.v \
-    87938:0=$V/lin3c1_m3/m3_c13.v 215907:0=$V/lin3c3_s0/s0_c32.v \
+    87938:0=$V/lin3c1_m3/m3_c13.v 125501:0=$V/lin3c3_s0/s0_c9.v \
+    215907:0=$V/lin3c3_s0/s0_c32.v \
     345355:0=$V/lin3c3_s0/s0_c66.v 345355:1199=$V/lin3c4_s2/s2_c1.v \
     345355:1618=$D/q1618.sl 345355:1621 \
     > bb/l3c10bound-110012-bstr.sl
@@ -91,11 +92,12 @@ measurements; they may be wrong in places.
 | 16 | 82,198 | 84,158 | `m3_c9.v` |
 | 17 | 84,158 | 86,078 | `m3_c11.v` |
 | 18 | 86,078 | 87,938 | `m3_c13.v` |
-| 19 | 87,938 | 215,907 | `lin3c3_s0/s0_c32.v` |
-| 20 | 215,907 | 345,355 | `s0_c66.v` |
-| 21 | 345,355 | script step 1,199 | `lin3c4_s2/s2_c1.v` |
-| 22 | step 1,199 | step 1,618 (CHILD9 at 1,605, ABSORB8 at 1,612) | dump, fitted against `s2_c1.v` |
-| 23 | step 1,618 | step 1,621 (CHAIN8V at 1,619) and the span bound |  |
+| 19 | 87,938 | 125,501 | `lin3c3_s0/s0_c9.v` |
+| 20 | 125,501 | 215,907 | `s0_c32.v` |
+| 21 | 215,907 | 345,355 | `s0_c66.v` |
+| 22 | 345,355 | script step 1,199 | `lin3c4_s2/s2_c1.v` |
+| 23 | step 1,199 | step 1,618 (CHILD9 at 1,605, ABSORB8 at 1,612) | dump, fitted against `s2_c1.v` |
+| 24 | step 1,618 | step 1,621 (CHAIN8V at 1,619) and the span bound |  |
 
 - Rocq's move counts for `lin3c1_*` appear to equal `c10-run6`'s, and
   those for `lin3c3_s0` less 1,220,145,608 (so that `s0_c0.v` is at
@@ -108,11 +110,17 @@ measurements; they may be wrong in places.
 - The three fitted checkpoints keep 2,970 of the 3,041 left items of
   `s2_c1.v` with 96 new runs at the head, and 6, 4 and 2 of its 21
   right items with 33,084, 125,688 and 195,654 new runs.
-- The `native-compute` runs the five large-memory pieces 19 to 23
-  first (22, 23, 19, 20, 21), then pieces 0 to 18 longest first by the
-  profile below.
-- Pieces 19 to 23 are cut where the large-memory part of the run
-  seems to start (about move 87,938) and at the script steps above.
+- The `native-compute` runs the pieces longest first, by their CPU
+  times with the code of `bb/PORT-C10-bigj-notes.md` (those of pieces
+  19 and 20 from the harness profile below).
+- Pieces 19 to 24 are cut where the large-memory part of the run
+  seems to start (about move 87,938), at the script steps above, and
+  at `s0_c9.v` (move 125,501), where a profile of the moves from move
+  87,938 (`bb/l3c10-bstr-h.sl`, with that code) puts about 97 s
+  before the cut and 101 s after it. The `lin3c3_s0` certificates are
+  4,000 moves apart; `bb/l3c10-bstr-gen.py` refuses `s0_c10.v` to
+  `s0_c12.v`, whose run lists seem to hold two adjacent runs of one
+  symbol.
   Pieces 0 to 18 are cut at Rocq certificates only, chosen from a
   profile of the CPU time per 1,000 moves (`bb/l3c10-bstr-h.sl`, from
   the blank tape and six checkpoints up to move 84,158) so as to keep
@@ -125,9 +133,13 @@ measurements; they may be wrong in places.
 ## Timings
 
 Both on a shared 4-core, 15 GB container with no other job, one
-after the other. The 24-piece column is from a run with `chk-b` and
-`rnorm-q` (`bb/l3c10-child.sl`), the 4-piece column from one without
-them.
+after the other, and both before the code of
+`bb/PORT-C10-fast-notes.md` and `bb/PORT-C10-bigj-notes.md`. The 24
+pieces are those of the table above without the cut at move 125,501:
+their piece 19 is pieces 19 and 20 here, and their pieces 20 to 23
+are pieces 21 to 24. The 24-piece column is from a run with `chk-b`
+and `rnorm-q` (`bb/l3c10-child.sl`), the 4-piece column from one
+without them.
 
 | | 24 pieces, bytes | 4 pieces, tokens (`-par.sl`) |
 |---|---|---|
@@ -151,8 +163,9 @@ Per piece in the 24-piece run, CPU seconds and peak RSS:
 | s | 163 | 172 | 188 | 196 | 209 | 216 | 212 | 331 | 181 | 151 | 271 | 290 |
 | GB | 0.12 | 0.11 | 0.10 | 0.09 | 0.08 | 0.07 | 0.07 | 1.68 | 1.39 | 2.80 | 3.46 | 2.89 |
 
-- On 12 processors, starting the pieces in the `native-compute`'s
-  order as processors come free, the wall time would seem to be about
+- On 12 processors, starting that run's pieces in its
+  `native-compute`'s order (22, 23, 19, 20, 21, then pieces 0 to 18)
+  as processors come free, the wall time would seem to be about
   45 s before the pieces start plus about 405 s, about 450 s. The
   pieces running at once would then seem to hold at most about 13.1 GB
   (the sum of their peaks, the first twelve pieces in that order), with
@@ -194,7 +207,7 @@ Per piece in the 24-piece run, CPU seconds and peak RSS:
   absorbs (ABSORB8 at step 1,612). The left sides' numbers are small;
   their cells seem to take about 0.17 GB.
 - The simulator works on the explicit `Rq`, so those trains seem to
-  be live throughout pieces 19 to 23. A harness run of piece 22's
+  be live throughout pieces 19 to 24. A harness run of piece 23's
   script from the step-1,199 checkpoint (no target check) peaked at
   3.45 GB, at the end of ABSORB8, with a heap of about 487M words at
   exit; under `OCAMLRUNPARAM=o=60` it peaked at 2.66 GB and took about
@@ -205,11 +218,12 @@ Per piece in the 24-piece run, CPU seconds and peak RSS:
   it with `chk-b` against the configuration decoded from it, at
   2.29 GB in all, so the check's transient numbers seem to cost less
   than a second configuration. In a run of the goal that decoded each
-  target with `gen-b` in place of `chk-b`, piece 21's peak went from
+  target with `gen-b` in place of `chk-b`, the peak of the piece that
+  ends at step 1,199 went from
   about 2.9 GB to 3.43 GB at that decode.
 - `rnorm` builds a copy of each side, the 3.4 to 3.8 million runs of
   the left included; `rnorm-q` skips it where the side is already
-  normal, as the proposals certified in pieces 20 to 23 seem to be.
+  normal, as the proposals certified in pieces 21 to 24 seem to be.
 
 ## Other `native-compute`s in the load list
 

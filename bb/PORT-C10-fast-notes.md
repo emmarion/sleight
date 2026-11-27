@@ -58,7 +58,8 @@ Shared 4-core container, single runs.
   printed at the end: the same configuration as with the code of
   ee7978df; 99 s user against 280 s, step 1,605 (CHILD9) 12.4 s
   against 44.8 s, step 1,612 (ABSORB8) 46.2 s against 185 s.
-- The 24-piece goal, `bb/l3c10bound-110012-bstr.sh` under
+- The goal in 24 pieces (those of `bb/PORT-C10-bstr-notes.md`
+  without the cut at move 125,501), `bb/l3c10bound-110012-bstr.sh` under
   `/usr/bin/time -v`: PASS, exit 0, 16:53 wall, 3,764 s user, 3.45 GB
   peak, against 19:45, 4,451 s and 3.46 GB for ee7978df. Per piece, CPU
   seconds from `ps` every 5 s (ee7978df in parentheses): 22: 82 (271),
@@ -75,8 +76,8 @@ Shared 4-core container, single runs.
   `vdig`'s shifts and divisions of `T`, `top-run` (in `zc` and
   `maxs-run`), multiplications by 3 and 4 of the block value, and the
   collector's work on the large heap that each such number allocates.
-- The moves at the start of piece 19, and of pieces 6 to 18, seem to
-  be BIGJ moves; `bb/PORT-C10-bigj-notes.md` describes them.
+- The moves from move 87,938 on, and those of pieces 6 to 18, seem
+  to be mostly BIGJ moves at first; `bb/PORT-C10-bigj-notes.md` describes them.
 
 ## Open
 
