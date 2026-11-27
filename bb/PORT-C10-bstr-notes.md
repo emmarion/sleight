@@ -21,9 +21,17 @@ measurements; they may be wrong in places.
     `genb-fn`, `gen-b`, `RchB`, `ReachB`, `SpanB` and `rchb-cat` are the
     `PQ` layer of `bb/l3c10-par110.sl` over strings. `rb-first`,
     `rb-run` and `rb-span` run `run-from6` (`c10-run6`, then
-    `s15-run` over a script); a piece decodes its target checkpoint
-    only after its run, so that the two configurations are not live
-    at once.
+    `s15-run` over a script).
+  - `chk-b s e` checks that the bytes `s` decode to a `PQ` that
+    generates `e` (`GenB s e`) without building the configuration
+    that `s` stands for: `unalt` reads the counts off each side of
+    `e` (`AltEv`), and `pchk`, `gchk`, `rep-chk`, `trn-chk` and
+    `dig-chk` strip each generator's expansion from the front of
+    those counts, comparing each number of `e` with one computed from
+    the generator, so that a train's numbers are computed one at a
+    time and none is kept. `gen-at` is `chk-b`, falling back to
+    `gen-b` and `rq-eq`; `rb-first` and `rb-run` check their target
+    checkpoint with it against the configuration the run reached.
   - All have the types above and use no axiom.
 - `bb/l3c10-bstr-gen.py`: writes the goal (`--goal E SCRIPT
   [--order=...] m:s=src ... m:s`, as `bb/l3c10-par110-gen.py`), with
@@ -91,29 +99,31 @@ measurements; they may be wrong in places.
 ## Timings
 
 Both on a shared 4-core, 15 GB container with no other job, one
-after the other.
+after the other. The 12-piece column is from a run with `chk-b` and
+`rnorm-q` (`bb/l3c10-child.sl`), the 4-piece column from one without
+them.
 
 | | 12 pieces, bytes | 4 pieces, tokens (`-par.sl`) |
 |---|---|---|
 | result | PASS, exit 0 | PASS, exit 0 |
-| wall | 1,367 s | 1,785 s |
-| user | 4,911 s | 4,854 s |
-| peak RSS (one process) | 3.49 GB | 4.99 GB |
-| pieces start after | about 40 s | about 45 s |
-| largest piece (CPU) | 527 s (piece 0) | 1,721 s (piece 1) |
-| sum of pieces (CPU, `ps` every 5 s) | 4,846 s | 4,800 s |
+| wall | 1,266 s | 1,785 s |
+| user | 4,483 s | 4,854 s |
+| peak RSS (one process) | 3.46 GB | 4.99 GB |
+| pieces start after | about 45 s | about 45 s |
+| largest piece (CPU) | 490 s (pieces 0 and 1) | 1,721 s (piece 1) |
+| sum of pieces (CPU, `ps` every 5 s) | 4,410 s | 4,800 s |
 
 Per piece in the 12-piece run, CPU seconds and peak RSS:
 
 | piece | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| s | 527 | 514 | 443 | 450 | 448 | 503 | 412 | 333 | 220 | 351 | 333 | 312 |
-| GB | 0.36 | 0.24 | 0.21 | 0.16 | 0.12 | 0.09 | 0.07 | 1.68 | 1.79 | 3.43 | 3.49 | 2.89 |
+| s | 490 | 490 | 425 | 445 | 448 | 492 | 399 | 328 | 176 | 149 | 276 | 292 |
+| GB | 0.36 | 0.24 | 0.21 | 0.16 | 0.12 | 0.09 | 0.07 | 1.68 | 1.29 | 2.82 | 3.46 | 2.53 |
 
 - With a processor per piece, the wall time would seem to be about
-  40 s before the pieces start plus the largest piece, about 570 s,
+  45 s before the pieces start plus the largest piece, about 535 s,
   against about 1,770 s for the four pieces. All twelve at once would
-  seem to hold about 14.5 GB, with about 0.7 GB more for `slc` itself.
+  seem to hold about 13 GB, with about 0.7 GB more for `slc` itself.
 - The four pieces' CPU was 1,270, 1,721, 1,204 and 605 s, at most
   0.48, 0.19, 4.99 and 3.59 GB.
 - Encoding alone (the same four checkpoints, and the same twelve,
@@ -128,6 +138,44 @@ Per piece in the 12-piece run, CPU seconds and peak RSS:
   checkpoints before move 345,355 and 4.2 to 5.3 s after, with no
   consistent difference between the two encodings; nearly all of it
   seems to be the expansion of the trains.
+
+## Memory
+
+- The configurations of the late checkpoints, counted by a harness
+  that decodes each with `gen-b` (runs on each side, and the sum of
+  the bit lengths of the right side's numbers):
+
+  | checkpoint | left runs | right runs | right bits |
+  |---|---|---|---|
+  | move 215,907 | 137 | 1,116,731 | 3.98e9 |
+  | move 345,355 | 3,831,422 | 130,094 | 3.98e9 |
+  | step 1,199 | 3,439,144 | 326,256 | 7.22e9 |
+  | step 1,618 | 3,360,732 | 321,822 | 3.98e9 |
+
+- Nearly all of the right side's bits seem to be in explicit trains:
+  one of 63,054 markers (63,053 at step 1,618), whose gaps' bit
+  lengths fall by 2 from 126,170 to 65, at the far end of the right
+  side in all four, about 0.5 GB of digits; and at step 1,199 one more
+  of 56,848 markers (about 0.4 GB), which the piece from step 1,199
+  absorbs (ABSORB8 at step 1,612). The left sides' numbers are small;
+  their cells seem to take about 0.17 GB.
+- The simulator works on the explicit `Rq`, so those trains seem to
+  be live throughout pieces 7 to 11. A harness run of piece 10's
+  script from the step-1,199 checkpoint (no target check) peaked at
+  3.45 GB, at the end of ABSORB8, with a heap of about 487M words at
+  exit; under `OCAMLRUNPARAM=o=60` it peaked at 2.66 GB and took about
+  15% more user time (360 s against 313 s). Much of the peak thus
+  seems to be the collector's headroom over a live set of perhaps
+  1.2 to 1.5 GB.
+- Decoding the step-1,199 checkpoint alone peaked at 1.97 GB; checking
+  it with `chk-b` against the configuration decoded from it, at
+  2.29 GB in all, so the check's transient numbers seem to cost less
+  than a second configuration. In a run of the goal that decoded each
+  target with `gen-b` in place of `chk-b`, piece 9's peak went from
+  about 2.9 GB to 3.43 GB at that decode.
+- `rnorm` builds a copy of each side, the 3.4 to 3.8 million runs of
+  the left included; `rnorm-q` skips it where the side is already
+  normal, as the proposals certified in pieces 8 to 11 seem to be.
 
 ## Other `native-compute`s in the load list
 
