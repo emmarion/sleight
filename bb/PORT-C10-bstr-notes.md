@@ -59,7 +59,9 @@ measurements; they may be wrong in places.
 - Rocq's move counts for `lin3c1_*` and `lin3c3_s0` appear to equal
   `c10-run6`'s: the pieces' end checks pass with them.
 - The script is the 1,621 indices `bb/l3c10bound-110012-par.sl` runs
-  (pieces 2 and 3 there), one per word in a text file.
+  (pieces 2 and 3 there), one per word in
+  `bb/l3c10-bstr-data/script.txt`. The three fitted checkpoints are
+  `bb/l3c10-bstr-data/q1604.sl`, `q1611.sl` and `q1618.sl`.
 - The three fitted checkpoints keep 2,970 of the 3,041 left items of
   `s2_c1.v` with 96 new runs at the head, and 6, 4 and 2 of its 21
   right items with 33,084, 125,688 and 195,654 new runs.
