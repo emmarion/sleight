@@ -37,7 +37,22 @@ measurements; they may be wrong in places.
   runs moves in chunks of 1,000 and then script steps, and prints the
   user time after each, with the configuration at chosen points.
 - `bb/l3c10bound-110012-bstr.sl`: the goal, generated with the
-  checkpoints below; `bb/l3c10bound-110012-bstr.sh` runs it.
+  checkpoints below; `bb/l3c10bound-110012-bstr.sh` runs it. With `V`
+  the `verify` directory of the busycoq-L3 checkout that holds the
+  Rocq certificates, the command that writes it is:
+
+  ```sh
+  D=bb/l3c10-bstr-data
+  python3 bb/l3c10-bstr-gen.py --goal 110012 $D/script.txt \
+    --order=10,0,1,2,11,3,4,5,9,6,7,8 \
+    55117:0=$V/lin3c1_m1/m1_c5.v 64231:0=$V/lin3c1_m1/m1_c9.v \
+    69746:0=$V/lin3c1_m2/m2_c8.v 74657:0=$V/lin3c1_m2/m2_c14.v \
+    79212:0=$V/lin3c1_m3/m3_c4.v 84158:0=$V/lin3c1_m3/m3_c9.v \
+    87938:0=$V/lin3c1_m3/m3_c13.v 215907:0=$V/lin3c3_s0/s0_c32.v \
+    345355:0=$V/lin3c3_s0/s0_c66.v 345355:1199=$V/lin3c4_s2/s2_c1.v \
+    345355:1618=$D/q1618.sl 345355:1621 \
+    > bb/l3c10bound-110012-bstr.sl
+  ```
 
 ## Pieces
 
@@ -45,55 +60,60 @@ measurements; they may be wrong in places.
 |---|---|---|---|
 | 0 | blank | move 55,117 | `lin3c1_m1/m1_c5.v` |
 | 1 | 55,117 | 64,231 | `m1_c9.v` |
-| 2 | 64,231 | 71,317 | `lin3c1_m2/m2_c10.v` |
-| 3 | 71,317 | 77,301 | `lin3c1_m3/m3_c2.v` |
-| 4 | 77,301 | 83,198 | `m3_c8.v` |
-| 5 | 83,198 | 87,938 | `m3_c13.v` |
-| 6 | 87,938 | 345,355 | `lin3c3_s0/s0_c66.v` |
-| 7 | 345,355 | script step 1,199 | `lin3c4_s2/s2_c1.v` |
-| 8 | step 1,199 | step 1,604 | dump, fitted against `s2_c1.v` |
-| 9 | step 1,604 | step 1,611 (CHILD9 at 1,605) | dump, fitted against `s2_c1.v` |
-| 10 | step 1,611 | step 1,618 (ABSORB8 at 1,612) | dump, fitted against `s2_c1.v` |
+| 2 | 64,231 | 69,746 | `lin3c1_m2/m2_c8.v` |
+| 3 | 69,746 | 74,657 | `m2_c14.v` |
+| 4 | 74,657 | 79,212 | `lin3c1_m3/m3_c4.v` |
+| 5 | 79,212 | 84,158 | `m3_c9.v` |
+| 6 | 84,158 | 87,938 | `m3_c13.v` |
+| 7 | 87,938 | 215,907 | `lin3c3_s0/s0_c32.v` |
+| 8 | 215,907 | 345,355 | `s0_c66.v` |
+| 9 | 345,355 | script step 1,199 | `lin3c4_s2/s2_c1.v` |
+| 10 | step 1,199 | step 1,618 (CHILD9 at 1,605, ABSORB8 at 1,612) | dump, fitted against `s2_c1.v` |
 | 11 | step 1,618 | step 1,621 (CHAIN8V at 1,619) and the span bound | |
 
-- Rocq's move counts for `lin3c1_*` and `lin3c3_s0` appear to equal
-  `c10-run6`'s: the pieces' end checks pass with them.
+- Rocq's move counts for `lin3c1_*` appear to equal `c10-run6`'s, and
+  those for `lin3c3_s0` less 1,220,145,608 (so that `s0_c0.v` is at
+  89,501, where `m3_c16.v` is): the pieces' end checks pass with them.
 - The script is the 1,621 indices `bb/l3c10bound-110012-par.sl` runs
   (pieces 2 and 3 there), one per word in
-  `bb/l3c10-bstr-data/script.txt`. The three fitted checkpoints are
-  `bb/l3c10-bstr-data/q1604.sl`, `q1611.sl`, and `q1618.sl`.
+  `bb/l3c10-bstr-data/script.txt`. The fitted checkpoints are
+  `bb/l3c10-bstr-data/q1604.sl`, `q1611.sl`, and `q1618.sl`; the goal
+  uses only `q1618.sl`.
 - The three fitted checkpoints keep 2,970 of the 3,041 left items of
   `s2_c1.v` with 96 new runs at the head, and 6, 4 and 2 of its 21
   right items with 33,084, 125,688 and 195,654 new runs.
-- The order of the pieces in the `native-compute` is 9, 0, 1, 2, 11,
-  3, 4, 5, 10, 6, 7, 8, chosen so that on four processors no more than
+- The order of the pieces in the `native-compute` is 10, 0, 1, 2, 11,
+  3, 4, 5, 9, 6, 7, 8, chosen so that on four processors no more than
   two of the large-memory pieces seem to run at once.
+- The cuts were chosen from the CPU time per move of an earlier split,
+  so that the pieces' CPU times come out roughly even.
 
 ## Timings
 
-Both on a shared 4-core, 15 GB container, one after the other.
+Both on a shared 4-core, 15 GB container with no other job, one
+after the other.
 
 | | 12 pieces, bytes | 4 pieces, tokens (`-par.sl`) |
 |---|---|---|
 | result | PASS, exit 0 | PASS, exit 0 |
-| wall | 1,387 s | 1,785 s |
-| user | 4,808 s | 4,854 s |
-| peak RSS (one process) | 3.54 GB | 4.99 GB |
+| wall | 1,367 s | 1,785 s |
+| user | 4,911 s | 4,854 s |
+| peak RSS (one process) | 3.49 GB | 4.99 GB |
 | pieces start after | about 40 s | about 45 s |
-| largest piece (CPU) | 581 s (piece 4) | 1,721 s (piece 1) |
-| sum of pieces (CPU, `ps` every 5 s) | 4,762 s | 4,800 s |
+| largest piece (CPU) | 527 s (piece 0) | 1,721 s (piece 1) |
+| sum of pieces (CPU, `ps` every 5 s) | 4,846 s | 4,800 s |
 
 Per piece in the 12-piece run, CPU seconds and peak RSS:
 
 | piece | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| s | 503 | 493 | 563 | 573 | 581 | 509 | 559 | 345 | 73 | 60 | 207 | 296 |
-| GB | 0.36 | 0.24 | 0.21 | 0.14 | 0.11 | 0.08 | 2.36 | 3.43 | 3.45 | 3.25 | 3.54 | 2.89 |
+| s | 527 | 514 | 443 | 450 | 448 | 503 | 412 | 333 | 220 | 351 | 333 | 312 |
+| GB | 0.36 | 0.24 | 0.21 | 0.16 | 0.12 | 0.09 | 0.07 | 1.68 | 1.79 | 3.43 | 3.49 | 2.89 |
 
 - With a processor per piece, the wall time would seem to be about
-  40 s before the pieces start plus the largest piece, about 620 s,
-  against about 1,770 s for the four pieces; but all twelve at once
-  would hold about 20 GB, with about 0.7 GB more for `slc` itself.
+  40 s before the pieces start plus the largest piece, about 570 s,
+  against about 1,770 s for the four pieces. All twelve at once would
+  seem to hold about 14.5 GB, with about 0.7 GB more for `slc` itself.
 - The four pieces' CPU was 1,270, 1,721, 1,204 and 605 s, at most
   0.48, 0.19, 4.99 and 3.59 GB.
 - Encoding alone (the same four checkpoints, and the same twelve,
