@@ -57,15 +57,17 @@ steps.
 User seconds of compiled runs of a harness that builds the
 configuration of script step 1,199 from `bb/l3c10bound-110012-par.sl`'s
 checkpoint `g3` and runs the script with the dispatcher given, on a
-shared 4-core container. "Before" is `s15-ent`; the CHILD9 figure is
-from `bb/PORT-C10-par110-notes.md`, the other two from this session.
+shared 4-core container, single runs. "Before" is `s15-ent`.
 
-| step | before | `c-child-h`, `zjump` | `s15-ent3` |
+| step | `s15-ent` | `c-child-h`, `zjump` | `s15-ent3` |
 |---|---|---|---|
-| 1,605 (CHILD9) | 774 | 89 to 91 | 52 |
-| 1,612 (ABSORB8) | 353 | 353 | 200 |
-| 1,619 (CHAIN8V) | 448 | 448 | 262 |
-| 1,200 to 1,621 | about 1,900 | about 1,000 | 618 |
+| 1,605 (CHILD9) | 717 | 89 to 91 | 52 |
+| 1,612 (ABSORB8) | 347 | 347 to 353 | 200 |
+| 1,619 (CHAIN8V) | 466 | 448 | 262 |
+| 1,200 to 1,621 | 1,695 | | 618 |
+
+The other entries 40, 41 and 42 of the script gain too: the CHILD9s at
+steps 1,298 and 1,586 took about 33 s before and about 5 s now.
 
 With `OCAMLRUNPARAM=s=32M` (a minor heap of 32M words), steps 1,605 and
 1,612 took 45 s and 150 s with `s15-ent3`.
@@ -77,7 +79,19 @@ lin3c4_s2's script from `lin3c3_s0/s0_c66.v`'s configuration, with
 fingerprints from step 1,600 on and the configurations at steps 1,604,
 1,611 and 1,618 written out. With `s15-ent3`, the fingerprints after
 each of steps 1,600 to 1,621 equal Rocq's; that after step 1,621 is the
-one the far2 and par110 notes give for Rocq's `s2_c2.v`.
+one the far2 and par110 notes give for Rocq's `s2_c2.v`. In a second
+run, the fingerprints after each of steps 1,200 to 1,621 (422 steps)
+equal those of far2's Rocq traces (`rq` and `rq3`).
+
+## Goal
+
+A copy of `bb/l3c10bound-110012.sl` with `c10-run6` in place of
+`c10-run4` and `s15-run3` in place of `s15-run`, after the full file
+list, `bb/l3c10-run.sl`, `bb/l3c10-far.sl`, `bb/l3c10-train.sl`,
+`bb/l3c10-trlaw.sl`, `bb/l3c10-chf.sl`, `bb/l3c10-far2.sl` and
+`bb/l3c10-slow3.sl`, under `--goal proved` and `ulimit -s unlimited`:
+PASS, exit 0, 4,826 s wall, 4,774 s user, 3.97 GB peak, on a shared
+4-core container (the far2 notes give 8,328 s wall for the original).
 
 ## Open
 
