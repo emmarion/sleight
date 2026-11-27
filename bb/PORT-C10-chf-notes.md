@@ -99,7 +99,7 @@ All CHILD moves from the blank tape to 89,501 come before 58,055. Move
 39,807 alone, from a one-configuration input, takes about 5.8 s against
 about 41.7 s for `c-child-f`; of those, the climb's 7,825 markers take
 about 5 s, about 0.8 ms each, most of it in `zjump`'s walk to the jump
-level and `wtail`'s recount of the changed window.
+level and `wtail`.
 
 ## Goals
 

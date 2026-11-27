@@ -280,7 +280,7 @@
     ((BTrue)
       (let ((many lc)) (lc-of e lm))
       (let ((many mp) (many rho)) (fe-of lc))
-      (fe-cert-f c0 e ch (nat-is i 42) lc mp rho)))
+      (match many (nat-is i 42) _ ((BTrue) (c-child-h c0 e ch lc mp rho)) ((BFalse) (fe-cert-f c0 e ch (BFalse) lc mp rho)))))
   (let-match many (nat-is i 40) (BFalse) ((BTrue) (mac-chain3g (BFalse) c0 e ch)))
   (let-match many (nat-is i 41) (BFalse) ((BTrue) (mac-absorb3 c0 e ch)))
   (RsNo l3 c0 e ch))

@@ -73,7 +73,7 @@ Shared 4-core container, single runs, user time.
 ## Open
 
 - Each fast step still walks and rebuilds the block below the jump
-  level (`zwalk`, `wtail`'s `sd-run`, `ds-dg`, `push-all`). In the
+  level (`zwalk`, `wtail`, `push-all`). In the
   CHAIN at move 38,507 the jump level, computed from each gap as
   `cf-step` does, goes down from about 3,800 to about 1,900, one level
   per marker, so this is thousands of levels per marker; Rocq's `fastStep8` keeps

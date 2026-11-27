@@ -16,7 +16,7 @@ they may be wrong in places.
     (VDESC2: `c-vdesc-u`), 6 (WALKN: `c-wr`), 20 (CONTACT), 23
     (IDENT), 24 (SWEEP3), 26 (RESUME1J: `try-resume-f`), 30 (DEATH3:
     `c-death-u`), 38 and 39 (BCOVF: `fe-cert-f`), 41 (ABSORB8:
-    `mac-absorb3`), 42 (CHILD9: `fe-cert-f` with CHILD).
+    `mac-absorb3`), 42 (CHILD9: `c-child-h`).
   - Index 37 (FDESC6) is `c-fdesc-k` with no level cap; `c-fdesc-u`
     is the same function with the cap of 256 levels that simC10's
     FDESC has.
