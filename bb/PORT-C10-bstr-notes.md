@@ -71,32 +71,31 @@ measurements; they may be wrong in places.
 
 ## Timings
 
-All on a shared 4-core, 15 GB container, with another session's
-compiled job taking about one core throughout; pieces got about 0.75
-of a core each.
+Both on a shared 4-core, 15 GB container, one after the other.
 
 | | 12 pieces, bytes | 4 pieces, tokens (`-par.sl`) |
 |---|---|---|
 | result | PASS, exit 0 | PASS, exit 0 |
-| wall | 2,252 s | 2,233 s |
-| user | 6,218 s | 6,170 s |
-| peak RSS (one process) | 3.44 GB | 4.84 GB |
-| elaboration to the goal's compile | 24.4 s | 23.9 s |
-| ocamlopt of the goal's program | 14.9 s | 15.6 s |
-| largest piece (CPU) | 758 s (piece 9) | about 1,740 s |
-| sum of pieces (CPU, `ps` every 5 s) | 6,167 s | about 6,130 s |
+| wall | 1,387 s | 1,785 s |
+| user | 4,808 s | 4,854 s |
+| peak RSS (one process) | 3.54 GB | 4.99 GB |
+| pieces start after | about 40 s | about 45 s |
+| largest piece (CPU) | 581 s (piece 4) | 1,721 s (piece 1) |
+| sum of pieces (CPU, `ps` every 5 s) | 4,762 s | 4,800 s |
 
 Per piece in the 12-piece run, CPU seconds and peak RSS:
 
 | piece | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| s | 495 | 495 | 574 | 585 | 598 | 524 | 564 | 537 | 136 | 758 | 377 | 524 |
-| GB | 0.42 | 0.24 | 0.21 | 0.14 | 0.11 | 0.08 | 1.87 | 2.96 | 3.32 | 3.23 | 3.38 | 2.89 |
+| s | 503 | 493 | 563 | 573 | 581 | 509 | 559 | 345 | 73 | 60 | 207 | 296 |
+| GB | 0.36 | 0.24 | 0.21 | 0.14 | 0.11 | 0.08 | 2.36 | 3.43 | 3.45 | 3.25 | 3.54 | 2.89 |
 
 - With a processor per piece, the wall time would seem to be about
-  40 s before the pieces start plus the largest piece, about 800 s,
-  against about 1,790 s for the four pieces; but all twelve at once
-  would hold about 19 GB.
+  40 s before the pieces start plus the largest piece, about 620 s,
+  against about 1,770 s for the four pieces; but all twelve at once
+  would hold about 20 GB, with about 0.7 GB more for `slc` itself.
+- The four pieces' CPU was 1,270, 1,721, 1,204 and 605 s, at most
+  0.48, 0.19, 4.99 and 3.59 GB.
 - Encoding alone (the same four checkpoints, and the same twelve,
   with every piece's moves and script cut to nothing): elaboration
   and ocamlopt came within a few seconds of each other either way,
@@ -128,12 +127,8 @@ Per piece in the 12-piece run, CPU seconds and peak RSS:
   110.9 s with `--inline 200`, 98.5 s with `OCAMLRUNPARAM=o=200`,
   91.4 s with `o=400` and 93.1 s with both; the peak RSS went from
   0.21 GB to 0.27 GB with `o=200` and 0.42 GB with `o=400`.
-- Piece 9's script steps (1,605 to 1,611) in the harness from its
-  checkpoint: 724 s by default (from the dumping run, the same
-  binary) and 616 s with `o=400`, at 4.9 GB peak against 3.2 GB for
-  piece 9 in the goal run.
 - So `--inline 200` seemed to change nothing, and `o=400` to save
   about a sixth of the CPU time at about twice the memory. The goal
   was not run under `o=400` here: its large pieces at about twice
-  3.3 GB would not seem to fit two at a time in this container.
+  3.5 GB would not seem to fit two at a time in this container.
   `bb/l3c10bound-110012-bstr.sh` sets neither.

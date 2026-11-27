@@ -88,15 +88,9 @@ User seconds of compiled runs, from separate harness runs:
 
 ## Timings
 
-`bb/l3c10bound-110012-par.sl` on a shared 4-core container (load about
-1 from other work): PASS, exit 0, 2,098 s wall, 7,083 s user, 4.84 GB
-peak (the third piece). The pieces started about 40 s in and used about 1,450,
-1,950, 1,610 and 2,030 s of CPU (from `ps` samples every 10 s), at
-most 0.5, 0.2, 4.8 and 3.4 GB. `bb/l3c10bound-110012.sl` alone was
+`bb/l3c10bound-110012-par.sl` on a shared 4-core container: PASS,
+exit 0, 1,785 s wall, 4,854 s user, 4.99 GB peak (the third piece).
+The pieces started about 45 s in and used about 1,270, 1,721, 1,204
+and 605 s of CPU (from `ps` samples every 5 s), at most 0.48, 0.19,
+4.99 and 3.59 GB. `bb/l3c10bound-110012.sl` alone was
 8,328 s wall in the far2 session.
-
-## Open
-
-- A checkpoint near script step 1,604 might bring the largest piece
-  from about 2,030 s to about 1,880 s; no Rocq certificate is there,
-  so it would need a fit of a dumped configuration.
