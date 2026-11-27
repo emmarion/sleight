@@ -75,11 +75,8 @@ Shared 4-core container, single runs.
   `vdig`'s shifts and divisions of `T`, `top-run` (in `zc` and
   `maxs-run`), multiplications by 3 and 4 of the block value, and the
   collector's work on the large heap that each such number allocates.
-- Piece 19 is now the longest. In the harness from `m3_c13.v` (move
-  87,938), the first 1,000 moves took about 105 s and the next 1,000
-  about 68 s, both with this code and with ee7978df's, and later stretches of
-  1,000 moves about 1 s; the stack samples there were in `c10-big`,
-  `bigj-ok`, `xg`, `c-pgrp` and `c-enc`, not in the climbs.
+- The moves at the start of piece 19, and of pieces 6 to 18, seem to
+  be BIGJ moves; `bb/PORT-C10-bigj-notes.md` describes them.
 
 ## Open
 

@@ -2,16 +2,47 @@
   (let-match many r (RsOk _ _ e1 _) ((RsNo _ _ _ _) r))
   (match many (rq-eq e1 e) _ ((ESome _ _) (RsNo l3 c0 e ch)) ((ENone _) r)))
 
+(def-fns _ $ (many lm-of : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (LmR e) lm))
+  (let-match erased ch (MkRch _ _ _ c _ _ _ dc _))
+  (c-lm e c dc))
+
+(def-adts
+  ((Ahead : ((Conf) c0) ((Rq) e) -> Type)
+    enum
+    (many AhNone : (erased (Conf) c0) (erased (Rq) e) -> (Ahead c0 e))
+    (many AhLm : (erased (Conf) c0) (erased (Rq) e) (many (LmR e) lm) -> (Ahead c0 e))
+    (many AhJump : (erased (Conf) c0) (erased (Rq) e) (many (Rq) e2) (erased (Rch l3 c0 e2) ch2) (many (LmR e2) lm2) -> (Ahead c0 e))))
+
+(def-adts
+  ((Big : ((Conf) c0) -> Type)
+    enum
+    (many BigR : (erased (Conf) c0) (many (Nat) j) (many (Rs l3 c0) r) -> (Big c0))
+    (many BigP : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Ahead c0 e) p) -> (Big c0))))
+
+(def-fns _ $ (many ahead-lm : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Ahead c0 e) p) -> (many (LmR e) lm))
+  (match many p _ ((AhLm _ _ lm) lm) (else (lm-of c0 e ch))))
+
+(def-fns _ $ (many big-one : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Rq) e1) (erased (Rch l3 c0 e1) ch1) (many (Ahead c0 e1) p)
+    -> (many (Big c0) res))
+  (match many (fired c0 e ch (RsOk l3 c0 e1 ch1)) _ ((RsOk _ _ _ _) (BigP c0 e1 ch1 p)) ((RsNo _ _ _ _) (BigR c0 2 (RsNo l3 c0 e ch)))))
+
+(def-fns _ $ (many big-two : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Rq) e1) (erased (Rch l3 c0 e1) ch1) (many (LmR e1) lm1)
+    -> (many (Big c0) res))
+  (let-match many (c-move9-at c0 e1 ch1 lm1) (RsOk _ _ e2 ch2) ((RsNo _ _ _ _) (big-one c0 e ch e1 ch1 (AhLm c0 e1 lm1))))
+  (let ((many lm2)) (lm-of c0 e2 ch2))
+  (let ((many r0)) (fired c0 e ch (try-contact-at c0 e2 ch2 lm2)))
+  (match many r0 _ ((RsOk _ _ _ _) (BigR c0 0 r0)) ((RsNo _ _ _ _) (big-one c0 e ch e1 ch1 (AhJump c0 e1 e2 ch2 lm2)))))
+
+(def-fns _ $ (many c10-big-p : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Ahead c0 e) p) -> (many (Big c0) res))
+  (let ((many no)) (BigR c0 2 (RsNo l3 c0 e ch)))
+  (let-match many (bigj-ok e) (BTrue) ((BFalse) no))
+  (match many p _
+    ((AhJump _ _ e1 ch1 lm1) (big-two c0 e ch e1 ch1 lm1))
+    (else (match many (c-move9-at c0 e ch (ahead-lm c0 e ch p)) _ ((RsOk _ _ e1 ch1) (big-two c0 e ch e1 ch1 (lm-of c0 e1 ch1))) ((RsNo _ _ _ _) no)))))
+
 (def-fns _ $ (many c10-big : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (LmR e) lm)
     -> (many (Nat) j) (many (Rs l3 c0) res))
-  (let ((many no)) (RsNo l3 c0 e ch))
-  (let-match many (bigj-ok e) (BTrue) ((BFalse) (values 2 no)))
-  (let ((many r1)) (c-move9-at c0 e ch lm))
-  (let-match many r1 (RsOk _ _ e1 ch1) ((RsNo _ _ _ _) (values 2 no)))
-  (let ((many r0)) (match many (c-move9 c0 e1 ch1) (((Rs l3 c0) r)) ((RsOk _ _ e2 ch2) (fired c0 e ch (try-contact c0 e2 ch2))) ((RsNo _ _ _ _) no)))
-  (let-match many r0 (RsNo _ _ _ _) ((RsOk _ _ _ _) (values 0 r0)))
-  (let ((many r2)) (fired c0 e ch r1))
-  (match many r2 _ ((RsOk _ _ _ _) (values 1 r2)) ((RsNo _ _ _ _) (values 2 r2))))
+  (match many (c10-big-p c0 e ch (AhLm c0 e lm)) _ ((BigR _ j r) (values j r)) ((BigP _ e1 ch1 _) (values 1 (RsOk l3 c0 e1 ch1)))))
 
 (def-fns _ $ (many rtake-g : (subterm many (Nat) k) (many (List (Rn)) R) (many (Nat) g) -> (many (List (Rn)) P))
   (let-match many k (Succ k1) ((Zero) (Cons _ (MkRn (BFalse) g) (Nil (Rn)))))
