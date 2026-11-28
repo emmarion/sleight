@@ -401,7 +401,7 @@
 (def-fns _ $ (many death-end-u : (erased (Conf) c0) (subterm many (Nat) fuel) (many (Nat) depth) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (Rq) t)
     -> (many (Rs l3 c0) res))
   (let-match many (c-wr-n depth (BFalse) c0 e ch) (RsNo _ _ _ _)
-    ((RsOk _ _ e1 ch1) (match many (rq-same e1 t) _ ((ESome _ _) (RsOk l3 c0 e1 ch1)) ((ENone _) (RsNo l3 c0 e ch)))))
+    ((RsOk _ _ e1 ch1) (match many (rq-eq e1 t) _ ((BTrue) (RsOk l3 c0 e1 ch1)) ((BFalse) (RsNo l3 c0 e ch)))))
   (let-match many fuel (Succ f) ((Zero) (RsNo l3 c0 e ch)))
   (let-match many (c-move9 c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ _ _) (RsNo l3 c0 e ch)))
   (tail $ death-end-u c0 f depth e1 ch1 t))

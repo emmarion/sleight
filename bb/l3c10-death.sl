@@ -10,7 +10,7 @@
   (let-match many e (MkRq _ L _ _))
   (let-match many t (MkRq _ Lt _ _))
   (let-match many (c-wr-n (nat-shr (monus (rlen L 0) (rlen Lt 0)) 1) (BFalse) c0 e ch) (RsNo _ _ _ _)
-    ((RsOk _ _ e1 ch1) (match many (rq-same e1 t) _ ((ESome _ _) (RsOk l3 c0 e1 ch1)) ((ENone _) (RsNo l3 c0 e ch)))))
+    ((RsOk _ _ e1 ch1) (match many (rq-eq e1 t) _ ((BTrue) (RsOk l3 c0 e1 ch1)) ((BFalse) (RsNo l3 c0 e ch)))))
   (let-match many fuel (Succ f) ((Zero) (RsNo l3 c0 e ch)))
   (let-match many (c-move9 c0 e ch) (RsOk _ _ e1 ch1) ((RsNo _ _ _ _) (RsNo l3 c0 e ch)))
   (tail $ death-end c0 f e1 ch1 t))
