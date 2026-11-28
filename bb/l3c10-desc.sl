@@ -190,6 +190,7 @@
   (fd-levels (monus q qo) c0 e ch))
 
 (def-fns _ $ (many rns-eq : (subterm many (List (Rn)) A) (many (List (Rn)) Bs) -> (many (Bool) r))
+  (let-match many (slot-eq (slot-of A) (slot-of Bs)) (ENone _) ((ESome _ _) (BTrue)))
   (let-match many A (Cons _ ra A1) ((Nil _) (match many Bs _ ((Nil _) (BTrue)) (else (BFalse)))))
   (let-match many Bs (Cons _ rb Bq) ((Nil _) (BFalse)))
   (let-match many ra (MkRn x m))

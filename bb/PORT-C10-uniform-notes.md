@@ -48,8 +48,7 @@ Shared 4-core container, noisy. Rocq's times from `hints mine`.
 | VDESC (umain 3) | 2/2 | about 0.03 s | 0.042 s |
 | VDESC2 (umain 25) | 14/14 | about 0.09 s | under 0.001 s |
 
-Sleight times are differences between repetition counts. DEATH's
-remaining time seems to be mostly comparisons over the whole tape.
+Sleight times are differences between repetition counts.
 
 ## Open
 

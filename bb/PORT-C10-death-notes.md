@@ -17,7 +17,7 @@ following the cascade of `death_casc_exact` (`lin3d27_death.v`):
   episode, about 30 of them, until `c-wr-n` can walk the debris: a walk
   over exactly the stack entries above the target's left side (the
   depth is the difference in run counts, halved), whose result must
-  equal the normalized proposal (`rq-norm`, `rq-same`);
+  equal the normalized proposal (`rq-norm`, `rq-eq`);
 - `c-certify` with no fuel then hands back the proposal itself.
 
 `c-wr-n` is `bb/l3c10-desc.sl`'s `c-wr` with the depth of `stk-all` as
