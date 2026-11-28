@@ -270,7 +270,7 @@
   (let-match many (nat-is i 20) (BFalse) ((BTrue) (try-contact c0 e ch)))
   (let-match many (nat-is i 23) (BFalse) ((BTrue) (try-identG c0 e ch)))
   (let-match many (nat-is i 24) (BFalse) ((BTrue) (try-sweep3 c0 e ch)))
-  (let-match many (nat-is i 26) (BFalse) ((BTrue) (try-resume-f c0 e ch)))
+  (let-match many (nat-is i 26) (BFalse) ((BTrue) (try-resume-h c0 e ch)))
   (let-match many (nat-is i 28) (BFalse) ((BTrue) (c-ddj c0 e ch)))
   (let-match many (nat-is i 30) (BFalse) ((BTrue) (c-death-u c0 e ch)))
   (let-match many (nat-is i 33) (BFalse) ((BTrue) (try-iterV c0 e ch)))
