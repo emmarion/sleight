@@ -30,7 +30,7 @@ measurements; they may be wrong in places.
 
 Build: the full L3 file list, then `bb/l3c10-run.sl`,
 `bb/l3c10-far.sl`, `bb/l3c10-train.sl`, `bb/l3c10-trlaw.sl`,
-`bb/l3c10-chf.sl`, `bb/l3c10-far2.sl`, `bb/l3c10-par.sl`,
+`bb/l3c10-chf.sl`, `bb/l3c10-junc.sl`, `bb/l3c10-far2.sl`, `bb/l3c10-par.sl`,
 `bb/l3c10-par37.sl`, `bb/l3c10-par110.sl` and the goal file, with
 `--goal proved` and `ulimit -s unlimited`.
 

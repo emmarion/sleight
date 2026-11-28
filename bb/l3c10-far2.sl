@@ -245,8 +245,12 @@
   (let-match many (nle u g) (BFalse) ((BTrue) (Some _ (rpushn (BFalse) (monus g u) R1))))
   (match many R1 _ ((Nil _) (Some _ R1)) (else (None _))))
 
-(def-fns _ $ (many jx-prop : (erased (Rq) e) (many (LmR e) lm) -> (many (Maybe (Rq)) t))
-  (let-match many lm (LmOk _ _ _ _ _ _ n L0 _ _ X T _ R1 _ _ _) ((LmNo _) (None _)))
+(def-adts $ (JxP : -> Type)
+  enum
+  (many MkJxP : (many (List (Nat)) U Ld) (many (Nat) K z) (many (Tt) T2) (many (List (Rn)) W R2) -> (JxP)))
+
+(def-fns _ $ (many jx-plan : (erased (Rq) e) (many (LmR e) lm) -> (many (Maybe (JxP)) t))
+  (let-match many lm (LmOk _ _ _ _ _ _ _ _ _ _ X T _ R1 _ _ _) ((LmNo _) (None _)))
   (let-match many (tdigits 0 X) (Some _ D) ((None _) (None _)))
   (let-match many D (Cons _ d Ds) ((Nil _) (None _)))
   (let-match many (nat-is d 2) (BTrue) ((BFalse) (None _)))
@@ -254,12 +258,19 @@
   (let ((many W) (many R2)) (jx-split (match many T (((Nat) k)) ((TtE) 6) (else 4)) R1))
   (let ((many U) (many r)) (jx-try 24 7 Ds T Te W))
   (let-match many r (JxOk K Ld T2 z) ((JxNo) (None _)))
+  (Some _ (MkJxP U Ld K z T2 W R2)))
+
+(def-fns _ $ (many jx-prop : (erased (Rq) e) (many (LmR e) lm) (many (JxP) pl) -> (many (Maybe (Rq)) t))
+  (let-match many lm (LmOk _ _ _ _ _ _ n L0 _ _ _ _ _ _ _ _ _) ((LmNo _) (None _)))
+  (let-match many pl (MkJxP U Ld K z T2 _ R2))
   (let-match many (jx-rest R2 (nat-mul 8 K)) (Some _ R3) ((None _) (None _)))
   (Some _ (lm-out L0 (nat-add n (nat-mul 3 K)) (c-enc (Cons _ 2 (jx-app-n U Ld))) T2 (rpushn (BFalse) z R3))))
 
-(def-fns _ $ (many c-junc : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
-  (let-match erased ch (MkRch _ _ _ c _ _ _ dc _))
-  (c-certify-c c0 e ch 100000 0 (jx-prop e (c-lm e c dc))))
+(def-fns _ $ (many c-junc : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) (many (LmR e) lm) -> (many (Rs l3 c0) res))
+  (let-match many (jx-plan e lm) (Some _ pl) ((None _) (RsNo l3 c0 e ch)))
+  (let-match many pl (MkJxP U Ld K z T2 W _))
+  (let-match many (c-junc-w c0 e ch lm (nlen U) (rns-cells W) K z (c-enc Ld) T2) (RsNo _ _ _ _) ((RsOk _ _ e1 ch1) (RsOk l3 c0 e1 ch1)))
+  (c-certify-c c0 e ch 100000 0 (jx-prop e lm pl)))
 
 (def-fns _ $ (many s15-ent : (many (Nat) i) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
   (let-match erased ch (MkRch _ _ _ c _ _ _ dc _))
@@ -274,7 +285,7 @@
   (let-match many (nat-is i 28) (BFalse) ((BTrue) (c-ddj c0 e ch)))
   (let-match many (nat-is i 30) (BFalse) ((BTrue) (c-death-u c0 e ch)))
   (let-match many (nat-is i 33) (BFalse) ((BTrue) (try-iterV c0 e ch)))
-  (let-match many (nat-is i 35) (BFalse) ((BTrue) (c-junc c0 e ch)))
+  (let-match many (nat-is i 35) (BFalse) ((BTrue) (c-junc c0 e ch lm)))
   (let-match many (nat-is i 37) (BFalse) ((BTrue) (c-fdesc-k 4294967296 c0 e ch)))
   (let-match many (or (nat-is i 38) (or (nat-is i 39) (nat-is i 42))) (BFalse)
     ((BTrue)
