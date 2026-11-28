@@ -255,9 +255,21 @@
   (let-match many (certify-fc c0 e1 ch1 64 lc1 (child-fin lc1 (monus Gr need))) (RsOk _ _ e2 ch2) ((RsNo _ _ _ _) no))
   (RsOk l3 c0 e2 ch2))
 
+(def-fns _ $ (many try-resume-h : (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch) -> (many (Rs l3 c0) res))
+  (let-match erased ch (MkRch _ _ _ c _ _ _ dc _))
+  (let ((many lm)) (c-lm e c dc))
+  (let-match many (resume-guard e lm) (BTrue) ((BFalse) (RsNo l3 c0 e ch)))
+  (let-match many (c-move9-at c0 e ch lm) (RsOk _ _ e1 ch1) ((RsNo _ _ _ _) (RsNo l3 c0 e ch)))
+  (let ((many lc)) (lmc e1))
+  (let ((many mp) (many rho)) (fe-of lc))
+  (let-match many (fe-cert-f c0 e1 ch1 (BFalse) lc mp rho) (RsNo _ _ _ _) ((RsOk _ _ e2 ch2) (RsOk l3 c0 e2 ch2)))
+  (let-match many (c-child-h c0 e1 ch1 lc mp rho) (RsOk _ _ e2 ch2) ((RsNo _ _ _ _) (RsNo l3 c0 e ch)))
+  (RsOk l3 c0 e2 ch2))
+
 (def-fns _ $ (many c10-ent-h : (many (Nat) i) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch)
     (many (LmR e) lm) (many (LmC) lc) (many (Maybe (Nat)) mp) (many (Nat) rho) -> (many (Rs l3 c0) res))
   (let-match many (nat-eq i 5) (Unequal _ _ _ _ _) ((Equal _ _ _) (c-child-h c0 e ch lc mp rho)))
+  (let-match many (nat-eq i 24) (Unequal _ _ _ _ _) ((Equal _ _ _) (try-resume-h c0 e ch)))
   (c10-ent-l i c0 e ch lm lc mp rho))
 
 (def-fns _ $ (many c10-scan-h : (subterm many (Nat) n) (many (Nat) i) (erased (Conf) c0) (many (Rq) e) (erased (Rch l3 c0 e) ch)
